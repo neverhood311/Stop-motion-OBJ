@@ -17,13 +17,14 @@ from bpy.app.handlers import persistent
 #global variable for the MeshSequenceController
 MSC = None
 
+#set the frame number for all mesh sequence objects
 @persistent
 def updateFrame(dummy):
     scn = bpy.context.scene
     global MSC
-    #print("Updating the frame to :" + str(scn.frame_current))
     MSC.setFrame(scn.frame_current)
 
+#runs every time the start frame of an object is changed
 def updateStartFrame(self, context):
     updateFrame(0)
     return None
@@ -63,19 +64,12 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         precision=2,
         default=1
     )
-    
-#register this settings class
-#bpy.utils.register_class(MeshSequenceSettings)
-#add this settings class to bpy.types.Object
-#bpy.types.Object.mesh_sequence_settings = bpy.props.PointerProperty(type=MeshSequenceSettings)
 
 class MeshSequence:
     """This class contains a reference to a sequence object as well as all of the meshes in the sequence"""
     
     bl_idname = "mesh_sequence_controller"
     bl_label = "Store and control animation of a mesh sequence"
-    
-    #scn = bpy.context.scene
     
     def __init__(self):
         #an array of meshes in the sequence
@@ -101,7 +95,7 @@ class MeshSequence:
         #self.firstNum = -1
         #self.lastNum = -1
         #self.numFrames = -1
-        self.startFrame = -1
+        self.startFrame = 1
         self.meshNames = ''
         
         self.seqObject.mesh_sequence_settings.initialized = True
@@ -136,6 +130,7 @@ class MeshSequence:
             #http://stackoverflow.com/questions/1976007/what-characters-are-forbidden-in-windows-and-linux-directory-names
             self.seqObject.mesh_sequence_settings.meshNames += tmpMesh.name + '/'
             numFrames+=1
+            
         if(numFrames > 0):
             #remove the last '/' from the string
             self.seqObject.mesh_sequence_settings.meshNames = self.seqObject.mesh_sequence_settings.meshNames[:-1]
@@ -206,34 +201,29 @@ class MeshSequence:
         
         
     def setFrame(self, _frameNum):
-        
-        #print(self.seqObject)
-        #return
-        #print('Start frame: ' + str(self.seqObject.mesh_sequence_settings.startFrame))
         numFrames = len(self.meshes) - 1
         #convert the frame number into an array index
         idx = _frameNum - (self.seqObject.mesh_sequence_settings.startFrame - 1)
-        
+        #adjust for playback speed
         idx = int(idx * self.seqObject.mesh_sequence_settings.speed)
-        #print('index: ' + str(idx))
-        #_frameNum -= (self.seqObject.mesh_sequence_settings.startFrame - 1)
+        #get the playback mode
         frameMode = int(self.seqObject.mesh_sequence_settings.frameMode)
         #0: Blank
-        #1: Extend (default)
-        #2: Repeat
-        #3: Bounce
         if(frameMode == 0):
             if(idx < 1 or idx >= numFrames + 1):
                 idx = 0
+        #1: Extend (default)
         elif(frameMode == 1):
             if(idx < 1):
                 idx = 1
             elif(idx >= numFrames + 1):
                 idx = numFrames
+        #2: Repeat
         elif(frameMode == 2):
             idx -= 1
             idx = idx % (numFrames)
             idx += 1
+        #3: Bounce
         elif(frameMode == 3):
             idx -= 1
             tmp = int(idx / numFrames)
@@ -242,7 +232,6 @@ class MeshSequence:
             else:
                 idx = (numFrames - 1) - (idx % numFrames)
             idx += 1
-        #print('index: ' + str(idx))
         #store the current mesh for grabbing the material later
         prev_mesh = self.seqObject.data
         #swap the meshes
@@ -274,13 +263,11 @@ class MeshSequenceController:
             #if it's a sequence object (we'll have to figure out how to indicate this, probably with a T/F custom property)
             if(obj.mesh_sequence_settings.initialized == True):
                 #create a MeshSequence object for it
-                #call sequence.loadSequenceFromData() on it
-                #print("I'm a mesh sequence object: " + obj.name)
-                #print(obj.mesh_sequence_settings.meshNames)
                 tmpSeq = MeshSequence()
+                #call sequence.loadSequenceFromData() on it
                 tmpSeq.loadSequenceFromData(obj)
                 self.sequences.append(tmpSeq)
-            else:
+            #else:
                 #print("I'm NOT: " + obj.name)
         
     
@@ -288,10 +275,8 @@ class MeshSequenceController:
         #check for deleted objects:
         #get all objects in the scene
         objs = bpy.data.objects.values()
-        #print(objs)
         #for each mesh sequence
         for seq in self.sequences:
-            #print(seq.seqObject)
             #if its sequence object is not in the scene
             if (seq.seqObject in objs) == False:
                 #free the object's meshes
@@ -329,10 +314,6 @@ def initSequenceController(dummy):	#apparently we need a dummy variable?
     global MSC
     #create a new MeshSequenceController object
     MSC = MeshSequenceController()
-    #bpy.app.handlers.scene_update_post.remove(initSequenceController)
-    
-
-
 
 
 #Add mesh sequence operator
@@ -389,37 +370,38 @@ class MeshSequencePanel(bpy.types.Panel):
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = 'object'
-    bl_options = {'DEFAULT_CLOSED'}
+    #bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
         layout = self.layout
         obj = context.object
 
         objSettings = obj.mesh_sequence_settings
-        if(objSettings.loaded == False):
-            #path to directory
-            row = layout.row()
-            row.prop(objSettings, "dirPath")
+        if(objSettings.initialized == True):
+            if(objSettings.loaded == False):
+                #path to directory
+                row = layout.row()
+                row.prop(objSettings, "dirPath")
+                
+                #filename
+                row = layout.row()
+                row.prop(objSettings, "fileName")
+                
+                #button for loading
+                row = layout.row()
+                row.operator("ms.load_mesh_sequence")
             
-            #filename
+            #start frame
             row = layout.row()
-            row.prop(objSettings, "fileName")
+            row.prop(objSettings, "startFrame")
             
-            #button for loading
+            #frame mode
             row = layout.row()
-            row.operator("ms.load_mesh_sequence")
-        
-        #start frame
-        row = layout.row()
-        row.prop(objSettings, "startFrame")
-        
-        #frame mode
-        row = layout.row()
-        row.prop(objSettings, "frameMode")
-        
-        #playback speed
-        row = layout.row()
-        row.prop(objSettings, "speed")
+            row.prop(objSettings, "frameMode")
+            
+            #playback speed
+            row = layout.row()
+            row.prop(objSettings, "speed")
     
 def register():
     #print("Registered the OBJ Sequence addon")
@@ -428,18 +410,15 @@ def register():
     #add this settings class to bpy.types.Object
     bpy.types.Object.mesh_sequence_settings = bpy.props.PointerProperty(type=MeshSequenceSettings)
     bpy.app.handlers.load_post.append(initSequenceController)
-    #bpy.app.handlers.scene_update_post.append(initSequenceController)
     bpy.app.handlers.frame_change_pre.append(updateFrame)
     bpy.utils.register_class(AddMeshSequence)
     bpy.utils.register_class(LoadMeshSequence)
     bpy.utils.register_class(MeshSequencePanel)
     bpy.types.INFO_MT_mesh_add.append(menu_func)
-    #initSequenceController(0)
 
 def unregister():
     #print("Unregistered the OBJ Sequence addon")
     bpy.app.handlers.load_post.remove(initSequenceController)
-    #bpy.app.handlers.scene_update_post.remove(initSequenceController)
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
     bpy.utils.unregister_class(AddMeshSequence)
     bpy.utils.unregister_class(LoadMeshSequence)
