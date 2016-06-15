@@ -1,28 +1,27 @@
 # Stop-motion-OBJ
 A Blender add-on for importing a sequence of OBJ meshes as frames
 
-### A Blender addon similar to Meshfoot
-This is basically a simplified version of the Meshfoot addon that is no longer available. This is **NOT** intended to be a replica of Meshfoot. Stop motion OBJ allows you to import a sequence of OBJ files and render them as individual frames.
+Stop motion OBJ allows you to import a sequence of OBJ files and render them as individual frames. Have a RealFlow animation but want to render it in Blender? This addon is for you! Currently tested for Blender 2.77.1.
 
 ### Features
 - OBJ sequence import
 - Allows changing topology 
   - (the OBJ files don't need to have the same number of vertices and faces)
+- Supports shapes with UVs and image textures
 - Variable playback speed
 - Multiple playback modes
 - Object can have materials
 
 ### Limitations
-- I'm not sure whether the addon supports OBJs with UVs and materials with textures (try it out and let me know)
-- Only absolute paths are supported for now
+- Only absolute filepaths are supported (for now)
 - File numbers must be zero-padded
 - No motion blur
-- Currently, only OBJ files are supported, as implied by the addon's name
+- Only OBJ files are supported, as implied by the addon's name
 
 ## Installing Stop motion OBJ
 - Download mesh_sequence_controller.py and move it to Blender's addons folder (something like C:\Program Files\Blender Foundation\Blender\2.77\scripts\addons)
 - Open Blender and open the Add-ons preferences (File > User Preferences... > Add-ons)
-- In the search bar, type 'OBJ' and look for the addon in the list
+- In the search bar, type 'OBJ' and look for the Stop motion OBJ addon in the list
 - Check the box to install it, and click 'Save User Settings'
 - **RESTART BLENDER BEFORE USING THE ADDON**
 
@@ -42,4 +41,5 @@ This is basically a simplified version of the Meshfoot addon that is no longer a
 - You can also decide what happens before and after the OBJ sequence:
   - 'Blank' will simply make the object disappear
   - 'Extend' will freeze the first and last frames before and after the OBJ sequence, respectively
+  - 'Repeat' will repeat the animation
   - 'Bounce' will play the animation in reverse once the sequence has finished
