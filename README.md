@@ -1,2 +1,45 @@
 # Stop-motion-OBJ
 A Blender add-on for importing a sequence of OBJ meshes as frames
+
+### A Blender addon similar to Meshfoot
+This is basically a simplified version of the Meshfoot addon that is no longer available. This is **NOT** intended to be a replica of Meshfoot. Stop motion OBJ allows you to import a sequence of OBJ files and render them as individual frames.
+
+### Features
+- OBJ sequence import
+- Allows changing topology 
+  - (the OBJ files don't need to have the same number of vertices and faces)
+- Variable playback speed
+- Multiple playback modes
+- Object can have materials
+
+### Limitations
+- I'm not sure whether the addon supports OBJs with UVs and materials with textures (try it out and let me know)
+- Only absolute paths are supported for now
+- File numbers must be zero-padded
+- No motion blur
+- Currently, only OBJ files are supported, as implied by the addon's name
+
+## Installing Stop motion OBJ
+- Download mesh_sequence_controller.py and move it to Blender's addons folder (something like C:\Program Files\Blender Foundation\Blender\2.77\scripts\addons)
+- Open Blender and open the Add-ons preferences (File > User Preferences... > Add-ons)
+- In the search bar, type 'OBJ' and look for the addon in the list
+- Check the box to install it, and click 'Save User Settings'
+- **RESTART BLENDER BEFORE USING THE ADDON**
+
+## Using Stop motion OBJ
+- (make sure you've installed the addon and restarted Blender before using)
+- In the 3D view, click Add > Mesh > OBJ Sequence
+  - The object will initially be empty. We need to load an OBJ sequence into it.
+- Make sure the object is selected. 
+- In the properties panel, click on the Object Properties tab (the little orange cube icon). In the settings panel, scroll down to find the OBJ Sequence subpanel and open it.
+- Enter the Root Folder by clicking on the folder button and navigating to the folder where the OBJs are stored. **Make sure to UNCHECK ‘Relative Path’**
+- In the File Name box, enter the common prefix of the OBJ files.
+  - ex: If you have frame001, frame002, frame003, you should enter ‘frame’
+- Click ‘Load Mesh Sequence’ to load. 
+  - Depending on the number of frames, this could take a while.
+- Step through a few frames to see the animation.
+- You can adjust which frame the animation starts on as well as its playback speed.
+- You can also decide what happens before and after the OBJ sequence:
+  - 'Blank' will simply make the object disappear
+  - 'Extend' will freeze the first and last frames before and after the OBJ sequence, respectively
+  - 'Bounce' will play the animation in reverse once the sequence has finished
