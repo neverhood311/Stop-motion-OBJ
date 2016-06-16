@@ -199,8 +199,8 @@ class MeshSequence:
     def setStartFrame(self, _frameNum):
         self.startFrame = _frameNum
         
-        
-    def setFrame(self, _frameNum):
+    
+    def getMeshIdxFromFrame(self, _frameNum):
         numFrames = len(self.meshes) - 1
         #convert the frame number into an array index
         idx = _frameNum - (self.seqObject.mesh_sequence_settings.startFrame - 1)
@@ -232,6 +232,10 @@ class MeshSequence:
             else:
                 idx = (numFrames - 1) - (idx % numFrames)
             idx += 1
+        return idx
+    
+    def setFrame(self, _frameNum):
+        idx = self.getMeshIdxFromFrame(_frameNum)
         #store the current mesh for grabbing the material later
         prev_mesh = self.seqObject.data
         #swap the meshes
@@ -250,8 +254,38 @@ class MeshSequence:
     
     #create a separate object for each mesh in the array, each visible for only one frame
     def bakeSequence(self, context):
-        #TODO
-        print("TODO")
+        #create an empty object and name it "C_{object's current name}" ('C' stands for 'Container')
+        #copy the object's transformation data into the container
+        #copy the object's animation data into the container
+        
+        #create a dictionary mapping meshes to new objects, meshToObject
+        #create a placeholder for the object's material, objMaterial
+        
+        #for each mesh (including the empty mesh):
+            #create an object for the mesh
+            #remove the fake user from the mesh
+            #if the mesh has a material, store this in objMaterial
+            #add a dictionary entry to meshToObject, the mesh => the object
+            #in the object, add keyframes at frames 0 and the last frame of the animation:
+                #set object.hide to True
+                #set object.hide_render to True
+        
+        #if objMaterial was set:
+            #for each mesh:
+                #set the material to objMaterial
+        
+        #for each frame of the animation:
+            #figure out which mesh is visible
+            #use the dictionary to find which object the mesh belongs to
+            #add two keyframes to the object at the current frame:
+                #set object.hide to False
+                #set object.hide_render to False
+            #add two keyframes to the object at the next frame:
+                #set object.hide to True
+                #set object.hide_render to True
+        
+        #delete the sequence object
+        pass
 
 class MeshSequenceController:
     
