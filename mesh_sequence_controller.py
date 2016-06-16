@@ -17,6 +17,10 @@ from bpy.app.handlers import persistent
 #global variable for the MeshSequenceController
 MSC = None
 
+def deselectAll():
+    for ob in bpy.context.scene.objects:
+        ob.select = False
+
 #set the frame number for all mesh sequence objects
 @persistent
 def updateFrame(dummy):
@@ -84,8 +88,7 @@ class MeshSequence:
         scn.objects.link(self.seqObject)
         
         #deselect all other objects
-        for ob in scn.objects:
-            ob.select = False
+        deselectAll()
         
         #select the object
         scn.objects.active = self.seqObject
@@ -179,8 +182,7 @@ class MeshSequence:
             self.meshes.append(bpy.data.meshes[meshName])
         
         #deselect all objects (otherwise everything that is selected will get deleted)
-        for ob in scn.objects:
-            ob.select = False
+        deselectAll()
             
         #select and delete the empty object and empty mesh that __init__ created
         scn.objects.active = bpy.data.objects[oldName]
@@ -253,39 +255,96 @@ class MeshSequence:
             mesh.use_fake_user = False
     
     #create a separate object for each mesh in the array, each visible for only one frame
-    def bakeSequence(self, context):
+    def bakeSequence(self):
+        seqObj = self.seqObject
         #create an empty object and name it "C_{object's current name}" ('C' stands for 'Container')
+        bpy.ops.object.empty_add(type='PLAIN_AXES')
+        newName = "C_" + seqObj.name
+        containerObj = bpy.context.object
+        containerObj.name = newName
         #copy the object's transformation data into the container
+        containerObj.location = seqObj.location
+        containerObj.scale = seqObj.scale
+        containerObj.rotation_euler = seqObj.rotation_euler
+        containerObj.rotation_quaternion = seqObj.rotation_quaternion   #just in case
         #copy the object's animation data into the container
+        #http://blender.stackexchange.com/questions/27136/how-to-copy-keyframes-from-one-action-to-other
+        if(seqObj.animation_data != None):
+            seq_anim = seqObj.animation_data
+            properties = [p.identifier for p in seq_anim.bl_rna.properties if not p.is_readonly]
+            if(containerObj.animation_data == None):
+                containerObj.animation_data_create()
+            cont_anim = containerObj.animation_data
+            for prop in properties:
+                setattr(cont_anim, prop, getattr(seq_anim, prop))
         
         #create a dictionary mapping meshes to new objects, meshToObject
+        meshToObject = {}
         #create a placeholder for the object's material, objMaterial
+        objMaterial = None
+        
+        scn = bpy.context.scene
         
         #for each mesh (including the empty mesh):
-            #create an object for the mesh
+        for mesh in self.meshes:
+            #create an object for the mesh and add it to the scene
+            tmpObj = bpy.data.objects.new('o_' + mesh.name, mesh)
+            scn.objects.link(tmpObj)
             #remove the fake user from the mesh
+            mesh.use_fake_user = False
             #if the mesh has a material, store this in objMaterial
+            if(len(mesh.materials) > 0):
+                objMaterial = mesh.materials[0]
             #add a dictionary entry to meshToObject, the mesh => the object
+            meshToObject[mesh] = tmpObj
             #in the object, add keyframes at frames 0 and the last frame of the animation:
-                #set object.hide to True
-                #set object.hide_render to True
+            #set object.hide to True
+            tmpObj.hide = True
+            tmpObj.keyframe_insert(data_path='hide', frame=scn.frame_start)
+            tmpObj.keyframe_insert(data_path='hide', frame=scn.frame_end)
+            #set object.hide_render to True
+            tmpObj.hide_render = True
+            tmpObj.keyframe_insert(data_path='hide_render', frame=scn.frame_start)
+            tmpObj.keyframe_insert(data_path='hide_render', frame=scn.frame_end)
+            #set the empty object as this object's parent
+            tmpObj.parent = containerObj
         
         #if objMaterial was set:
+        if(objMaterial != None):
             #for each mesh:
+            for mesh in self.meshes:
                 #set the material to objMaterial
+                mesh.materials.clear()
+                mesh.materials.append(objMaterial)
         
         #for each frame of the animation:
+        for frameNum in range(scn.frame_start, scn.frame_end + 1):
             #figure out which mesh is visible
+            idx = self.getMeshIdxFromFrame(frameNum)
+            frameMesh = self.meshes[idx]
             #use the dictionary to find which object the mesh belongs to
+            frameObj = meshToObject[frameMesh]
             #add two keyframes to the object at the current frame:
-                #set object.hide to False
-                #set object.hide_render to False
+            #set object.hide to False
+            frameObj.hide = False
+            frameObj.keyframe_insert(data_path='hide', frame=frameNum)
+            #set object.hide_render to False
+            frameObj.hide_render = False
+            frameObj.keyframe_insert(data_path='hide_render', frame=frameNum)
             #add two keyframes to the object at the next frame:
-                #set object.hide to True
-                #set object.hide_render to True
+            #set object.hide to True
+            frameObj.hide = True
+            frameObj.keyframe_insert(data_path='hide', frame=frameNum+1)
+            #set object.hide_render to True
+            frameObj.hide_render = True
+            frameObj.keyframe_insert(data_path='hide_render', frame=frameNum+1)
         
         #delete the sequence object
-        pass
+        deselectAll()
+        scn.objects.active = self.seqObject
+        self.seqObject.select = True
+        bpy.ops.object.delete()
+        
 
 class MeshSequenceController:
     
@@ -449,6 +508,8 @@ def register():
     bpy.utils.register_class(LoadMeshSequence)
     bpy.utils.register_class(MeshSequencePanel)
     bpy.types.INFO_MT_mesh_add.append(menu_func)
+    #for running the script, instead of installing the add-on
+    #initSequenceController(0)
 
 def unregister():
     #print("Unregistered the OBJ Sequence addon")
