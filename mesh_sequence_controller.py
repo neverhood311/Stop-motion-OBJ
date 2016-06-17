@@ -257,16 +257,20 @@ class MeshSequence:
     #create a separate object for each mesh in the array, each visible for only one frame
     def bakeSequence(self):
         seqObj = self.seqObject
-        #create an empty object and name it "C_{object's current name}" ('C' stands for 'Container')
+        scn = bpy.context.scene
+        #create an empty object
         bpy.ops.object.empty_add(type='PLAIN_AXES')
+        containerObj = bpy.context.active_object
+        #rename the container object to "C_{object's current name}" ('C' stands for 'Container')
         newName = "C_" + seqObj.name
-        containerObj = bpy.context.object
         containerObj.name = newName
+        
         #copy the object's transformation data into the container
         containerObj.location = seqObj.location
         containerObj.scale = seqObj.scale
         containerObj.rotation_euler = seqObj.rotation_euler
         containerObj.rotation_quaternion = seqObj.rotation_quaternion   #just in case
+        
         #copy the object's animation data into the container
         #http://blender.stackexchange.com/questions/27136/how-to-copy-keyframes-from-one-action-to-other
         if(seqObj.animation_data != None):
@@ -282,8 +286,6 @@ class MeshSequence:
         meshToObject = {}
         #create a placeholder for the object's material, objMaterial
         objMaterial = None
-        
-        scn = bpy.context.scene
         
         #for each mesh (including the empty mesh):
         for mesh in self.meshes:
@@ -388,7 +390,8 @@ class MeshSequenceController:
 
     def remove(self, _obj):
         self.sequences.remove(_obj)
-        #TODO: clear out the object's meshes
+        #clear out the object's meshes
+        _obj.freeMeshes()
     
     def findMSOfromObject(self, _obj):
         for MSO in self.sequences:
@@ -427,6 +430,7 @@ class AddMeshSequence(bpy.types.Operator):
         
         return {'FINISHED'}
 
+#the function for adding "OBJ Sequence" to the Add > Mesh menu
 def menu_func(self, context):
     self.layout.operator(AddMeshSequence.bl_idname, icon="PLUGIN")
 
@@ -457,9 +461,25 @@ class LoadMeshSequence(bpy.types.Operator):
         #print("MSO object name: " + MSO.seqObject.name)
         return {'FINISHED'}
 
+class BakeMeshSequence(bpy.types.Operator):
+    """Bake OBJ Sequence"""
+    bl_idname = "ms.bake_sequence"
+    bl_label = "Bake OBJ Sequence"
+    #bl_options = {'UNDO'}
+    
+    def execute(self, context):
+        global MSC
+        obj = context.object
+        MSO = MSC.findMSOfromObject(obj)
+        MSO.bakeSequence()
+        #update the frame so the right shape is visible
+        bpy.context.scene.frame_current = bpy.context.scene.frame_current
+        return {'FINISHED'}
+
+#The properties panel added to the Object Properties Panel list        
 class MeshSequencePanel(bpy.types.Panel):
     bl_idname = 'OBJ_SEQUENCE_properties'
-    bl_label = 'OBJ Sequence'
+    bl_label = 'OBJ Sequence'   #The name that will show up in the properties panel
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = 'object'
@@ -471,7 +491,10 @@ class MeshSequencePanel(bpy.types.Panel):
 
         objSettings = obj.mesh_sequence_settings
         if(objSettings.initialized == True):
+            #Only show options for loading a sequence if one hasn't been loaded yet
             if(objSettings.loaded == False):
+                #layout.label("Load OBJ Sequence", icon='FILE_MOVIE')
+                layout.label("Load OBJ Sequence:", icon='FILE_FOLDER')
                 #path to directory
                 row = layout.row()
                 row.prop(objSettings, "dirPath")
@@ -495,6 +518,14 @@ class MeshSequencePanel(bpy.types.Panel):
             #playback speed
             row = layout.row()
             row.prop(objSettings, "speed")
+            
+            #Show the Bake Sequence button only if a sequence has been loaded
+            if(objSettings.loaded == True):
+                layout.row().separator()
+                row = layout.row()
+                box = row.box()
+                box.operator("ms.bake_sequence")
+                box.label("Warning: Cannot be undone!")
     
 def register():
     #print("Registered the OBJ Sequence addon")
@@ -506,6 +537,7 @@ def register():
     bpy.app.handlers.frame_change_pre.append(updateFrame)
     bpy.utils.register_class(AddMeshSequence)
     bpy.utils.register_class(LoadMeshSequence)
+    bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(MeshSequencePanel)
     bpy.types.INFO_MT_mesh_add.append(menu_func)
     #for running the script, instead of installing the add-on
@@ -517,6 +549,7 @@ def unregister():
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
     bpy.utils.unregister_class(AddMeshSequence)
     bpy.utils.unregister_class(LoadMeshSequence)
+    bpy.utils.unregister_class(BakeMeshSequence)
     bpy.utils.unregister_class(MeshSequencePanel)
     bpy.types.INFO_MT_mesh_add.remove(menu_func)
 
