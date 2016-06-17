@@ -11,12 +11,15 @@ Stop motion OBJ allows you to import a sequence of OBJ files and render them as 
 - Variable playback speed
 - Multiple playback modes
 - Object can have materials
+- Bake sequence
+  - This allows the sequence to be seen on other computers without installing the addon (in a renderfarm, for example)
 
 ### Limitations
 - Only absolute filepaths are supported (for now)
 - File numbers must be zero-padded
 - No motion blur
 - Only OBJ files are supported, as implied by the addon's name
+- Doesn't work with physics
 
 ## Installing Stop motion OBJ
 - Download mesh_sequence_controller.py and move it to Blender's addons folder (something like C:\Program Files\Blender Foundation\Blender\2.77\scripts\addons)
