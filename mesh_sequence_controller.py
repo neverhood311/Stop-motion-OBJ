@@ -46,7 +46,9 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         name='Start Frame',
         update=updateStartFrame,
         default=1)
+    #A long list of mesh names
     meshNames = bpy.props.StringProperty()
+    numMeshes = bpy.props.IntProperty()
     initialized = bpy.props.BoolProperty(default=False)
     loaded = bpy.props.BoolProperty(default=False)
     
@@ -67,48 +69,54 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         step=25,
         precision=2,
         default=1
-    )
+    )  
 
-class MeshSequence:
-    """This class contains a reference to a sequence object as well as all of the meshes in the sequence"""
-    
-    bl_idname = "mesh_sequence_controller"
-    bl_label = "Store and control animation of a mesh sequence"
+class MeshSequenceController:
     
     def __init__(self):
-        #an array of meshes in the sequence
-        self.meshes = []
+        #a list of sequence objects
+        self.sequences = []
+        #map objects to their list of names
+        self.seqMeshNames = {}
+        #for each object in bpy.data.objects:
+        for obj in bpy.data.objects:
+        #for obj in bpy.context.scene.objects:
+            #if it's a sequence object (we'll have to figure out how to indicate this, probably with a T/F custom property)
+            if(obj.mesh_sequence_settings.initialized == True):
+                #print("I am: " + obj.name)
+                #call sequence.loadSequenceFromData() on it
+                self.loadSequenceFromData(obj)
+                self.sequences.append(obj)
+                self.seqMeshNames[obj] = obj.mesh_sequence_settings.meshNames
+            #else:
+                #print("I'm NOT: " + obj.name)
+        
+    def newMeshSequence(self):
         #create an empty mesh
         emptyMesh = bpy.data.meshes.new('emptyMesh')
-        self.meshes.append(emptyMesh)
+        #give it a fake user
+        emptyMesh.use_fake_user = True
         #create a new object containing the empty mesh
-        self.seqObject = bpy.data.objects.new("sequence", self.meshes[0])
+        theObj = bpy.data.objects.new("sequence", emptyMesh)
+        theObj.mesh_sequence_settings.meshNames = emptyMesh.name + '/'
         #link the object to the scene
         scn = bpy.context.scene
-        scn.objects.link(self.seqObject)
+        scn.objects.link(theObj)
         
         #deselect all other objects
         deselectAll()
         
         #select the object
-        scn.objects.active = self.seqObject
-        self.seqObject.select = True
+        scn.objects.active = theObj
+        theObj.select = True
         
-        #set some defaults
-        #self.firstNum = -1
-        #self.lastNum = -1
-        #self.numFrames = -1
-        self.startFrame = 1
-        self.meshNames = ''
-        
-        self.seqObject.mesh_sequence_settings.initialized = True
-        
-        
+        theObj.mesh_sequence_settings.initialized = True
+        return theObj
     
-    def loadSequenceFromFile(self, _dir, _file):
+    def loadSequenceFromFile(self, _obj, _dir, _file):
         scn = bpy.context.scene
-        #add a custom text property to the sequence object
-        self.seqObject.mesh_sequence_settings.meshNames = ''
+        #clear out the object's meshNames
+        #_obj.mesh_sequence_settings.meshNames = ''
         #combine the file directory with the filename and the .obj extension
         full_filepath = os.path.join(_dir, _file + '*.obj')
         #print(full_filepath)
@@ -122,8 +130,7 @@ class MeshSequence:
             #make a copy of the object's mesh and give it a fake user (so it doesn't get deleted)
             tmpMesh = tmpObject.data.copy()
             tmpMesh.use_fake_user = True
-            #add its mesh to the meshes list
-            self.meshes.append(tmpMesh)
+            
             #select the object
             tmpObject.select = True
             #delete it
@@ -131,85 +138,79 @@ class MeshSequence:
             #add the new mesh's name to the sequence object's text property
             #add the '/' character as a delimiter
             #http://stackoverflow.com/questions/1976007/what-characters-are-forbidden-in-windows-and-linux-directory-names
-            self.seqObject.mesh_sequence_settings.meshNames += tmpMesh.name + '/'
+            _obj.mesh_sequence_settings.meshNames += tmpMesh.name + '/'
             numFrames+=1
-            
+        
+        _obj.mesh_sequence_settings.numMeshes = numFrames+1
         if(numFrames > 0):
             #remove the last '/' from the string
-            self.seqObject.mesh_sequence_settings.meshNames = self.seqObject.mesh_sequence_settings.meshNames[:-1]
-            
+            _obj.mesh_sequence_settings.meshNames = _obj.mesh_sequence_settings.meshNames[:-1]
+            #add these names to the dictionary
+            self.seqMeshNames[_obj] = _obj.mesh_sequence_settings.meshNames
             #set the sequence object's mesh to meshes[1]
-            self.seqObject.data = self.meshes[1]
-            #set the object's:
-            #firstNum
-            #self.firstNum = self.seqObject.mesh_sequence_settings.firstNum = _first
-            #lastNum
-            #self.lastNum = self.seqObject.mesh_sequence_settings.lastNum = _last
-            #numFrames
-            #self.numFrames = self.seqObject.mesh_sequence_settings.numFrames = _last - _first
-            #startFrame
-            self.startFrame = self.seqObject.mesh_sequence_settings.startFrame = 1
+            self.setFrameObj(_obj, scn.frame_current)
             
             #select the sequence object
-            scn.objects.active = self.seqObject
-            self.seqObject.select = True
+            scn.objects.active = _obj
+            _obj.select = True
             
-            self.seqObject.mesh_sequence_settings.loaded = True
+            _obj.mesh_sequence_settings.loaded = True
         
         return numFrames
     
     #this is used when a mesh sequence object has been saved and subsequently found in a .blend file
-    def loadSequenceFromData(self, _object):
+    def loadSequenceFromData(self, _obj):
         scn = bpy.context.scene
-        oldName = self.seqObject.name
-        #assign _object to self
-        self.seqObject = _object
-        #get the object's custom properties:
-        #firstNum
-        #self.firstNum = _object.mesh_sequence_settings.firstNum
-        #lastNum
-        #self.lastNum = _object.mesh_sequence_settings.lastNum
-        #numFrames
-        #self.numFrames = _object.mesh_sequence_settings.numFrames
-        #startFrame
-        self.startFrame = _object.mesh_sequence_settings.startFrame
-        #list of meshes
-        self.meshNames = _object.mesh_sequence_settings.meshNames
-        #split meshNames into individual mesh names
-        #for each mesh
-        for meshName in self.meshNames.split('/'):
-            #add it to self.meshes
-            self.meshes.append(bpy.data.meshes[meshName])
+        #count the number of mesh names
+        #(helps with backwards compatibility)
+        _obj.mesh_sequence_settings.numMeshes = len(_obj.mesh_sequence_settings.meshNames.split('/'))
+        #add these names to the dictionary
+        self.seqMeshNames[_obj] = _obj.mesh_sequence_settings.meshNames
         
         #deselect all objects (otherwise everything that is selected will get deleted)
         deselectAll()
-            
-        #select and delete the empty object and empty mesh that __init__ created
-        scn.objects.active = bpy.data.objects[oldName]
-        bpy.data.objects[oldName].select = True
-        bpy.ops.object.delete()
         
         #select the sequence object
-        scn.objects.active = self.seqObject
-        self.seqObject.select = True
+        scn.objects.active = _obj
+        _obj.select = True
         #set the frame number
-        self.setFrame(scn.frame_current)
+        self.setFrameObj(_obj, scn.frame_current)
         
-        self.seqObject.mesh_sequence_settings.loaded = True
-        
-        
-    def setStartFrame(self, _frameNum):
-        self.startFrame = _frameNum
-        
+        _obj.mesh_sequence_settings.loaded = True
     
-    def getMeshIdxFromFrame(self, _frameNum):
-        numFrames = len(self.meshes) - 1
+    def getMesh(self, _obj, _idx):
+        #get the object's meshNames
+        #split it into individual mesh names
+        names = _obj.mesh_sequence_settings.meshNames.split('/')
+        #return the one at _idx
+        name = names[_idx]
+        return bpy.data.meshes[name]
+    
+    def setFrame(self, _frame):
+        #check for deleted objects:
+        #get all objects in the scene
+        objs = bpy.data.objects.values()
+        #for each mesh sequence
+        for seq in self.sequences:
+            #if its sequence object is not in the scene
+            if (seq in objs) == False:
+                #print('removing one')
+                self.sequences.remove(seq)
+                self.freeMeshes(self.seqMeshNames[seq])
+        
+        #for each sequence object:
+        for obj in self.sequences:
+            #call object.setFrame(_frame)
+            self.setFrameObj(obj, _frame)
+
+    def getMeshIdxFromFrame(self, _obj, _frameNum):
+        numFrames = _obj.mesh_sequence_settings.numMeshes - 1
         #convert the frame number into an array index
-        idx = _frameNum - (self.seqObject.mesh_sequence_settings.startFrame - 1)
+        idx = _frameNum - (_obj.mesh_sequence_settings.startFrame - 1)
         #adjust for playback speed
-        idx = int(idx * self.seqObject.mesh_sequence_settings.speed)
+        idx = int(idx * _obj.mesh_sequence_settings.speed)
         #get the playback mode
-        frameMode = int(self.seqObject.mesh_sequence_settings.frameMode)
+        frameMode = int(_obj.mesh_sequence_settings.frameMode)
         #0: Blank
         if(frameMode == 0):
             if(idx < 1 or idx >= numFrames + 1):
@@ -236,45 +237,38 @@ class MeshSequence:
             idx += 1
         return idx
     
-    def setFrame(self, _frameNum):
-        idx = self.getMeshIdxFromFrame(_frameNum)
+    def setFrameObj(self, _obj, _frameNum):
+        idx = self.getMeshIdxFromFrame(_obj, _frameNum)
         #store the current mesh for grabbing the material later
-        prev_mesh = self.seqObject.data
+        prev_mesh = _obj.data
         #swap the meshes
-        self.seqObject.data = self.meshes[idx]
+        _obj.data = self.getMesh(_obj, idx)
         #if the previous mesh had a material, copy it to the new one
         if(len(prev_mesh.materials) > 0):
             prev_material = prev_mesh.materials[0]
-            self.seqObject.data.materials.clear()
-            self.seqObject.data.materials.append(prev_material)
-        
-    def freeMeshes(self):
-        #for each mesh
-        for mesh in self.meshes:
-            #remove the fake user from the mesh
-            mesh.use_fake_user = False
+            _obj.data.materials.clear()
+            _obj.data.materials.append(prev_material)
     
     #create a separate object for each mesh in the array, each visible for only one frame
-    def bakeSequence(self):
-        seqObj = self.seqObject
+    def bakeSequence(self, _obj):
         scn = bpy.context.scene
         #create an empty object
         bpy.ops.object.empty_add(type='PLAIN_AXES')
         containerObj = bpy.context.active_object
         #rename the container object to "C_{object's current name}" ('C' stands for 'Container')
-        newName = "C_" + seqObj.name
+        newName = "C_" + _obj.name
         containerObj.name = newName
         
         #copy the object's transformation data into the container
-        containerObj.location = seqObj.location
-        containerObj.scale = seqObj.scale
-        containerObj.rotation_euler = seqObj.rotation_euler
-        containerObj.rotation_quaternion = seqObj.rotation_quaternion   #just in case
+        containerObj.location = _obj.location
+        containerObj.scale = _obj.scale
+        containerObj.rotation_euler = _obj.rotation_euler
+        containerObj.rotation_quaternion = _obj.rotation_quaternion   #just in case
         
         #copy the object's animation data into the container
         #http://blender.stackexchange.com/questions/27136/how-to-copy-keyframes-from-one-action-to-other
-        if(seqObj.animation_data != None):
-            seq_anim = seqObj.animation_data
+        if(_obj.animation_data != None):
+            seq_anim = _obj.animation_data
             properties = [p.identifier for p in seq_anim.bl_rna.properties if not p.is_readonly]
             if(containerObj.animation_data == None):
                 containerObj.animation_data_create()
@@ -287,8 +281,10 @@ class MeshSequence:
         #create a placeholder for the object's material, objMaterial
         objMaterial = None
         
+        meshNames = _obj.mesh_sequence_settings.meshNames.split('/')
         #for each mesh (including the empty mesh):
-        for mesh in self.meshes:
+        for meshName in meshNames:
+            mesh = bpy.data.meshes[meshName]
             #create an object for the mesh and add it to the scene
             tmpObj = bpy.data.objects.new('o_' + mesh.name, mesh)
             scn.objects.link(tmpObj)
@@ -314,7 +310,8 @@ class MeshSequence:
         #if objMaterial was set:
         if(objMaterial != None):
             #for each mesh:
-            for mesh in self.meshes:
+            for meshName in meshNames:
+                mesh = bpy.data.meshes[meshName]
                 #set the material to objMaterial
                 mesh.materials.clear()
                 mesh.materials.append(objMaterial)
@@ -322,8 +319,8 @@ class MeshSequence:
         #for each frame of the animation:
         for frameNum in range(scn.frame_start, scn.frame_end + 1):
             #figure out which mesh is visible
-            idx = self.getMeshIdxFromFrame(frameNum)
-            frameMesh = self.meshes[idx]
+            idx = self.getMeshIdxFromFrame(_obj, frameNum)
+            frameMesh = self.getMesh(_obj, idx)
             #use the dictionary to find which object the mesh belongs to
             frameObj = meshToObject[frameMesh]
             #add two keyframes to the object at the current frame:
@@ -343,60 +340,25 @@ class MeshSequence:
         
         #delete the sequence object
         deselectAll()
-        scn.objects.active = self.seqObject
-        self.seqObject.select = True
+        scn.objects.active = _obj
+        _obj.select = True
         bpy.ops.object.delete()
-        
-
-class MeshSequenceController:
     
-    def __init__(self):
-        self.sequences = []
-        #for each object in bpy.data.objects:
-        for obj in bpy.data.objects:
-        #for obj in bpy.context.scene.objects:
-            #if it's a sequence object (we'll have to figure out how to indicate this, probably with a T/F custom property)
-            if(obj.mesh_sequence_settings.initialized == True):
-                #create a MeshSequence object for it
-                tmpSeq = MeshSequence()
-                #call sequence.loadSequenceFromData() on it
-                tmpSeq.loadSequenceFromData(obj)
-                self.sequences.append(tmpSeq)
-            #else:
-                #print("I'm NOT: " + obj.name)
-        
-    
-    def setFrame(self, _frame):
-        #check for deleted objects:
-        #get all objects in the scene
-        objs = bpy.data.objects.values()
-        #for each mesh sequence
-        for seq in self.sequences:
-            #if its sequence object is not in the scene
-            if (seq.seqObject in objs) == False:
-                #free the object's meshes
-                seq.freeMeshes()
-                #remove the object from the sequence array
-                #print('removing: ' + seq.seqObject.name)
-                self.sequences.remove(seq)
-        
-        #for each sequence object:
-        for obj in self.sequences:
-            #call object.setFrame(_frame)
-            obj.setFrame(_frame)
-
     def append(self, _obj):
         self.sequences.append(_obj)
 
     def remove(self, _obj):
         self.sequences.remove(_obj)
         #clear out the object's meshes
-        _obj.freeMeshes()
+        self.freeMeshes(_obj)
     
-    def findMSOfromObject(self, _obj):
-        for MSO in self.sequences:
-            if MSO.seqObject == _obj:
-                return MSO
+    def freeMeshes(self, _names):
+        names = _names.split('/')
+        #for each mesh
+        for name in names:
+            #print("freeing " + name)
+            #remove the fake user from the mesh
+            bpy.data.meshes[name].use_fake_user = False
     
     def cleanupExtraMeshes(self):
         #TODO
@@ -405,7 +367,7 @@ class MeshSequenceController:
         pass
 
 @persistent
-def initSequenceController(dummy):	#apparently we need a dummy variable?
+def initSequenceController(dummy):    #apparently we need a dummy variable?
     #print("initSequenceController was just called")
     global MSC
     #create a new MeshSequenceController object
@@ -422,11 +384,10 @@ class AddMeshSequence(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     def execute(self, context):
-        #create a new MeshSequence object
-        tmpMSO = MeshSequence()
-        #add it to the MeshSequenceController, MSC
         global MSC
-        MSC.append(tmpMSO)
+        obj = MSC.newMeshSequence()
+        #add it to the MeshSequenceController, MSC
+        MSC.append(obj)
         
         return {'FINISHED'}
 
@@ -447,10 +408,8 @@ class LoadMeshSequence(bpy.types.Operator):
         dirPath = obj.mesh_sequence_settings.dirPath
         #get the object's filename
         fileName = obj.mesh_sequence_settings.fileName
-        #find the MeshSequence object that contains this object
-        MSO = MSC.findMSOfromObject(obj)
         
-        num = MSO.loadSequenceFromFile(dirPath, fileName)
+        num = MSC.loadSequenceFromFile(obj, dirPath, fileName)
         if(num == 0):
             self.report({'ERROR'}, "Invalid file path. Please enter a Root Folder and File Name. Make sure to uncheck 'Relative Path'")
             return {'CANCELLED'}
@@ -470,8 +429,7 @@ class BakeMeshSequence(bpy.types.Operator):
     def execute(self, context):
         global MSC
         obj = context.object
-        MSO = MSC.findMSOfromObject(obj)
-        MSO.bakeSequence()
+        MSC.bakeSequence(obj)
         #update the frame so the right shape is visible
         bpy.context.scene.frame_current = bpy.context.scene.frame_current
         return {'FINISHED'}
