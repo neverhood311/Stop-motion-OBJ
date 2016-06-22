@@ -20,6 +20,8 @@ Stop motion OBJ allows you to import a sequence of OBJ files and render them as 
 - No motion blur
 - Only OBJ files are supported, as implied by the addon's name
 - Doesn't work with physics
+- Only single-object files are supported
+- Sequences can't be duplicated (for now)
 
 ## Installing Stop motion OBJ
 - Download mesh_sequence_controller.py and move it to Blender's addons folder (something like C:\Program Files\Blender Foundation\Blender\2.77\scripts\addons)
