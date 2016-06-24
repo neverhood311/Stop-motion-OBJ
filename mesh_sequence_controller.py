@@ -1,6 +1,6 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
-#   Stop motion OBJ: An OBJ sequence importer for Blender
+#   Stop motion OBJ: A Mesh sequence importer for Blender
 #   Copyright (C) 2016  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
@@ -21,11 +21,11 @@
 
 bl_info = {
     "name" : "Stop motion OBJ",
-    "description": "Import a sequence of OBJ files and display them each as a single frame of animation",
+    "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
     "version": (0, 1),
     "blender": (2, 77, 0),
-    "location": "View 3D > Add > Mesh > OBJ Sequence",
+    "location": "View 3D > Add > Mesh > Mesh Sequence",
     "warning": "",
     "category": "Add Mesh",
     "wiki_url": "https://github.com/neverhood311/Stop-motion-OBJ",
@@ -92,7 +92,15 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         step=25,
         precision=2,
         default=1
-    )  
+    )
+    
+    #the file format for files in the sequence (OBJ, STL, or PLY)
+    fileFormat = bpy.props.EnumProperty(
+        items = [('0', 'OBJ', 'Wavefront OBJ'),
+                ('1', 'STL', 'STereoLithography'),
+                ('2', 'PLY', 'Stanford PLY')],
+        name='File Format',
+        default='0')
 
 class MeshSequenceController:
     
@@ -138,22 +146,39 @@ class MeshSequenceController:
     
     def loadSequenceFromFile(self, _obj, _dir, _file):
         scn = bpy.context.scene
-        #clear out the object's meshNames
-        #_obj.mesh_sequence_settings.meshNames = ''
+        #get the file format
+        format = 'obj'
+        formatidx = int(_obj.mesh_sequence_settings.fileFormat)
+        importFunc = None
+        #OBJ
+        if(formatidx == 0):
+            format = 'obj'
+            importFunc = bpy.ops.import_scene.obj
+        #STL
+        elif(formatidx == 1):
+            format = 'stl'
+            importFunc = bpy.ops.import_mesh.stl
+        #PLY
+        elif(formatidx == 2):
+            format = 'ply'
+            importFunc = bpy.ops.import_mesh.ply
         #combine the file directory with the filename and the .obj extension
-        full_filepath = os.path.join(_dir, _file + '*.obj')
-        #print(full_filepath)
+        full_filepath = os.path.join(_dir, _file + '*.' + format)
+        print(full_filepath)
         numFrames = 0
         #for each file that matches the glob query:
         for file in glob.glob(full_filepath):
-            #import the OBJ file
-            bpy.ops.import_scene.obj(filepath = file)
+            #import the mesh file
+            #bpy.ops.import_scene.obj(filepath = file)
+            importFunc(filepath = file)
             #get a reference to it
             tmpObject = bpy.context.selected_objects[0]
             #make a copy of the object's mesh and give it a fake user (so it doesn't get deleted)
-            tmpMesh = tmpObject.data.copy()
+            #tmpMesh = tmpObject.data.copy()
+            tmpMesh = tmpObject.data    #don't copy it; just copy the pointer. This cuts memory usage in half.
             tmpMesh.use_fake_user = True
-            
+            #deselect all objects
+            deselectAll()
             #select the object
             tmpObject.select = True
             #delete it
@@ -399,11 +424,11 @@ def initSequenceController(dummy):    #apparently we need a dummy variable?
 
 #Add mesh sequence operator
 class AddMeshSequence(bpy.types.Operator):
-    """Add OBJ Sequence"""
+    """Add Mesh Sequence"""
     #what the operator is called
     bl_idname = "ms.add_mesh_sequence"
     #what shows up in the menu
-    bl_label = "OBJ Sequence"
+    bl_label = "Mesh Sequence"
     bl_options = {'UNDO'}
 
     def execute(self, context):
@@ -414,14 +439,14 @@ class AddMeshSequence(bpy.types.Operator):
         
         return {'FINISHED'}
 
-#the function for adding "OBJ Sequence" to the Add > Mesh menu
+#the function for adding "Mesh Sequence" to the Add > Mesh menu
 def menu_func(self, context):
     self.layout.operator(AddMeshSequence.bl_idname, icon="PLUGIN")
 
 class LoadMeshSequence(bpy.types.Operator):
-    """Load OBJ Sequence"""
+    """Load Mesh Sequence"""
     bl_idname = "ms.load_mesh_sequence"
-    bl_label = "Load OBJ Sequence"
+    bl_label = "Load Mesh Sequence"
     bl_options = {'UNDO'}
     
     def execute(self, context):
@@ -434,7 +459,7 @@ class LoadMeshSequence(bpy.types.Operator):
         
         num = MSC.loadSequenceFromFile(obj, dirPath, fileName)
         if(num == 0):
-            self.report({'ERROR'}, "Invalid file path. Please enter a Root Folder and File Name. Make sure to uncheck 'Relative Path'")
+            self.report({'ERROR'}, "Invalid file path. Make sure the Root Folder, File Name, and File Format are correct. Make sure to uncheck 'Relative Path'")
             return {'CANCELLED'}
         
         #print("We've loaded the OBJ sequence!")
@@ -444,9 +469,9 @@ class LoadMeshSequence(bpy.types.Operator):
         return {'FINISHED'}
 
 class BakeMeshSequence(bpy.types.Operator):
-    """Bake OBJ Sequence"""
+    """Bake Mesh Sequence"""
     bl_idname = "ms.bake_sequence"
-    bl_label = "Bake OBJ Sequence"
+    bl_label = "Bake Mesh Sequence"
     #bl_options = {'UNDO'}
     
     def execute(self, context):
@@ -460,7 +485,7 @@ class BakeMeshSequence(bpy.types.Operator):
 #The properties panel added to the Object Properties Panel list        
 class MeshSequencePanel(bpy.types.Panel):
     bl_idname = 'OBJ_SEQUENCE_properties'
-    bl_label = 'OBJ Sequence'   #The name that will show up in the properties panel
+    bl_label = 'Mesh Sequence'   #The name that will show up in the properties panel
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = 'object'
@@ -474,8 +499,8 @@ class MeshSequencePanel(bpy.types.Panel):
         if(objSettings.initialized == True):
             #Only show options for loading a sequence if one hasn't been loaded yet
             if(objSettings.loaded == False):
-                #layout.label("Load OBJ Sequence", icon='FILE_MOVIE')
-                layout.label("Load OBJ Sequence:", icon='FILE_FOLDER')
+                #layout.label("Load Mesh Sequence", icon='FILE_MOVIE')
+                layout.label("Load Mesh Sequence:", icon='FILE_FOLDER')
                 #path to directory
                 row = layout.row()
                 row.prop(objSettings, "dirPath")
@@ -484,9 +509,15 @@ class MeshSequencePanel(bpy.types.Panel):
                 row = layout.row()
                 row.prop(objSettings, "fileName")
                 
+                #file extension
+                row = layout.row()
+                row.prop(objSettings, "fileFormat")
+                
                 #button for loading
                 row = layout.row()
                 row.operator("ms.load_mesh_sequence")
+                
+                
             
             #start frame
             row = layout.row()
