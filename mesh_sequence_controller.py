@@ -174,7 +174,8 @@ class MeshSequenceController:
             #get a reference to it
             tmpObject = bpy.context.selected_objects[0]
             #make a copy of the object's mesh and give it a fake user (so it doesn't get deleted)
-            tmpMesh = tmpObject.data.copy()
+            #tmpMesh = tmpObject.data.copy()
+            tmpMesh = tmpObject.data    #don't copy it; just copy the pointer. This cuts memory usage in half.
             tmpMesh.use_fake_user = True
             #deselect all objects
             deselectAll()
