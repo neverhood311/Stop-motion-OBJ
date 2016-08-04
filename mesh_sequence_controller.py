@@ -166,8 +166,10 @@ class MeshSequenceController:
         full_filepath = os.path.join(_dir, _file + '*.' + format)
         print(full_filepath)
         numFrames = 0
+        unsortedFiles = glob.glob(full_filepath)
+        sortedFiles = sorted(unsortedFiles)
         #for each file that matches the glob query:
-        for file in glob.glob(full_filepath):
+        for file in sortedFiles:
             #import the mesh file
             #bpy.ops.import_scene.obj(filepath = file)
             importFunc(filepath = file)
