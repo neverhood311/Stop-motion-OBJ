@@ -3,7 +3,11 @@ A Blender add-on for importing a sequence of meshes as frames
 
 Stop motion OBJ allows you to import a sequence of OBJ (or STL or PLY) files and render them as individual frames. Have a RealFlow animation but want to render it in Blender? This addon is for you! Currently tested for Blender 2.77.1.
 
-If you find this add-on helpful, please consider donating Bitcoin to support development: 16Bbv5jmKJ2T3dqw2rbaiL6vsoZvyNvaU1
+If you find this add-on helpful, please consider donating to support development:
+
+Bitcoin wallet: 16Bbv5jmKJ2T3dqw2rbaiL6vsoZvyNvaU1
+
+PayPal: https://www.paypal.me/justinj
 
 ### IMPORTANT
 - File numbers must be zero-padded
