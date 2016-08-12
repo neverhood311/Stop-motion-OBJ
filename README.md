@@ -30,9 +30,11 @@ PayPal: https://www.paypal.me/justinj
 - Only absolute filepaths are supported (for now)
 - File numbers must be zero-padded
 - No motion blur
-- Doesn't work with physics
+- ~~Doesn't work with physics~~ 
+  - (It actually works with rigid body physics. In Rigid Body Collisions set Shape to 'Mesh' and Source to 'Base')
 - Only single-object files are supported
-- Sequences can't be duplicated (for now)
+- ~~Sequences can't be duplicated (for now)~~
+  - Sequences can now be duplicated, but they share a material. For a duplicate sequence with a different material, you have to re-import the sequence.
 
 ## Installing Stop motion OBJ
 - Download mesh_sequence_controller.py and move it to Blender's addons folder (something like C:\Program Files\Blender Foundation\Blender\2.77\scripts\addons)
