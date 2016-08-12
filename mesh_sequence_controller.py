@@ -105,10 +105,6 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
 class MeshSequenceController:
     
     def __init__(self):
-        #a list of sequence objects
-        self.sequences = []
-        #map objects to their list of names
-        self.seqMeshNames = {}
         #for each object in bpy.data.objects:
         for obj in bpy.data.objects:
         #for obj in bpy.context.scene.objects:
@@ -117,16 +113,17 @@ class MeshSequenceController:
                 #print("I am: " + obj.name)
                 #call sequence.loadSequenceFromData() on it
                 self.loadSequenceFromData(obj)
-                self.sequences.append(obj)
-                self.seqMeshNames[obj] = obj.mesh_sequence_settings.meshNames
             #else:
                 #print("I'm NOT: " + obj.name)
+        self.freeUnusedMeshes()
         
     def newMeshSequence(self):
         #create an empty mesh
         emptyMesh = bpy.data.meshes.new('emptyMesh')
         #give it a fake user
         emptyMesh.use_fake_user = True
+        #make sure it knows it's part of a mesh sequence
+        emptyMesh.inMeshSequence = True
         #create a new object containing the empty mesh
         theObj = bpy.data.objects.new("sequence", emptyMesh)
         theObj.mesh_sequence_settings.meshNames = emptyMesh.name + '/'
@@ -175,10 +172,9 @@ class MeshSequenceController:
             importFunc(filepath = file)
             #get a reference to it
             tmpObject = bpy.context.selected_objects[0]
-            #make a copy of the object's mesh and give it a fake user (so it doesn't get deleted)
-            #tmpMesh = tmpObject.data.copy()
             tmpMesh = tmpObject.data    #don't copy it; just copy the pointer. This cuts memory usage in half.
             tmpMesh.use_fake_user = True
+            tmpMesh.inMeshSequence = True
             #deselect all objects
             deselectAll()
             #select the object
@@ -195,8 +191,6 @@ class MeshSequenceController:
         if(numFrames > 0):
             #remove the last '/' from the string
             _obj.mesh_sequence_settings.meshNames = _obj.mesh_sequence_settings.meshNames[:-1]
-            #add these names to the dictionary
-            self.seqMeshNames[_obj] = _obj.mesh_sequence_settings.meshNames
             #set the sequence object's mesh to meshes[1]
             self.setFrameObj(_obj, scn.frame_current)
             
@@ -211,11 +205,15 @@ class MeshSequenceController:
     #this is used when a mesh sequence object has been saved and subsequently found in a .blend file
     def loadSequenceFromData(self, _obj):
         scn = bpy.context.scene
+        t_meshNames = _obj.mesh_sequence_settings.meshNames.split('/')
         #count the number of mesh names
         #(helps with backwards compatibility)
-        _obj.mesh_sequence_settings.numMeshes = len(_obj.mesh_sequence_settings.meshNames.split('/'))
-        #add these names to the dictionary
-        self.seqMeshNames[_obj] = _obj.mesh_sequence_settings.meshNames
+        _obj.mesh_sequence_settings.numMeshes = len(t_meshNames)
+        
+        #make sure the meshes know they're part of a mesh sequence
+        #(helps with backwards compatibility)
+        for t_meshName in t_meshNames:
+            bpy.data.meshes[t_meshName].inMeshSequence = True
         
         #deselect all objects (otherwise everything that is selected will get deleted)
         deselectAll()
@@ -237,21 +235,12 @@ class MeshSequenceController:
         return bpy.data.meshes[name]
     
     def setFrame(self, _frame):
-        #check for deleted objects:
-        #get all objects in the scene
-        objs = bpy.data.objects.values()
-        #for each mesh sequence
-        for seq in self.sequences:
-            #if its sequence object is not in the scene
-            if (seq in objs) == False:
-                #print('removing one')
-                self.sequences.remove(seq)
-                self.freeMeshes(self.seqMeshNames[seq])
-        
-        #for each sequence object:
-        for obj in self.sequences:
-            #call object.setFrame(_frame)
-            self.setFrameObj(obj, _frame)
+        #for each object in the scene
+        for obj in bpy.data.objects:
+            #if it's been loaded and initialized
+            if obj.mesh_sequence_settings.initialized == True and obj.mesh_sequence_settings.loaded == True:
+                #set the frame on the sequence object
+                self.setFrameObj(obj, _frame)
 
     def getMeshIdxFromFrame(self, _obj, _frameNum):
         numFrames = _obj.mesh_sequence_settings.numMeshes - 1
@@ -335,6 +324,8 @@ class MeshSequenceController:
         #for each mesh (including the empty mesh):
         for meshName in meshNames:
             mesh = bpy.data.meshes[meshName]
+            #even though it's kinda still part of a mesh sequence, it's not really anymore
+            mesh.inMeshSequence = False
             #create an object for the mesh and add it to the scene
             tmpObj = bpy.data.objects.new('o_' + mesh.name, mesh)
             scn.objects.link(tmpObj)
@@ -394,27 +385,28 @@ class MeshSequenceController:
         _obj.select = True
         bpy.ops.object.delete()
     
-    def append(self, _obj):
-        self.sequences.append(_obj)
-
-    def remove(self, _obj):
-        self.sequences.remove(_obj)
-        #clear out the object's meshes
-        self.freeMeshes(_obj)
-    
-    def freeMeshes(self, _names):
-        names = _names.split('/')
-        #for each mesh
-        for name in names:
-            #print("freeing " + name)
-            #remove the fake user from the mesh
-            bpy.data.meshes[name].use_fake_user = False
-    
-    def cleanupExtraMeshes(self):
-        #TODO
-        #get every mesh in the scene and set use_fake_user to False
-        #then go through every object in the sequences array and give their meshes fake users
-        pass
+    def freeUnusedMeshes(self):
+        numFreed = 0
+        #for every mesh in the scene
+        for t_mesh in bpy.data.meshes:
+            #if inMeshSequence is set to True
+            if t_mesh.inMeshSequence == True:
+                #set its use_fake_user to False
+                t_mesh.use_fake_user = False
+                numFreed += 1
+        #for every object in the scene
+        for t_obj in bpy.data.objects:
+            #if its mesh sequence has been initialized and loaded
+            if t_obj.mesh_sequence_settings.initialized == True and t_obj.mesh_sequence_settings.loaded == True:
+                #get its meshNames
+                t_meshNames = t_obj.mesh_sequence_settings.meshNames
+                #for each mesh name
+                for t_meshName in t_meshNames.split('/'):
+                    #set its use_fake_user to True
+                    bpy.data.meshes[t_meshName].use_fake_user = True
+                    numFreed -= 1
+        #the remaining meshes with no real or fake users will be garbage collected when Blender is closed
+        print(numFreed, " meshes freed")
 
 @persistent
 def initSequenceController(dummy):    #apparently we need a dummy variable?
@@ -436,8 +428,6 @@ class AddMeshSequence(bpy.types.Operator):
     def execute(self, context):
         global MSC
         obj = MSC.newMeshSequence()
-        #add it to the MeshSequenceController, MSC
-        MSC.append(obj)
         
         return {'FINISHED'}
 
@@ -474,7 +464,7 @@ class BakeMeshSequence(bpy.types.Operator):
     """Bake Mesh Sequence"""
     bl_idname = "ms.bake_sequence"
     bl_label = "Bake Mesh Sequence"
-    #bl_options = {'UNDO'}
+    bl_options = {'UNDO'}
     
     def execute(self, context):
         global MSC
@@ -501,7 +491,6 @@ class MeshSequencePanel(bpy.types.Panel):
         if(objSettings.initialized == True):
             #Only show options for loading a sequence if one hasn't been loaded yet
             if(objSettings.loaded == False):
-                #layout.label("Load Mesh Sequence", icon='FILE_MOVIE')
                 layout.label("Load Mesh Sequence:", icon='FILE_FOLDER')
                 #path to directory
                 row = layout.row()
@@ -539,10 +528,11 @@ class MeshSequencePanel(bpy.types.Panel):
                 row = layout.row()
                 box = row.box()
                 box.operator("ms.bake_sequence")
-                box.label("Warning: Cannot be undone!")
     
 def register():
     #print("Registered the OBJ Sequence addon")
+    #give bpy.types.Mesh a new property that says whether it's part of a mesh sequence
+    bpy.types.Mesh.inMeshSequence = bpy.props.BoolProperty()    #defaults to False
     #register this settings class
     bpy.utils.register_class(MeshSequenceSettings)
     #add this settings class to bpy.types.Object
