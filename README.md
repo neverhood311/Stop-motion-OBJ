@@ -61,3 +61,6 @@ PayPal: https://www.paypal.me/justinj
   - 'Extend' will freeze the first and last frames before and after the mesh sequence, respectively
   - 'Repeat' will repeat the animation
   - 'Bounce' will play the animation in reverse once the sequence has finished
+- Once your sequence is loaded, you can change the shading (smooth or flat) of the entire sequence:
+  - The shading buttons are found in the Mesh Sequence Settings for the object.
+  - Note: The normal shading buttons (in the 3D View "Tools" panel) will only affect the current frame, not the entire sequence.
