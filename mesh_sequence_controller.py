@@ -45,6 +45,7 @@ def deselectAll():
         ob.select = False
 
 #set the frame number for all mesh sequence objects
+#COMMENT THIS persistent OUT WHEN RUNNING FROM THE TEXT EDITOR
 @persistent
 def updateFrame(dummy):
     scn = bpy.context.scene
@@ -288,6 +289,30 @@ class MeshSequenceController:
             _obj.data.materials.clear()
             _obj.data.materials.append(prev_material)
     
+    #iterate over the meshes in the sequence and set their shading to smooth or flat
+    def shadeSequence(self, _obj, _smooth):
+        scn = bpy.context.scene
+        #deselect everything in the scene
+        deselectAll()
+        #select the sequence object
+        scn.objects.active = _obj
+        _obj.select = True
+        #grab the current mesh so we can put it back later
+        origMesh = _obj.data
+        #for each mesh in the sequence
+        for idx in range(1, _obj.mesh_sequence_settings.numMeshes):
+            #set the object's mesh to this mesh
+            _obj.data = self.getMesh(_obj, idx)
+            if(_smooth):
+                #call Blender's shade_smooth operator
+                bpy.ops.object.shade_smooth()
+            else:
+                #call Blender's shade_flat operator
+                bpy.ops.object.shade_flat()
+        #reset the sequence's mesh to the right one based on the current frame
+        _obj.data = origMesh
+        
+    
     #create a separate object for each mesh in the array, each visible for only one frame
     def bakeSequence(self, _obj):
         scn = bpy.context.scene
@@ -408,6 +433,7 @@ class MeshSequenceController:
         #the remaining meshes with no real or fake users will be garbage collected when Blender is closed
         print(numFreed, " meshes freed")
 
+#COMMENT THIS persistent OUT WHEN RUNNING FROM THE TEXT EDITOR
 @persistent
 def initSequenceController(dummy):    #apparently we need a dummy variable?
     #print("initSequenceController was just called")
@@ -460,6 +486,30 @@ class LoadMeshSequence(bpy.types.Operator):
         #print("MSO object name: " + MSO.seqObject.name)
         return {'FINISHED'}
 
+class BatchShadeSmooth(bpy.types.Operator):
+    """Smooth Shade Sequence"""
+    bl_idname = "ms.batch_shade_smooth"
+    bl_label = "Smooth"
+    bl_options = {'UNDO'}
+    
+    def execute(self, context):
+        global MSC
+        obj = context.object
+        MSC.shadeSequence(obj, True)    #True for smooth
+        return {'FINISHED'}
+
+class BatchShadeFlat(bpy.types.Operator):
+    """Flat Shade Sequence"""
+    bl_idname = "ms.batch_shade_flat"
+    bl_label = "Flat"
+    bl_options = {'UNDO'}
+    
+    def execute(self, context):
+        global MSC
+        obj = context.object
+        MSC.shadeSequence(obj, False)   #False for flat
+        return {'FINISHED'}
+        
 class BakeMeshSequence(bpy.types.Operator):
     """Bake Mesh Sequence"""
     bl_idname = "ms.bake_sequence"
@@ -508,8 +558,6 @@ class MeshSequencePanel(bpy.types.Panel):
                 row = layout.row()
                 row.operator("ms.load_mesh_sequence")
                 
-                
-            
             #start frame
             row = layout.row()
             row.prop(objSettings, "startFrame")
@@ -522,6 +570,13 @@ class MeshSequencePanel(bpy.types.Panel):
             row = layout.row()
             row.prop(objSettings, "speed")
             
+            #Show the shading buttons only if a sequence has been loaded
+            if(objSettings.loaded == True):
+                layout.row().separator()
+                row = layout.row(align=True)
+                row.label("Shading:")
+                row.operator("ms.batch_shade_smooth")
+                row.operator("ms.batch_shade_flat")
             #Show the Bake Sequence button only if a sequence has been loaded
             if(objSettings.loaded == True):
                 layout.row().separator()
@@ -541,10 +596,13 @@ def register():
     bpy.app.handlers.frame_change_pre.append(updateFrame)
     bpy.utils.register_class(AddMeshSequence)
     bpy.utils.register_class(LoadMeshSequence)
+    bpy.utils.register_class(BatchShadeSmooth)
+    bpy.utils.register_class(BatchShadeFlat)
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(MeshSequencePanel)
     bpy.types.INFO_MT_mesh_add.append(menu_func)
     #for running the script, instead of installing the add-on
+    #UNCOMMENT THIS FUNCTION CALL WHEN RUNNING FROM THE TEXT EDITOR
     #initSequenceController(0)
 
 def unregister():
@@ -553,6 +611,8 @@ def unregister():
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
     bpy.utils.unregister_class(AddMeshSequence)
     bpy.utils.unregister_class(LoadMeshSequence)
+    bpy.utils.unregister_class(BatchShadeSmooth)
+    bpy.utils.unregister_class(BatchShadeFlat)
     bpy.utils.unregister_class(BakeMeshSequence)
     bpy.utils.unregister_class(MeshSequencePanel)
     bpy.types.INFO_MT_mesh_add.remove(menu_func)
