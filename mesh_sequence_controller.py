@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016  Justin Jensen
+#   Copyright (C) 2016-2017  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ bl_info = {
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
     "version": (0, 1),
-    "blender": (2, 77, 0),
+    "blender": (2, 78, 0),
     "location": "View 3D > Add > Mesh > Mesh Sequence",
     "warning": "",
     "category": "Add Mesh",
@@ -63,9 +63,6 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         description="Only .OBJ files will be listed",
         subtype="DIR_PATH")
     fileName = bpy.props.StringProperty(name='File Name')
-    #firstNum = bpy.props.IntProperty()
-    #lastNum = bpy.props.IntProperty()
-    #numFrames = bpy.props.IntProperty()
     startFrame = bpy.props.IntProperty(
         name='Start Frame',
         update=updateStartFrame,
@@ -111,11 +108,8 @@ class MeshSequenceController:
         #for obj in bpy.context.scene.objects:
             #if it's a sequence object (we'll have to figure out how to indicate this, probably with a T/F custom property)
             if(obj.mesh_sequence_settings.initialized == True):
-                #print("I am: " + obj.name)
                 #call sequence.loadSequenceFromData() on it
                 self.loadSequenceFromData(obj)
-            #else:
-                #print("I'm NOT: " + obj.name)
         self.freeUnusedMeshes()
         
     def newMeshSequence(self):
@@ -169,7 +163,6 @@ class MeshSequenceController:
         #for each file that matches the glob query:
         for file in sortedFiles:
             #import the mesh file
-            #bpy.ops.import_scene.obj(filepath = file)
             importFunc(filepath = file)
             #get a reference to it
             tmpObject = bpy.context.selected_objects[0]
@@ -436,7 +429,6 @@ class MeshSequenceController:
 #COMMENT THIS persistent OUT WHEN RUNNING FROM THE TEXT EDITOR
 @persistent
 def initSequenceController(dummy):    #apparently we need a dummy variable?
-    #print("initSequenceController was just called")
     global MSC
     #create a new MeshSequenceController object
     MSC = MeshSequenceController()
@@ -480,10 +472,6 @@ class LoadMeshSequence(bpy.types.Operator):
             self.report({'ERROR'}, "Invalid file path. Make sure the Root Folder, File Name, and File Format are correct. Make sure to uncheck 'Relative Path'")
             return {'CANCELLED'}
         
-        #print("We've loaded the OBJ sequence!")
-        #print("Dirpath: " + dirPath)
-        #print("filename: " + fileName)
-        #print("MSO object name: " + MSO.seqObject.name)
         return {'FINISHED'}
 
 class BatchShadeSmooth(bpy.types.Operator):
@@ -531,7 +519,6 @@ class MeshSequencePanel(bpy.types.Panel):
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = 'object'
-    #bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
         layout = self.layout
@@ -585,7 +572,6 @@ class MeshSequencePanel(bpy.types.Panel):
                 box.operator("ms.bake_sequence")
     
 def register():
-    #print("Registered the OBJ Sequence addon")
     #give bpy.types.Mesh a new property that says whether it's part of a mesh sequence
     bpy.types.Mesh.inMeshSequence = bpy.props.BoolProperty()    #defaults to False
     #register this settings class
@@ -606,7 +592,6 @@ def register():
     #initSequenceController(0)
 
 def unregister():
-    #print("Unregistered the OBJ Sequence addon")
     bpy.app.handlers.load_post.remove(initSequenceController)
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
     bpy.utils.unregister_class(AddMeshSequence)
