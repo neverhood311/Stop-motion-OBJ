@@ -42,7 +42,7 @@ MSC = None
 
 def deselectAll():
     for ob in bpy.context.scene.objects:
-        ob.select = False
+        ob.select_set(action='DESELECT')
 
 #set the frame number for all mesh sequence objects
 #COMMENT THIS persistent OUT WHEN RUNNING FROM THE TEXT EDITOR
@@ -119,25 +119,29 @@ class MeshSequenceController:
         self.freeUnusedMeshes()
         
     def newMeshSequence(self):
-        #create an empty mesh
-        emptyMesh = bpy.data.meshes.new('emptyMesh')
-        #give it a fake user
-        emptyMesh.use_fake_user = True
+        #create a mesh object
+        bpy.ops.object.add(type='MESH')
+        #get a reference to it
+        theObj = bpy.context.object
+        #change its name to 'sequence'
+        theObj.name = 'sequence'
+        #grab its mesh data and change its name to 'emptyMesh'
+        theMesh = theObj.data
+        theMesh.name = 'emptyMesh'
+        #give the empty mesh a fake user
+        theMesh.use_fake_user = True
         #make sure it knows it's part of a mesh sequence
-        emptyMesh.inMeshSequence = True
-        #create a new object containing the empty mesh
-        theObj = bpy.data.objects.new("sequence", emptyMesh)
-        theObj.mesh_sequence_settings.meshNames = emptyMesh.name + '/'
-        #link the object to the scene
-        scn = bpy.context.scene
-        scn.objects.link(theObj)
+        theMesh.inMeshSequence = True
+        #add the mesh's name to the object's mesh_sequence_settings
+        theObj.mesh_sequence_settings.meshNames = theMesh.name + '/'
         
         #deselect all other objects
         deselectAll()
         
         #select the object
-        scn.objects.active = theObj
-        theObj.select = True
+        scn = bpy.context.scene
+        #scn.objects.active = theObj
+        theObj.select_set(action='SELECT')
         
         theObj.mesh_sequence_settings.initialized = True
         return theObj
