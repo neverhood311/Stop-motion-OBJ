@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2017  Justin Jensen
+#   Copyright (C) 2016-2018  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -23,8 +23,8 @@ bl_info = {
     "name" : "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (0, 1),
-    "blender": (2, 78, 0),
+    "version": (0, 2),
+    "blender": (2, 79, 0),
     "location": "View 3D > Add > Mesh > Mesh Sequence",
     "warning": "",
     "category": "Add Mesh",
@@ -81,6 +81,12 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
                 ('3', 'Bounce', 'Play in reverse at the end of the frame range')],
         name='Frame Mode',
         default='1')
+    
+    #material mode (one material total or one material per frame)
+    perFrameMaterial = bpy.props.BoolProperty(
+        name='Material per Frame',
+        default=True
+    )
     
     #playback speed
     speed = bpy.props.FloatProperty(
@@ -276,11 +282,13 @@ class MeshSequenceController:
         prev_mesh = _obj.data
         #swap the meshes
         _obj.data = self.getMesh(_obj, idx)
-        #if the previous mesh had a material, copy it to the new one
-        if(len(prev_mesh.materials) > 0):
-            prev_material = prev_mesh.materials[0]
-            _obj.data.materials.clear()
-            _obj.data.materials.append(prev_material)
+        # If this object doesn't have materials for each frame
+        if(_obj.mesh_sequence_settings.perFrameMaterial == False):
+            #if the previous mesh had a material, copy it to the new one
+            if(len(prev_mesh.materials) > 0):
+                prev_material = prev_mesh.materials[0]
+                _obj.data.materials.clear()
+                _obj.data.materials.append(prev_material)
     
     #iterate over the meshes in the sequence and set their shading to smooth or flat
     def shadeSequence(self, _obj, _smooth):
@@ -556,6 +564,10 @@ class MeshSequencePanel(bpy.types.Panel):
             #playback speed
             row = layout.row()
             row.prop(objSettings, "speed")
+            
+            #material mode (one material total or one material per frame)
+            row = layout.row()
+            row.prop(objSettings, "perFrameMaterial")
             
             #Show the shading buttons only if a sequence has been loaded
             if(objSettings.loaded == True):
