@@ -85,7 +85,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
     #material mode (one material total or one material per frame)
     perFrameMaterial = bpy.props.BoolProperty(
         name='Material per Frame',
-        default=True
+        default=False
     )
     
     #playback speed
@@ -343,8 +343,6 @@ class MeshSequenceController:
         
         #create a dictionary mapping meshes to new objects, meshToObject
         meshToObject = {}
-        #create a placeholder for the object's material, objMaterial
-        objMaterial = None
         
         meshNames = _obj.mesh_sequence_settings.meshNames.split('/')
         #for each mesh (including the empty mesh):
@@ -357,9 +355,6 @@ class MeshSequenceController:
             scn.objects.link(tmpObj)
             #remove the fake user from the mesh
             mesh.use_fake_user = False
-            #if the mesh has a material, store this in objMaterial
-            if(len(mesh.materials) > 0):
-                objMaterial = mesh.materials[0]
             #add a dictionary entry to meshToObject, the mesh => the object
             meshToObject[mesh] = tmpObj
             #in the object, add keyframes at frames 0 and the last frame of the animation:
@@ -374,14 +369,20 @@ class MeshSequenceController:
             #set the empty object as this object's parent
             tmpObj.parent = containerObj
         
-        #if objMaterial was set:
-        if(objMaterial != None):
+        #if this is a single-material sequence, make sure the material is copied to the whole sequence
+        if(_obj.mesh_sequence_settings.perFrameMaterial == False):
+            #grab the materials from the first frame
+            objMaterials = bpy.data.meshes[meshNames[1]].materials
             #for each mesh:
-            for meshName in meshNames:
+            iterMeshes = iter(meshNames)
+            next(iterMeshes)    #skip the emptyMesh
+            next(iterMeshes)    #skip the first mesh (we'll copy the material from this one into the rest of them)
+            for meshName in iterMeshes:
                 mesh = bpy.data.meshes[meshName]
                 #set the material to objMaterial
                 mesh.materials.clear()
-                mesh.materials.append(objMaterial)
+                for material in objMaterials:
+                    mesh.materials.append(material)
         
         #for each frame of the animation:
         for frameNum in range(scn.frame_start, scn.frame_end + 1):
@@ -549,6 +550,10 @@ class MeshSequencePanel(bpy.types.Panel):
                 row = layout.row()
                 row.prop(objSettings, "fileFormat")
                 
+                #material mode (one material total or one material per frame)
+                row = layout.row()
+                row.prop(objSettings, "perFrameMaterial")
+                
                 #button for loading
                 row = layout.row()
                 row.operator("ms.load_mesh_sequence")
@@ -564,10 +569,6 @@ class MeshSequencePanel(bpy.types.Panel):
             #playback speed
             row = layout.row()
             row.prop(objSettings, "speed")
-            
-            #material mode (one material total or one material per frame)
-            row = layout.row()
-            row.prop(objSettings, "perFrameMaterial")
             
             #Show the shading buttons only if a sequence has been loaded
             if(objSettings.loaded == True):
