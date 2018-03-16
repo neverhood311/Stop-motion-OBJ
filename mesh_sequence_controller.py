@@ -369,7 +369,8 @@ class MeshSequenceController:
             #set the empty object as this object's parent
             tmpObj.parent = containerObj
         
-        #if this is a single-material sequence, make sure the material is copied to the whole sequence
+        #If this is a single-material sequence, make sure the material is copied to the whole sequence
+        #This assumes that the first mesh in the sequence has a material
         if(_obj.mesh_sequence_settings.perFrameMaterial == False):
             #grab the materials from the first frame
             objMaterials = bpy.data.meshes[meshNames[1]].materials
@@ -558,27 +559,27 @@ class MeshSequencePanel(bpy.types.Panel):
                 row = layout.row()
                 row.operator("ms.load_mesh_sequence")
                 
-            #start frame
-            row = layout.row()
-            row.prop(objSettings, "startFrame")
-            
-            #frame mode
-            row = layout.row()
-            row.prop(objSettings, "frameMode")
-            
-            #playback speed
-            row = layout.row()
-            row.prop(objSettings, "speed")
-            
-            #Show the shading buttons only if a sequence has been loaded
             if(objSettings.loaded == True):
+                #start frame
+                row = layout.row()
+                row.prop(objSettings, "startFrame")
+                
+                #frame mode
+                row = layout.row()
+                row.prop(objSettings, "frameMode")
+                
+                #playback speed
+                row = layout.row()
+                row.prop(objSettings, "speed")
+                
+                #Show the shading buttons only if a sequence has been loaded
                 layout.row().separator()
                 row = layout.row(align=True)
                 row.label("Shading:")
                 row.operator("ms.batch_shade_smooth")
                 row.operator("ms.batch_shade_flat")
-            #Show the Bake Sequence button only if a sequence has been loaded
-            if(objSettings.loaded == True):
+                
+                #Bake Sequence button
                 layout.row().separator()
                 row = layout.row()
                 box = row.box()
