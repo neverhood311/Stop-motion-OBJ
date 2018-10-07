@@ -58,23 +58,23 @@ def updateStartFrame(self, context):
     return None
     
 class MeshSequenceSettings(bpy.types.PropertyGroup):
-    dirPath = bpy.props.StringProperty(
+    dirPath: bpy.props.StringProperty(
         name="Root Folder",
         description="Only .OBJ files will be listed",
         subtype="DIR_PATH")
-    fileName = bpy.props.StringProperty(name='File Name')
-    startFrame = bpy.props.IntProperty(
+    fileName: bpy.props.StringProperty(name='File Name')
+    startFrame: bpy.props.IntProperty(
         name='Start Frame',
         update=updateStartFrame,
         default=1)
     #A long list of mesh names
-    meshNames = bpy.props.StringProperty()
-    numMeshes = bpy.props.IntProperty()
-    initialized = bpy.props.BoolProperty(default=False)
-    loaded = bpy.props.BoolProperty(default=False)
+    meshNames: bpy.props.StringProperty()
+    numMeshes: bpy.props.IntProperty()
+    initialized: bpy.props.BoolProperty(default=False)
+    loaded: bpy.props.BoolProperty(default=False)
     
     #out-of-range frame mode
-    frameMode = bpy.props.EnumProperty(
+    frameMode: bpy.props.EnumProperty(
         items = [('0', 'Blank', 'Object disappears when frame is out of range'),
                 ('1', 'Extend', 'First and last frames are duplicated'),
                 ('2', 'Repeat', 'Repeat the animation'),
@@ -83,7 +83,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         default='1')
     
     #playback speed
-    speed = bpy.props.FloatProperty(
+    speed: bpy.props.FloatProperty(
         name='Playback Speed',
         min=0.0001,
         soft_min=0.01,
@@ -93,7 +93,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
     )
     
     #the file format for files in the sequence (OBJ, STL, or PLY)
-    fileFormat = bpy.props.EnumProperty(
+    fileFormat: bpy.props.EnumProperty(
         items = [('0', 'OBJ', 'Wavefront OBJ'),
                 ('1', 'STL', 'STereoLithography'),
                 ('2', 'PLY', 'Stanford PLY')],
@@ -532,7 +532,7 @@ class MeshSequencePanel(bpy.types.Panel):
         if(objSettings.initialized == True):
             #Only show options for loading a sequence if one hasn't been loaded yet
             if(objSettings.loaded == False):
-                layout.label("Load Mesh Sequence:", icon='FILE_FOLDER')
+                layout.label(text= "Load Mesh Sequence:", icon='FILE_FOLDER')
                 #path to directory
                 row = layout.row()
                 row.prop(objSettings, "dirPath")
@@ -565,7 +565,7 @@ class MeshSequencePanel(bpy.types.Panel):
             if(objSettings.loaded == True):
                 layout.row().separator()
                 row = layout.row(align=True)
-                row.label("Shading:")
+                row.label(text="Shading:")
                 row.operator("ms.batch_shade_smooth")
                 row.operator("ms.batch_shade_flat")
             #Show the Bake Sequence button only if a sequence has been loaded
@@ -590,7 +590,7 @@ def register():
     bpy.utils.register_class(BatchShadeFlat)
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(MeshSequencePanel)
-    bpy.types.INFO_MT_mesh_add.append(menu_func)
+    bpy.types.VIEW3D_MT_mesh_add.append(menu_func)
     #for running the script, instead of installing the add-on
     #UNCOMMENT THIS FUNCTION CALL WHEN RUNNING FROM THE TEXT EDITOR
     #initSequenceController(0)
@@ -604,7 +604,7 @@ def unregister():
     bpy.utils.unregister_class(BatchShadeFlat)
     bpy.utils.unregister_class(BakeMeshSequence)
     bpy.utils.unregister_class(MeshSequencePanel)
-    bpy.types.INFO_MT_mesh_add.remove(menu_func)
+    bpy.types.VIEW3D_MT_mesh_add.remove(menu_func)
 
 if __name__ == "__main__":
     register()
