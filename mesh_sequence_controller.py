@@ -182,7 +182,7 @@ class MeshSequenceController:
             #deselect all objects
             deselectAll()
             #select the object
-            tmpObject.select = True
+            tmpObject.select_set(action="SELECT")
             #delete it
             bpy.ops.object.delete()
             #add the new mesh's name to the sequence object's text property
@@ -199,8 +199,8 @@ class MeshSequenceController:
             self.setFrameObj(_obj, scn.frame_current)
             
             #select the sequence object
-            scn.objects.active = _obj
-            _obj.select = True
+            #scn.objects.active = _obj
+            _obj.select_set(action="SELECT")
             
             _obj.mesh_sequence_settings.loaded = True
         
@@ -300,8 +300,8 @@ class MeshSequenceController:
         #deselect everything in the scene
         deselectAll()
         #select the sequence object
-        scn.objects.active = _obj
-        _obj.select = True
+        #scn.objects.active = _obj
+        _obj.select_set(action="SELECT")
         #grab the current mesh so we can put it back later
         origMesh = _obj.data
         #for each mesh in the sequence
@@ -321,6 +321,7 @@ class MeshSequenceController:
     #create a separate object for each mesh in the array, each visible for only one frame
     def bakeSequence(self, _obj):
         scn = bpy.context.scene
+        activeCollection = bpy.context.view_layer.collections.active.collection
         #create an empty object
         bpy.ops.object.empty_add(type='PLAIN_AXES')
         containerObj = bpy.context.active_object
@@ -356,16 +357,16 @@ class MeshSequenceController:
             mesh.inMeshSequence = False
             #create an object for the mesh and add it to the scene
             tmpObj = bpy.data.objects.new('o_' + mesh.name, mesh)
-            scn.objects.link(tmpObj)
+            activeCollection.objects.link(tmpObj)
             #remove the fake user from the mesh
             mesh.use_fake_user = False
             #add a dictionary entry to meshToObject, the mesh => the object
             meshToObject[mesh] = tmpObj
             #in the object, add keyframes at frames 0 and the last frame of the animation:
             #set object.hide to True
-            tmpObj.hide = True
-            tmpObj.keyframe_insert(data_path='hide', frame=scn.frame_start)
-            tmpObj.keyframe_insert(data_path='hide', frame=scn.frame_end)
+            tmpObj.hide_viewport = True
+            tmpObj.keyframe_insert(data_path='hide_viewport', frame=scn.frame_start)
+            tmpObj.keyframe_insert(data_path='hide_viewport', frame=scn.frame_end)
             #set object.hide_render to True
             tmpObj.hide_render = True
             tmpObj.keyframe_insert(data_path='hide_render', frame=scn.frame_start)
@@ -398,23 +399,23 @@ class MeshSequenceController:
             frameObj = meshToObject[frameMesh]
             #add two keyframes to the object at the current frame:
             #set object.hide to False
-            frameObj.hide = False
-            frameObj.keyframe_insert(data_path='hide', frame=frameNum)
+            frameObj.hide_viewport = False
+            frameObj.keyframe_insert(data_path='hide_viewport', frame=frameNum)
             #set object.hide_render to False
             frameObj.hide_render = False
             frameObj.keyframe_insert(data_path='hide_render', frame=frameNum)
             #add two keyframes to the object at the next frame:
             #set object.hide to True
-            frameObj.hide = True
-            frameObj.keyframe_insert(data_path='hide', frame=frameNum+1)
+            frameObj.hide_viewport = True
+            frameObj.keyframe_insert(data_path='hide_viewport', frame=frameNum+1)
             #set object.hide_render to True
             frameObj.hide_render = True
             frameObj.keyframe_insert(data_path='hide_render', frame=frameNum+1)
         
         #delete the sequence object
         deselectAll()
-        scn.objects.active = _obj
-        _obj.select = True
+        #scn.objects.active = _obj
+        _obj.select_set(action="SELECT")
         bpy.ops.object.delete()
     
     def freeUnusedMeshes(self):
