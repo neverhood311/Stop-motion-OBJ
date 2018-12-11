@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2018  Justin Jensen
+#   Copyright (C) 2016-2019  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@ MSC = None
 
 def deselectAll():
     for ob in bpy.context.scene.objects:
-        ob.select_set(action='DESELECT')
+        ob.select_set(state=False)
 
 #set the frame number for all mesh sequence objects
 #COMMENT THIS persistent OUT WHEN RUNNING FROM THE TEXT EDITOR
@@ -83,7 +83,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         default='1')
     
     #material mode (one material total or one material per frame)
-    perFrameMaterial = bpy.props.BoolProperty(
+    perFrameMaterial: bpy.props.BoolProperty(
         name='Material per Frame',
         default=False
     )
@@ -141,7 +141,7 @@ class MeshSequenceController:
         #select the object
         scn = bpy.context.scene
         #scn.objects.active = theObj
-        theObj.select_set(action='SELECT')
+        theObj.select_set(state=True)
         
         theObj.mesh_sequence_settings.initialized = True
         return theObj
@@ -182,7 +182,7 @@ class MeshSequenceController:
             #deselect all objects
             deselectAll()
             #select the object
-            tmpObject.select_set(action="SELECT")
+            tmpObject.select_set(state=True)
             #delete it
             bpy.ops.object.delete()
             #add the new mesh's name to the sequence object's text property
@@ -200,7 +200,7 @@ class MeshSequenceController:
             
             #select the sequence object
             #scn.objects.active = _obj
-            _obj.select_set(action="SELECT")
+            _obj.select_set(state=True)
             
             _obj.mesh_sequence_settings.loaded = True
         
@@ -301,7 +301,7 @@ class MeshSequenceController:
         deselectAll()
         #select the sequence object
         #scn.objects.active = _obj
-        _obj.select_set(action="SELECT")
+        _obj.select_set(state=True)
         #grab the current mesh so we can put it back later
         origMesh = _obj.data
         #for each mesh in the sequence
@@ -415,7 +415,7 @@ class MeshSequenceController:
         #delete the sequence object
         deselectAll()
         #scn.objects.active = _obj
-        _obj.select_set(action="SELECT")
+        _obj.select_set(state=True)
         bpy.ops.object.delete()
     
     def freeUnusedMeshes(self):
