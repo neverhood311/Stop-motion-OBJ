@@ -331,7 +331,7 @@ class MeshSequenceController:
     #create a separate object for each mesh in the array, each visible for only one frame
     def bakeSequence(self, _obj):
         scn = bpy.context.scene
-        activeCollection = bpy.context.view_layer.collections.active.collection
+        activeCollection = bpy.context.collection
         #create an empty object
         bpy.ops.object.empty_add(type='PLAIN_AXES')
         containerObj = bpy.context.active_object
