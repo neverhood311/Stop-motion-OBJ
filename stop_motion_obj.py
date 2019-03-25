@@ -229,6 +229,15 @@ class MeshSequenceController:
         self.setFrameObj(_obj, scn.frame_current)
         
         _obj.mesh_sequence_settings.loaded = True
+
+    def reloadSequenceFromFile(self, _obj, _dir, _file):
+        # TODO: clear out the existing meshes
+
+        # clear out _obj.meshNames
+        _obj.mesh_sequence_settings.meshNames = ''
+
+        # call loadSequenceFromFile()
+        return self.loadSequenceFromFile(_obj, _dir, _file)
     
     def getMesh(self, _obj, _idx):
         #get the object's meshNames
@@ -489,6 +498,29 @@ class LoadMeshSequence(bpy.types.Operator):
         
         return {'FINISHED'}
 
+class ReloadMeshSequence(bpy.types.Operator):
+    """Reload From Disk"""
+    bl_idname = "ms.reload_mesh_sequence"
+    bl_label = "Reload From Disk"
+    bl_options = {'UNDO'}
+
+    def execute(self, context):
+        global MSC
+        obj = context.object
+
+        # get the object's file path
+        dirPath = obj.mesh_sequence_settings.dirPath
+
+        # get the object's filename
+        fileName = obj.mesh_sequence_settings.fileName
+
+        num = MSC.reloadSequenceFromFile(obj, dirPath, fileName)
+        if (num == 0):
+            self.report({'ERROR'}, "Invalid file path. Make sure the Root Folder, File Name, and File Format are correct.")
+            return {'CANCELLED'}
+        
+        return {'FINISHED'}
+
 class BatchShadeSmooth(bpy.types.Operator):
     """Smooth Shade Sequence"""
     bl_idname = "ms.batch_shade_smooth"
@@ -576,6 +608,10 @@ class MeshSequencePanel(bpy.types.Panel):
                 #playback speed
                 row = layout.row()
                 row.prop(objSettings, "speed")
+
+                # Reload From Disk button
+                row = layout.row()
+                row.operator("ms.reload_mesh_sequence")
                 
                 #Show the shading buttons only if a sequence has been loaded
                 layout.row().separator()
@@ -601,6 +637,7 @@ def register():
     bpy.app.handlers.frame_change_pre.append(updateFrame)
     bpy.utils.register_class(AddMeshSequence)
     bpy.utils.register_class(LoadMeshSequence)
+    bpy.utils.register_class(ReloadMeshSequence)
     bpy.utils.register_class(BatchShadeSmooth)
     bpy.utils.register_class(BatchShadeFlat)
     bpy.utils.register_class(BakeMeshSequence)
@@ -615,6 +652,7 @@ def unregister():
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
     bpy.utils.unregister_class(AddMeshSequence)
     bpy.utils.unregister_class(LoadMeshSequence)
+    bpy.utils.unregister_class(ReloadMeshSequence)
     bpy.utils.unregister_class(BatchShadeSmooth)
     bpy.utils.unregister_class(BatchShadeFlat)
     bpy.utils.unregister_class(BakeMeshSequence)
