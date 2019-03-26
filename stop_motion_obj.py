@@ -232,12 +232,23 @@ class MeshSequenceController:
 
     def reloadSequenceFromFile(self, _obj, _dir, _file):
         # TODO: clear out the existing meshes
+        # get rid of their fake user
+        # set their inMeshSequence to false
 
         # clear out _obj.meshNames
-        _obj.mesh_sequence_settings.meshNames = ''
+        _obj.mesh_sequence_settings.meshNames = 'emptyMesh/'
+
+        # temporarily set the speed to 1 while we reload
+        originalSpeed = _obj.mesh_sequence_settings.speed
+        _obj.mesh_sequence_settings.speed = 1.0
 
         # call loadSequenceFromFile()
-        return self.loadSequenceFromFile(_obj, _dir, _file)
+        numMeshes = self.loadSequenceFromFile(_obj, _dir, _file)
+
+        # set the speed back to its previous value
+        _obj.mesh_sequence_settings.speed = originalSpeed
+
+        return numMeshes
     
     def getMesh(self, _obj, _idx):
         #get the object's meshNames
