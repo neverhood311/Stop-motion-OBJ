@@ -56,7 +56,38 @@ def updateFrame(dummy):
 def updateStartFrame(self, context):
     updateFrame(0)
     return None
-    
+
+def countMatchingFiles(_directory, _filePrefix, _fileExtension):
+    full_filepath = os.path.join(_directory, _filePrefix + '*.' + _fileExtension)
+    print(full_filepath)
+    files = glob.glob(full_filepath)
+    print(files)
+    return len(files)
+
+def fileExtensionFromTypeNumber(_typeNumber):
+    #OBJ
+    if(_typeNumber == 0):
+        return 'obj'
+    #STL
+    elif(_typeNumber == 1):
+        return 'stl'
+    #PLY
+    elif(_typeNumber == 2):
+        return 'ply'
+    return ''
+
+def importFuncFromTypeNumber(_typeNumber):
+    # OBJ
+    if (_typeNumber == 0):
+        return bpy.ops.import_scene.obj
+    # STL
+    elif (_typeNumber == 1):
+        return bpy.ops.import_mesh.stl
+    # PLY
+    elif (_typeNumber == 2):
+        return bpy.ops.import_mesh.ply
+    return None
+
 class MeshSequenceSettings(bpy.types.PropertyGroup):
     dirPath: bpy.props.StringProperty(
         name="Root Folder",
@@ -147,59 +178,52 @@ class MeshSequenceController:
         return theObj
     
     def loadSequenceFromFile(self, _obj, _dir, _file):
+        # error out early if there are no files that match the file prefix
+        fileExtension = fileExtensionFromTypeNumber(int(_obj.mesh_sequence_settings.fileFormat))
+        if countMatchingFiles(_dir, _file, fileExtension) == 0:
+            return 0
+        
         scn = bpy.context.scene
-        #get the file format
+        # get the file format
         format = 'obj'
         formatidx = int(_obj.mesh_sequence_settings.fileFormat)
-        importFunc = None
-        #OBJ
-        if(formatidx == 0):
-            format = 'obj'
-            importFunc = bpy.ops.import_scene.obj
-        #STL
-        elif(formatidx == 1):
-            format = 'stl'
-            importFunc = bpy.ops.import_mesh.stl
-        #PLY
-        elif(formatidx == 2):
-            format = 'ply'
-            importFunc = bpy.ops.import_mesh.ply
-        #combine the file directory with the filename and the .obj extension
-        full_filepath = os.path.join(_dir, _file + '*.' + format)
+        importFunc = importFuncFromTypeNumber(int(_obj.mesh_sequence_settings.fileFormat))
+        
+        # combine the file directory with the filename and the .obj extension
+        full_filepath = os.path.join(_dir, _file + '*.' + fileExtension)
         print(full_filepath)
         numFrames = 0
         unsortedFiles = glob.glob(full_filepath)
         sortedFiles = sorted(unsortedFiles)
-        #for each file that matches the glob query:
+        # for each file that matches the glob query:
         for file in sortedFiles:
-            #import the mesh file
+            # import the mesh file
             importFunc(filepath = file)
-            #get a reference to it
+            # get a reference to it
             tmpObject = bpy.context.selected_objects[0]
-            tmpMesh = tmpObject.data    #don't copy it; just copy the pointer. This cuts memory usage in half.
+            tmpMesh = tmpObject.data    # don't copy it; just copy the pointer. This cuts memory usage in half.
             tmpMesh.use_fake_user = True
             tmpMesh.inMeshSequence = True
-            #deselect all objects
+            # deselect all objects
             deselectAll()
-            #select the object
+            # select the object
             tmpObject.select_set(state=True)
-            #delete it
+            # delete it
             bpy.ops.object.delete()
-            #add the new mesh's name to the sequence object's text property
-            #add the '/' character as a delimiter
-            #http://stackoverflow.com/questions/1976007/what-characters-are-forbidden-in-windows-and-linux-directory-names
+            # add the new mesh's name to the sequence object's text property
+            # add the '/' character as a delimiter
+            # http://stackoverflow.com/questions/1976007/what-characters-are-forbidden-in-windows-and-linux-directory-names
             _obj.mesh_sequence_settings.meshNames += tmpMesh.name + '/'
             numFrames+=1
         
         _obj.mesh_sequence_settings.numMeshes = numFrames+1
         if(numFrames > 0):
-            #remove the last '/' from the string
+            # remove the last '/' from the string
             _obj.mesh_sequence_settings.meshNames = _obj.mesh_sequence_settings.meshNames[:-1]
-            #set the sequence object's mesh to meshes[1]
+            # set the sequence object's mesh to meshes[1]
             self.setFrameObj(_obj, scn.frame_current)
             
-            #select the sequence object
-            #scn.objects.active = _obj
+            # select the sequence object
             _obj.select_set(state=True)
             
             _obj.mesh_sequence_settings.loaded = True
@@ -230,23 +254,31 @@ class MeshSequenceController:
         
         _obj.mesh_sequence_settings.loaded = True
 
-    def reloadSequenceFromFile(self, _obj, _dir, _file):
-        # TODO: clear out the existing meshes
-        # get rid of their fake user
-        # set their inMeshSequence to false
+    def reloadSequenceFromFile(self, _object, _directory, _filePrefix):
+        # if there are no files that match the file prefix, error out early before making changes
+        fileExtension = fileExtensionFromTypeNumber(int(_object.mesh_sequence_settings.fileFormat))
+        if countMatchingFiles(_directory, _filePrefix, fileExtension) == 0:
+            return 0
+        
+        # mark the existing meshes for cleanup (keep the first 'emptyMesh' one)
+        for meshName in _object.mesh_sequence_settings.meshNames.split('/')[1:]:
+            # get rid of its fake user
+            bpy.data.meshes[meshName].use_fake_user = False
 
-        # clear out _obj.meshNames
-        _obj.mesh_sequence_settings.meshNames = 'emptyMesh/'
+            # set its inMeshSequence to false
+            bpy.data.meshes[meshName].inMeshSequence = False
+
+        # re-initialize _object.meshNames
+        _object.mesh_sequence_settings.meshNames = 'emptyMesh/'
 
         # temporarily set the speed to 1 while we reload
-        originalSpeed = _obj.mesh_sequence_settings.speed
-        _obj.mesh_sequence_settings.speed = 1.0
+        originalSpeed = _object.mesh_sequence_settings.speed
+        _object.mesh_sequence_settings.speed = 1.0
 
-        # call loadSequenceFromFile()
-        numMeshes = self.loadSequenceFromFile(_obj, _dir, _file)
+        numMeshes = self.loadSequenceFromFile(_object, _directory, _filePrefix)
 
         # set the speed back to its previous value
-        _obj.mesh_sequence_settings.speed = originalSpeed
+        _object.mesh_sequence_settings.speed = originalSpeed
 
         return numMeshes
     
