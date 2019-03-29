@@ -28,7 +28,7 @@ PayPal: https://www.paypal.me/justinj
 - Only absolute filepaths are supported (for now)
 - ~~File numbers must be zero-padded~~
   - Sorting file with correct order is added in [this PR](https://github.com/neverhood311/Stop-motion-OBJ/pull/15)
-  - Files like file1, file2, file3 will be loaded in correct order, and zero-padded filenames should work, too.
+  - Files like file1, file2, file3 will be loaded in correct order, and zero-padded filenames still work, too.
 - No motion blur
 - ~~Doesn't work with physics~~ 
   - (It actually works with rigid body physics. In Rigid Body Collisions set Shape to 'Mesh' and Source to 'Base')
