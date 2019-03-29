@@ -25,15 +25,16 @@ PayPal: https://www.paypal.me/justinj
   - This allows the sequence to be viewed on other computers without installing the addon (in a renderfarm, for example)
 
 ### Limitations
-- Only absolute filepaths are supported (for now)
+- No motion blur
+- Only single-object files are supported
+- ~~Only absolute filepaths are supported~~
+  - Fixed in [https://github.com/neverhood311/Stop-motion-OBJ/pull/17](https://github.com/neverhood311/Stop-motion-OBJ/pull/17)
 - ~~File numbers must be zero-padded~~
   - Sorting file with correct order is added in [this PR](https://github.com/neverhood311/Stop-motion-OBJ/pull/15)
   - Files like file1, file2, file3 will be loaded in correct order, and zero-padded filenames still work, too.
-- No motion blur
 - ~~Doesn't work with physics~~ 
   - (It actually works with rigid body physics. In Rigid Body Collisions set Shape to 'Mesh' and Source to 'Base')
-- Only single-object files are supported
-- ~~Sequences can't be duplicated (for now)~~
+- ~~Sequences can't be duplicated~~
   - Sequences can now be duplicated, but they share a material. For a duplicate sequence with a different material, you have to re-import the sequence.
 
 ## Installing Stop motion OBJ
