@@ -10,9 +10,6 @@ Bitcoin wallet: 16Bbv5jmKJ2T3dqw2rbaiL6vsoZvyNvaU1
 PayPal: https://www.paypal.me/justinj
 
 ### IMPORTANT
-- File numbers must be zero-padded
-  - Like this: file001, file002, file003
-  - NOT like this: ~~file1, file2, file3~~
 - You MUST restart Blender after enabling the add-on
 
 ### Features
@@ -29,7 +26,9 @@ PayPal: https://www.paypal.me/justinj
 
 ### Limitations
 - Only absolute filepaths are supported (for now)
-- File numbers must be zero-padded
+- ~~File numbers must be zero-padded~~
+  - Sorting file with correct order is added in [this PR](https://github.com/neverhood311/Stop-motion-OBJ/pull/15)
+  - Files like file1, file2, file3 will be loaded in correct order, and zero-padded filenames still work, too.
 - No motion blur
 - ~~Doesn't work with physics~~ 
   - (It actually works with rigid body physics. In Rigid Body Collisions set Shape to 'Mesh' and Source to 'Base')

@@ -34,8 +34,15 @@ bl_info = {
 
 import bpy
 import os
+import re
 import glob
 from bpy.app.handlers import persistent
+
+def alphanumKey(string):
+    """ Turn a string into a list of string and number chunks.
+        "z23a" -> ["z", 23, "a"]
+    """
+    return [int(c) if c.isdigit() else c for c in re.split('([0-9]+)', string)]
 
 #global variable for the MeshSequenceController
 MSC = None
@@ -165,7 +172,9 @@ class MeshSequenceController:
         print(full_filepath)
         numFrames = 0
         unsortedFiles = glob.glob(full_filepath)
-        sortedFiles = sorted(unsortedFiles)
+        # Sort the given list in the way that humans expect.
+        sortedFiles = sorted(unsortedFiles, key=alphanumKey)
+
         #for each file that matches the glob query:
         for file in sortedFiles:
             #import the mesh file
