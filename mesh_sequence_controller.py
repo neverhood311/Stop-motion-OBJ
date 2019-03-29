@@ -168,8 +168,9 @@ class MeshSequenceController:
             format = 'ply'
             importFunc = bpy.ops.import_mesh.ply
         #combine the file directory with the filename and the .obj extension
-        full_filepath = os.path.join(_dir, _file + '*.' + format)
-        print(full_filepath)
+        full_dirpath = bpy.path.abspath(_dir)
+        full_filepath = os.path.join(full_dirpath, _file + '*.' + format)
+
         numFrames = 0
         unsortedFiles = glob.glob(full_filepath)
         # Sort the given list in the way that humans expect.
@@ -488,7 +489,7 @@ class LoadMeshSequence(bpy.types.Operator):
         
         num = MSC.loadSequenceFromFile(obj, dirPath, fileName)
         if(num == 0):
-            self.report({'ERROR'}, "Invalid file path. Make sure the Root Folder, File Name, and File Format are correct. Make sure to uncheck 'Relative Path'")
+            self.report({'ERROR'}, "No matching files found. Make sure the Root Folder, File Name, and File Format are correct.")
             return {'CANCELLED'}
         
         return {'FINISHED'}
