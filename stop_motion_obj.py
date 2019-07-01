@@ -23,7 +23,7 @@ bl_info = {
     "name" : "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (0, 4),
+    "version": (0, 5, 0),
     "blender": (2, 80, 0),
     "location": "View 3D > Add > Mesh > Mesh Sequence",
     "warning": "",
@@ -37,6 +37,7 @@ import os
 import re
 import glob
 from bpy.app.handlers import persistent
+from mathutils import Vector
 
 def alphanumKey(string):
     """ Turn a string into a list of string and number chunks.
@@ -97,52 +98,51 @@ def importFuncFromTypeNumber(_typeNumber):
     
 class MeshSequenceSettings(bpy.types.PropertyGroup):
     dirPath: bpy.props.StringProperty(
-        name="Root Folder",
-        description="Only .OBJ files will be listed",
-        subtype="DIR_PATH")
-    fileName: bpy.props.StringProperty(name='File Name')
+        name = "Root Folder",
+        description = "Only .OBJ files will be listed",
+        subtype = "DIR_PATH")
+    fileName: bpy.props.StringProperty(name = 'File Name')
     startFrame: bpy.props.IntProperty(
-        name='Start Frame',
-        update=updateStartFrame,
-        default=1)
-    #A long list of mesh names
+        name = 'Start Frame',
+        update = updateStartFrame,
+        default = 1)
+    
+    # A long list of mesh names
     meshNames: bpy.props.StringProperty()
     numMeshes: bpy.props.IntProperty()
     initialized: bpy.props.BoolProperty(default=False)
     loaded: bpy.props.BoolProperty(default=False)
     
-    #out-of-range frame mode
+    # out-of-range frame mode
     frameMode: bpy.props.EnumProperty(
         items = [('0', 'Blank', 'Object disappears when frame is out of range'),
                 ('1', 'Extend', 'First and last frames are duplicated'),
                 ('2', 'Repeat', 'Repeat the animation'),
                 ('3', 'Bounce', 'Play in reverse at the end of the frame range')],
-        name='Frame Mode',
-        default='1')
+        name = 'Frame Mode',
+        default = '1')
     
-    #material mode (one material total or one material per frame)
+    # material mode (one material total or one material per frame)
     perFrameMaterial: bpy.props.BoolProperty(
-        name='Material per Frame',
-        default=False
-    )
+        name = 'Material per Frame',
+        default = False)
     
-    #playback speed
+    # playback speed
     speed: bpy.props.FloatProperty(
-        name='Playback Speed',
-        min=0.0001,
-        soft_min=0.01,
-        step=25,
-        precision=2,
-        default=1
-    )
+        name = 'Playback Speed',
+        min = 0.0001,
+        soft_min = 0.01,
+        step = 25,
+        precision = 2,
+        default = 1)
     
-    #the file format for files in the sequence (OBJ, STL, or PLY)
+    # the file format for files in the sequence (OBJ, STL, or PLY)
     fileFormat: bpy.props.EnumProperty(
         items = [('0', 'OBJ', 'Wavefront OBJ'),
                 ('1', 'STL', 'STereoLithography'),
                 ('2', 'PLY', 'Stanford PLY')],
-        name='File Format',
-        default='0')
+        name = 'File Format',
+        default = '0')
 
 class MeshSequenceController:
     
@@ -358,11 +358,9 @@ class MeshSequenceController:
     
     #iterate over the meshes in the sequence and set their shading to smooth or flat
     def shadeSequence(self, _obj, _smooth):
-        scn = bpy.context.scene
         #deselect everything in the scene
         deselectAll()
         #select the sequence object
-        #scn.objects.active = _obj
         _obj.select_set(state=True)
         #grab the current mesh so we can put it back later
         origMesh = _obj.data
@@ -384,21 +382,23 @@ class MeshSequenceController:
     def bakeSequence(self, _obj):
         scn = bpy.context.scene
         activeCollection = bpy.context.collection
-        #create an empty object
+        
+        # create an empty object
         bpy.ops.object.empty_add(type='PLAIN_AXES')
         containerObj = bpy.context.active_object
-        #rename the container object to "C_{object's current name}" ('C' stands for 'Container')
+        
+        # rename the container object to "C_{object's current name}" ('C' stands for 'Container')
         newName = "C_" + _obj.name
         containerObj.name = newName
         
-        #copy the object's transformation data into the container
+        # copy the object's transformation data into the container
         containerObj.location = _obj.location
         containerObj.scale = _obj.scale
         containerObj.rotation_euler = _obj.rotation_euler
         containerObj.rotation_quaternion = _obj.rotation_quaternion   #just in case
         
-        #copy the object's animation data into the container
-        #http://blender.stackexchange.com/questions/27136/how-to-copy-keyframes-from-one-action-to-other
+        # copy the object's animation data into the container
+        # http://blender.stackexchange.com/questions/27136/how-to-copy-keyframes-from-one-action-to-other
         if(_obj.animation_data != None):
             seq_anim = _obj.animation_data
             properties = [p.identifier for p in seq_anim.bl_rna.properties if not p.is_readonly]
@@ -408,75 +408,92 @@ class MeshSequenceController:
             for prop in properties:
                 setattr(cont_anim, prop, getattr(seq_anim, prop))
         
-        #create a dictionary mapping meshes to new objects, meshToObject
+        # create a dictionary mapping meshes to new objects, meshToObject
         meshToObject = {}
         
         meshNames = _obj.mesh_sequence_settings.meshNames.split('/')
-        #for each mesh (including the empty mesh):
+
+        # for each mesh (including the empty mesh):
         for meshName in meshNames:
             mesh = bpy.data.meshes[meshName]
-            #even though it's kinda still part of a mesh sequence, it's not really anymore
+            # even though it's kinda still part of a mesh sequence, it's not really anymore
             mesh.inMeshSequence = False
-            #create an object for the mesh and add it to the scene
+            # create an object for the mesh and add it to the scene
             tmpObj = bpy.data.objects.new('o_' + mesh.name, mesh)
             activeCollection.objects.link(tmpObj)
-            #remove the fake user from the mesh
+            # remove the fake user from the mesh
             mesh.use_fake_user = False
-            #add a dictionary entry to meshToObject, the mesh => the object
+            # add a dictionary entry to meshToObject, the mesh => the object
             meshToObject[mesh] = tmpObj
-            #in the object, add keyframes at frames 0 and the last frame of the animation:
-            #set object.hide to True
+            # in the object, add keyframes at frames 0 and the last frame of the animation:
+            tmpObj.scale = Vector((0.0001, 0.0001, 0.0001))
+            tmpObj.keyframe_insert(data_path = 'scale', frame = scn.frame_start)
+            tmpObj.keyframe_insert(data_path = 'scale', frame = scn.frame_end)
+
+            # TODO: should we also translate it down to Z=-1000?
+            
+            # set object.hide to True
             tmpObj.hide_viewport = True
             tmpObj.keyframe_insert(data_path='hide_viewport', frame=scn.frame_start)
             tmpObj.keyframe_insert(data_path='hide_viewport', frame=scn.frame_end)
-            #set object.hide_render to True
+            
+            # set object.hide_render to True
             tmpObj.hide_render = True
             tmpObj.keyframe_insert(data_path='hide_render', frame=scn.frame_start)
             tmpObj.keyframe_insert(data_path='hide_render', frame=scn.frame_end)
-            #set the empty object as this object's parent
+
+            # set the empty object as this object's parent
             tmpObj.parent = containerObj
         
-        #If this is a single-material sequence, make sure the material is copied to the whole sequence
-        #This assumes that the first mesh in the sequence has a material
+        # If this is a single-material sequence, make sure the material is copied to the whole sequence
+        # This assumes that the first mesh in the sequence has a material
         if(_obj.mesh_sequence_settings.perFrameMaterial == False):
-            #grab the materials from the first frame
+            # grab the materials from the first frame
             objMaterials = bpy.data.meshes[meshNames[1]].materials
-            #for each mesh:
+            # for each mesh:
             iterMeshes = iter(meshNames)
             next(iterMeshes)    #skip the emptyMesh
             next(iterMeshes)    #skip the first mesh (we'll copy the material from this one into the rest of them)
             for meshName in iterMeshes:
                 mesh = bpy.data.meshes[meshName]
-                #set the material to objMaterial
+                # set the material to objMaterial
                 mesh.materials.clear()
                 for material in objMaterials:
                     mesh.materials.append(material)
         
-        #for each frame of the animation:
+        # for each frame of the animation:
         for frameNum in range(scn.frame_start, scn.frame_end + 1):
-            #figure out which mesh is visible
+            # figure out which mesh is visible
             idx = self.getMeshIdxFromFrame(_obj, frameNum)
             frameMesh = self.getMesh(_obj, idx)
-            #use the dictionary to find which object the mesh belongs to
+            # use the dictionary to find which object the mesh belongs to
             frameObj = meshToObject[frameMesh]
-            #add two keyframes to the object at the current frame:
-            #set object.hide to False
+            # add two keyframes to the object at the current frame:
+            # set object.hide to False
             frameObj.hide_viewport = False
             frameObj.keyframe_insert(data_path='hide_viewport', frame=frameNum)
-            #set object.hide_render to False
+            # set object.hide_render to False
             frameObj.hide_render = False
             frameObj.keyframe_insert(data_path='hide_render', frame=frameNum)
-            #add two keyframes to the object at the next frame:
-            #set object.hide to True
+            # add two keyframes to the object at the next frame:
+            # set object.hide to True
             frameObj.hide_viewport = True
             frameObj.keyframe_insert(data_path='hide_viewport', frame=frameNum+1)
-            #set object.hide_render to True
+            # set object.hide_render to True
             frameObj.hide_render = True
             frameObj.keyframe_insert(data_path='hide_render', frame=frameNum+1)
+
+            # TODO: make sure the size is 1 on the subframe this will be visible/exported
+            frameObj.scale = Vector((0.0001, 0.0001, 0.0001))
+            if (frameNum > scn.frame_start):
+                frameObj.keyframe_insert(data_path = 'scale', frame = frameNum - 1)
+            if (frameNum < scn.frame_end):
+                frameObj.keyframe_insert(data_path = 'scale', frame = frameNum + 1)
+            frameObj.scale = Vector((1, 1, 1))
+            frameObj.keyframe_insert(data_path = 'scale', frame = frameNum)
         
-        #delete the sequence object
+        # delete the sequence object
         deselectAll()
-        #scn.objects.active = _obj
         _obj.select_set(state=True)
         bpy.ops.object.delete()
     
