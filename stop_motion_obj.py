@@ -23,7 +23,7 @@ bl_info = {
     "name" : "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (0, 4, 1),
+    "version": (2, 0, 0),
     "blender": (2, 80, 0),
     "location": "View 3D > Add > Mesh > Mesh Sequence",
     "warning": "",
@@ -195,7 +195,6 @@ class MeshSequenceController:
         
         scn = bpy.context.scene
         # get the file format
-        format = 'obj'
         formatidx = int(_obj.mesh_sequence_settings.fileFormat)
         importFunc = importFuncFromTypeNumber(int(_obj.mesh_sequence_settings.fileFormat))
 
@@ -331,9 +330,7 @@ class MeshSequenceController:
                 idx = numFrames
         #2: Repeat
         elif(frameMode == 2):
-            idx -= 1
-            idx = idx % (numFrames)
-            idx += 1
+            idx = ((idx - 1) % (numFrames)) + 1
         #3: Bounce
         elif(frameMode == 3):
             idx -= 1
@@ -365,7 +362,6 @@ class MeshSequenceController:
         #deselect everything in the scene
         deselectAll()
         #select the sequence object
-        #scn.objects.active = _obj
         _obj.select_set(state=True)
         #grab the current mesh so we can put it back later
         origMesh = _obj.data
@@ -479,7 +475,6 @@ class MeshSequenceController:
         
         #delete the sequence object
         deselectAll()
-        #scn.objects.active = _obj
         _obj.select_set(state=True)
         bpy.ops.object.delete()
     

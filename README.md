@@ -2,8 +2,8 @@
 A Blender add-on for importing a sequence of meshes as frames
 
 Stop motion OBJ allows you to import a sequence of OBJ (or STL or PLY) files and render them as individual frames. Have a RealFlow animation but want to render it in Blender? This addon is for you! There are now two versions:
-- [r1.2.0](https://github.com/neverhood311/Stop-motion-OBJ/releases/tag/0.2.80.0) for **Blender 2.80**
-- [r1.1.0](https://github.com/neverhood311/Stop-motion-OBJ/releases/tag/0.2.79.1) for Blender 2.79 (also tested for 2.77 and 2.78)
+- [v2.0.0](https://github.com/neverhood311/Stop-motion-OBJ/releases/tag/v2.0.0) for **Blender 2.80+**
+- [r1.1.1](https://github.com/neverhood311/Stop-motion-OBJ/releases/tag/0.2.79.2) for Blender 2.79 (also tested for 2.77 and 2.78). This version is now deprecated and will no longer be supported
 
 If you find this add-on helpful, please consider donating to support development:
 
@@ -54,7 +54,7 @@ PayPal: https://www.paypal.me/justinj
   - The object will initially be empty. We need to load a mesh sequence into it.
 - Make sure the object is selected.
 - In the properties panel, click on the Object Properties tab (the little orange cube icon). In the settings panel, scroll down to find the Mesh Sequence subpanel and open it.
-- Enter the Root Folder by clicking on the folder button and navigating to the folder where the mesh files are stored. **Make sure to UNCHECK ‘Relative Path’**
+- Enter the Root Folder by clicking on the folder button and navigating to the folder where the mesh files are stored. ~~**Make sure to UNCHECK ‘Relative Path’**~~
 - In the File Name box, enter a common prefix of the files.
   - ex: If you have frame001, frame002, frame003, you could enter ‘frame’, 'fram', or even 'f'
 - If your sequence has a different material for each frame, check the "Material per Frame" checkbox. Otherwise, leave it unchecked.
