@@ -23,7 +23,7 @@ bl_info = {
     "name" : "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 0, 0),
+    "version": (2, 1, 0),
     "blender": (2, 80, 0),
     "location": "View 3D > Add > Mesh > Mesh Sequence",
     "warning": "",
@@ -37,6 +37,7 @@ import os
 import re
 import glob
 from bpy.app.handlers import persistent
+from mathutils import Vector
 
 def alphanumKey(string):
     """ Turn a string into a list of string and number chunks.
@@ -424,16 +425,26 @@ class MeshSequenceController:
             #add a dictionary entry to meshToObject, the mesh => the object
             meshToObject[mesh] = tmpObj
             #in the object, add keyframes at frames 0 and the last frame of the animation:
-            #set object.hide to True
+            tmpObj.scale = Vector((0.0001, 0.0001, 0.0001))
+            tmpObj.keyframe_insert(data_path = 'scale', frame = scn.frame_start)
+            tmpObj.keyframe_insert(data_path = 'scale', frame = scn.frame_end)
+
+            # TODO: should we also translate it down to Z=-1000?
+
+            # TODO: allow the user to choose between animating visibility and animating scaling. Or maybe just do both!
+            '''#set object.hide to True
             tmpObj.hide_viewport = True
             tmpObj.keyframe_insert(data_path='hide_viewport', frame=scn.frame_start)
             tmpObj.keyframe_insert(data_path='hide_viewport', frame=scn.frame_end)
             #set object.hide_render to True
             tmpObj.hide_render = True
             tmpObj.keyframe_insert(data_path='hide_render', frame=scn.frame_start)
-            tmpObj.keyframe_insert(data_path='hide_render', frame=scn.frame_end)
+            tmpObj.keyframe_insert(data_path='hide_render', frame=scn.frame_end)'''
+            
             #set the empty object as this object's parent
             tmpObj.parent = containerObj
+
+            
         
         #If this is a single-material sequence, make sure the material is copied to the whole sequence
         #This assumes that the first mesh in the sequence has a material
@@ -458,7 +469,9 @@ class MeshSequenceController:
             frameMesh = self.getMesh(_obj, idx)
             #use the dictionary to find which object the mesh belongs to
             frameObj = meshToObject[frameMesh]
-            #add two keyframes to the object at the current frame:
+
+            # TODO: allow the user to choose between animating visibility and animating scaling. Or maybe just do both!
+            '''#add two keyframes to the object at the current frame:
             #set object.hide to False
             frameObj.hide_viewport = False
             frameObj.keyframe_insert(data_path='hide_viewport', frame=frameNum)
@@ -471,7 +484,24 @@ class MeshSequenceController:
             frameObj.keyframe_insert(data_path='hide_viewport', frame=frameNum+1)
             #set object.hide_render to True
             frameObj.hide_render = True
-            frameObj.keyframe_insert(data_path='hide_render', frame=frameNum+1)
+            frameObj.keyframe_insert(data_path='hide_render', frame=frameNum+1)'''
+
+            frameObj.scale = Vector((0.0001, 0.0001, 0.0001))
+            if (frameNum > scn.frame_start):
+                frameObj.keyframe_insert(data_path = 'scale', frame = frameNum - 1)
+            if (frameNum < scn.frame_end):
+                frameObj.keyframe_insert(data_path = 'scale', frame = frameNum + 1)
+            
+            # TODO: make sure the size is 1 on the subframe this will be visible/exported
+            frameObj.scale = Vector((1, 1, 1))
+            frameObj.keyframe_insert(data_path = 'scale', frame = frameNum)
+
+            # iterate over all keyframes for this object and change the interpolation mode to CONSTANT
+            # TODO: FBX exporter doesn't respect interpolation modes; it forces everything to be LINEAR
+            fcurves = frameObj.animation_data.action.fcurves
+            for fcurve in fcurves:
+                for keyframe in fcurve.keyframe_points:
+                    keyframe.interpolation = 'CONSTANT'
         
         #delete the sequence object
         deselectAll()
