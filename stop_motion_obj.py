@@ -23,7 +23,7 @@ bl_info = {
     "name" : "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 0, 0),
+    "version": (2, 1, 0),
     "blender": (2, 80, 0),
     "location": "View 3D > Add > Mesh > Mesh Sequence",
     "warning": "",
@@ -37,6 +37,31 @@ import os
 import re
 import glob
 from bpy.app.handlers import persistent
+
+def versionToString(versionTuple):
+    return str(versionTuple[0]) + '.' + str(versionTuple[1]) + '.' + str(versionTuple[2])
+
+def versionStringToTuple(versionString):
+    return tuple(map(int, versionString.split('.')))
+
+def compareVersions(vLoaded, vScript, checkMinorVersion = False):
+    """ Compare two version tuples to determine backwards compatibility.
+        If checkMinorVersion is True, also compare the minor version of each tuple.
+        Returns whether vLoaded <= vScript:
+        vLoaded < vScript => -1
+        vLoaded == vScript => 0
+        vLoaded > vScript => 1
+    """
+    majorVersionDiff = vLoaded[0] - vScript[0]
+    if (majorVersionDiff != 0):
+        return 1 if majorVersionDiff > 0 else -1
+    
+    if (checkMinorVersion == True):
+        minorVersionDiff = vLoaded[1] - vScript[1]
+        if (minorVersionDiff != 0):
+            return 1 if minorVersionDiff > 0 else -1
+
+    return 0
 
 def alphanumKey(string):
     """ Turn a string into a list of string and number chunks.
@@ -66,9 +91,7 @@ def updateStartFrame(self, context):
 
 def countMatchingFiles(_directory, _filePrefix, _fileExtension):
     full_filepath = os.path.join(_directory, _filePrefix + '*.' + _fileExtension)
-    print(full_filepath)
     files = glob.glob(full_filepath)
-    print(files)
     return len(files)
 
 def fileExtensionFromTypeNumber(_typeNumber):
@@ -96,6 +119,12 @@ def importFuncFromTypeNumber(_typeNumber):
     return None
     
 class MeshSequenceSettings(bpy.types.PropertyGroup):
+    # we will use this for backwards compatibility purposes
+    versionString: bpy.props.StringProperty(
+        name = "Version String",
+        default = versionToString(bl_info['version'])
+    )
+
     dirPath: bpy.props.StringProperty(
         name="Root Folder",
         description="Only .OBJ files will be listed",
@@ -105,7 +134,13 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         name='Start Frame',
         update=updateStartFrame,
         default=1)
-    #A long list of mesh names
+    
+    # The current visible frame of the sequence. This is only relevant for animated playback
+    currentMeshIdx: bpy.props.IntProperty(
+        name = 'Current Mesh Index',
+        default = 1)
+
+    # A long list of mesh names
     meshNames: bpy.props.StringProperty()
     numMeshes: bpy.props.IntProperty()
     initialized: bpy.props.BoolProperty(default=False)
@@ -116,10 +151,11 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         items = [('0', 'Blank', 'Object disappears when frame is out of range'),
                 ('1', 'Extend', 'First and last frames are duplicated'),
                 ('2', 'Repeat', 'Repeat the animation'),
-                ('3', 'Bounce', 'Play in reverse at the end of the frame range')],
+                ('3', 'Bounce', 'Play in reverse at the end of the frame range'),
+                ('4', 'Animate', 'Use animation curves to control playback')],
         name='Frame Mode',
         default='1')
-    
+
     #material mode (one material total or one material per frame)
     perFrameMaterial: bpy.props.BoolProperty(
         name='Material per Frame',
@@ -152,6 +188,13 @@ class MeshSequenceController:
         #for obj in bpy.context.scene.objects:
             #if it's a sequence object (we'll have to figure out how to indicate this, probably with a T/F custom property)
             if(obj.mesh_sequence_settings.initialized == True):
+                # reject if the major version is greater than the script major version
+                verLoaded = versionStringToTuple(obj.mesh_sequence_settings.versionString)
+                scriptVersion = bl_info['version']
+                if (compareVersions(verLoaded, scriptVersion) > 0):
+                    print("ERROR: Cannot load a mesh sequence created by a newer version of the script: sequence version: (" + obj.mesh_sequence_settings.versionString + "), script version: (" + versionToString(scriptVersion) + ")")
+                    continue
+
                 #call sequence.loadSequenceFromData() on it
                 self.loadSequenceFromData(obj)
         self.freeUnusedMeshes()
@@ -259,11 +302,14 @@ class MeshSequenceController:
         deselectAll()
         
         #select the sequence object
-        scn.objects.active = _obj
-        _obj.select = True
+        _obj.select_set(state=True)
+
         #set the frame number
         self.setFrameObj(_obj, scn.frame_current)
         
+        # update the version number
+        _obj.mesh_sequence_settings.versionString = versionToString(bl_info['version'])
+
         _obj.mesh_sequence_settings.loaded = True
     
     def reloadSequenceFromFile(self, _object, _directory, _filePrefix):
@@ -340,6 +386,14 @@ class MeshSequenceController:
             else:
                 idx = (numFrames - 1) - (idx % numFrames)
             idx += 1
+        # 4: Animated
+        elif(frameMode == 4):
+            idx = 1
+            if (_obj.animation_data != None):
+                # instead of reading this from currentMeshIdx, we need to evaluate the keyframe curve at this frame number
+                # we first need to find the index of the 'currentMeshIdx' fcurve, then modify that one
+                meshIdxCurve = next(curve for curve in _obj.animation_data.action.fcurves if 'currentMeshIdx' in curve.data_path)
+                idx = int(meshIdxCurve.evaluate(_frameNum))
         return idx
     
     def setFrameObj(self, _obj, _frameNum):
@@ -537,6 +591,7 @@ class LoadMeshSequence(bpy.types.Operator):
     def execute(self, context):
         global MSC
         obj = context.object
+
         #get the object's file path
         dirPath = obj.mesh_sequence_settings.dirPath
         #get the object's filename
@@ -648,17 +703,23 @@ class MeshSequencePanel(bpy.types.Panel):
                 row.operator("ms.load_mesh_sequence")
                 
             if(objSettings.loaded == True):
-                #start frame
-                row = layout.row()
-                row.prop(objSettings, "startFrame")
-                
                 #frame mode
                 row = layout.row()
                 row.prop(objSettings, "frameMode")
-                
-                #playback speed
-                row = layout.row()
-                row.prop(objSettings, "speed")
+
+                # animated playback
+                if (objSettings.frameMode == '4'):
+                    # current mesh index
+                    row = layout.row()
+                    row.prop(objSettings, "currentMeshIdx")
+                else:
+                    # start frame
+                    row = layout.row()
+                    row.prop(objSettings, "startFrame")
+                    
+                    # playback speed
+                    row = layout.row()
+                    row.prop(objSettings, "speed")
 
                 # Reload From Disk button
                 row = layout.row()
@@ -685,7 +746,7 @@ def register():
     #add this settings class to bpy.types.Object
     bpy.types.Object.mesh_sequence_settings = bpy.props.PointerProperty(type=MeshSequenceSettings)
     bpy.app.handlers.load_post.append(initSequenceController)
-    bpy.app.handlers.frame_change_pre.append(updateFrame)
+    bpy.app.handlers.frame_change_post.append(updateFrame)
     bpy.utils.register_class(AddMeshSequence)
     bpy.utils.register_class(LoadMeshSequence)
     bpy.utils.register_class(ReloadMeshSequence)
@@ -700,7 +761,7 @@ def register():
 
 def unregister():
     bpy.app.handlers.load_post.remove(initSequenceController)
-    bpy.app.handlers.frame_change_pre.remove(updateFrame)
+    bpy.app.handlers.frame_change_post.remove(updateFrame)
     bpy.utils.unregister_class(AddMeshSequence)
     bpy.utils.unregister_class(LoadMeshSequence)
     bpy.utils.unregister_class(ReloadMeshSequence)
