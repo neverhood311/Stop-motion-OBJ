@@ -23,7 +23,7 @@ bl_info = {
     "name" : "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 0, 0),
+    "version": (2, 0, 1),
     "blender": (2, 80, 0),
     "location": "View 3D > Add > Mesh > Mesh Sequence",
     "warning": "",
@@ -343,18 +343,23 @@ class MeshSequenceController:
         return idx
     
     def setFrameObj(self, _obj, _frameNum):
-        idx = self.getMeshIdxFromFrame(_obj, _frameNum)
-        #store the current mesh for grabbing the material later
+        # store the current mesh for grabbing the material later
         prev_mesh = _obj.data
-        #swap the meshes
-        _obj.data = self.getMesh(_obj, idx)
-        # If this object doesn't have materials for each frame
-        if(_obj.mesh_sequence_settings.perFrameMaterial == False):
-            #if the previous mesh had a material, copy it to the new one
-            if(len(prev_mesh.materials) > 0):
-                prev_material = prev_mesh.materials[0]
-                _obj.data.materials.clear()
-                _obj.data.materials.append(prev_material)
+        idx = self.getMeshIdxFromFrame(_obj, _frameNum)
+        next_mesh = self.getMesh(_obj, idx)
+
+        # if the new frame is not the same as the old one
+        if (next_mesh != prev_mesh):
+            # swap the meshes
+            _obj.data = next_mesh
+
+            # If this object doesn't have materials for each frame
+            if(_obj.mesh_sequence_settings.perFrameMaterial == False):
+                # if the previous mesh had a material, copy it to the new one
+                if(len(prev_mesh.materials) > 0):
+                    _obj.data.materials.clear()
+                    for material in prev_mesh.materials:
+                        _obj.data.materials.append(material)
     
     #iterate over the meshes in the sequence and set their shading to smooth or flat
     def shadeSequence(self, _obj, _smooth):
