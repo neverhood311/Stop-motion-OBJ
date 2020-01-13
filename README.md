@@ -2,14 +2,14 @@
 A Blender add-on for importing a sequence of meshes as frames
 
 Stop motion OBJ allows you to import a sequence of OBJ (or STL or PLY) files and render them as individual frames. Have a RealFlow animation but want to render it in Blender? This addon is for you! There are now two versions:
-- [v2.0.1](https://github.com/neverhood311/Stop-motion-OBJ/releases/tag/v2.0.1) for **Blender 2.80+**
+- [v2.0.2](https://github.com/neverhood311/Stop-motion-OBJ/releases/tag/v2.0.2) for **Blender 2.80+**
 - [r1.1.1](https://github.com/neverhood311/Stop-motion-OBJ/releases/tag/0.2.79.2) for Blender 2.79 (also tested for 2.77 and 2.78). This version is now deprecated and will no longer be supported
 
 If you find this add-on helpful, please consider donating to support development:
 
-Bitcoin wallet: 16Bbv5jmKJ2T3dqw2rbaiL6vsoZvyNvaU1
-
 PayPal: https://www.paypal.me/justinj
+
+Bitcoin wallet: 16Bbv5jmKJ2T3dqw2rbaiL6vsoZvyNvaU1
 
 ### IMPORTANT
 - You MUST restart Blender after enabling the add-on
@@ -42,10 +42,11 @@ PayPal: https://www.paypal.me/justinj
   - Sequences can now be duplicated, but they share a material. For a duplicate sequence with a different material, you have to re-import the sequence.
 
 ## Installing Stop motion OBJ
-- Download mesh_sequence_controller.py and move it to Blender's addons folder (something like C:\Program Files\Blender Foundation\Blender\2.80\scripts\addons)
-- Open Blender and open the Add-ons preferences (File > User Preferences... > Add-ons)
+- Find the [latest release](https://github.com/neverhood311/Stop-motion-OBJ/releases) and download the source code .zip file
+- Open Blender and open the Add-ons preferences (Edit > Preferences... > Add-ons)
+- Click Install..., find the .zip file you downloaded, and click Install Add-on
 - In the search bar, type 'OBJ' and look for the Stop motion OBJ addon in the list
-- Check the box to install it, and click 'Save User Settings'
+- Check the box to enable it
 - **RESTART BLENDER BEFORE USING THE ADDON**
 
 ## Using Stop motion OBJ
