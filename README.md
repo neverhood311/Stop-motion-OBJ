@@ -42,7 +42,7 @@ Bitcoin wallet: 16Bbv5jmKJ2T3dqw2rbaiL6vsoZvyNvaU1
   - Sequences can now be duplicated, but they share a material. For a duplicate sequence with a different material, you have to re-import the sequence.
 
 ## Installing Stop motion OBJ
-- Find the [latest release](https://github.com/neverhood311/Stop-motion-OBJ/releases) and download the source code .zip file
+- Find the [latest release](https://github.com/neverhood311/Stop-motion-OBJ/releases) and download the release .zip file (NOT the source code .zip file)
 - Open Blender and open the Add-ons preferences (Edit > Preferences... > Add-ons)
 - Click Install..., find the .zip file you downloaded, and click Install Add-on
 - In the search bar, type 'OBJ' and look for the Stop motion OBJ addon in the list
