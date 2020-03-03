@@ -21,10 +21,10 @@
 from .stop_motion_obj import *
 
 bl_info = {
-    "name" : "Stop motion OBJ",
+    "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 0, 2),
+    "version": (2, 0, 2, "alpha.1"),
     "blender": (2, 80, 0),
     "location": "View 3D > Add > Mesh > Mesh Sequence",
     "warning": "",
@@ -33,12 +33,10 @@ bl_info = {
     "tracker_url": "https://github.com/neverhood311/Stop-motion-OBJ/issues"
 }
 
+
 def register():
-    #give bpy.types.Mesh a new property that says whether it's part of a mesh sequence
-    bpy.types.Mesh.inMeshSequence = bpy.props.BoolProperty()    #defaults to False
-    #register this settings class
+    bpy.types.Mesh.inMeshSequence = bpy.props.BoolProperty()
     bpy.utils.register_class(MeshSequenceSettings)
-    #add this settings class to bpy.types.Object
     bpy.types.Object.mesh_sequence_settings = bpy.props.PointerProperty(type=MeshSequenceSettings)
     bpy.app.handlers.load_post.append(initSequenceController)
     bpy.app.handlers.frame_change_pre.append(updateFrame)
@@ -50,9 +48,9 @@ def register():
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(MeshSequencePanel)
     bpy.types.VIEW3D_MT_mesh_add.append(menu_func)
-    #for running the script, instead of installing the add-on
-    #UNCOMMENT THIS FUNCTION CALL WHEN RUNNING FROM THE TEXT EDITOR
-    #initSequenceController(0)
+    # UNCOMMENT THIS FUNCTION CALL WHEN RUNNING FROM THE TEXT EDITOR
+    # initSequenceController(0)
+
 
 def unregister():
     bpy.app.handlers.load_post.remove(initSequenceController)
@@ -64,7 +62,9 @@ def unregister():
     bpy.utils.unregister_class(BatchShadeFlat)
     bpy.utils.unregister_class(BakeMeshSequence)
     bpy.utils.unregister_class(MeshSequencePanel)
+    bpy.utils.unregister_class(MeshSequenceSettings)
     bpy.types.VIEW3D_MT_mesh_add.remove(menu_func)
+
 
 if __name__ == "__main__":
     register()
