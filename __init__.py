@@ -24,7 +24,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 0, 2, "alpha.1"),
+    "version": (2, 0, 2, "alpha.2"),
     "blender": (2, 80, 0),
     "location": "View 3D > Add > Mesh > Mesh Sequence",
     "warning": "",
@@ -36,6 +36,7 @@ bl_info = {
 
 def register():
     bpy.types.Mesh.inMeshSequence = bpy.props.BoolProperty()
+    bpy.utils.register_class(MeshNameProp)
     bpy.utils.register_class(MeshSequenceSettings)
     bpy.types.Object.mesh_sequence_settings = bpy.props.PointerProperty(type=MeshSequenceSettings)
     bpy.app.handlers.load_post.append(initSequenceController)
@@ -63,6 +64,7 @@ def unregister():
     bpy.utils.unregister_class(BakeMeshSequence)
     bpy.utils.unregister_class(MeshSequencePanel)
     bpy.utils.unregister_class(MeshSequenceSettings)
+    bpy.utils.unregister_class(MeshNameProp)
     bpy.types.VIEW3D_MT_mesh_add.remove(menu_func)
 
 

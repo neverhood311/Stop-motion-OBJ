@@ -83,6 +83,10 @@ def importFuncFromTypeNumber(_typeNumber):
     return None
 
 
+class MeshNameProp(bpy.types.PropertyGroup):
+    name: bpy.props.StringProperty()
+
+
 class MeshSequenceSettings(bpy.types.PropertyGroup):
     dirPath: bpy.props.StringProperty(
         name="Root Folder",
@@ -93,7 +97,9 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         name='Start Frame',
         update=updateStartFrame,
         default=1)
+    # TODO: deprecate meshNames
     meshNames: bpy.props.StringProperty()
+    meshNameArray: bpy.props.CollectionProperty(type=MeshNameProp)
     numMeshes: bpy.props.IntProperty()
     initialized: bpy.props.BoolProperty(default=False)
     loaded: bpy.props.BoolProperty(default=False)
@@ -134,7 +140,7 @@ class MeshSequenceController:
     def __init__(self):
         for obj in bpy.data.objects:
             if obj.mesh_sequence_settings.initialized is True:
-                self.loadSequenceFromData(obj)
+                self.loadSequenceFromBlendFile(obj)
         self.freeUnusedMeshes()
 
     def newMeshSequence(self):
@@ -147,7 +153,8 @@ class MeshSequenceController:
         theMesh.use_fake_user = True
         theMesh.inMeshSequence = True
         # add the mesh's name to the object's mesh_sequence_settings
-        theObj.mesh_sequence_settings.meshNames = theMesh.name + '/'
+        emptyMeshNameElement = theObj.mesh_sequence_settings.meshNameArray.add()
+        emptyMeshNameElement.name = theMesh.name
 
         deselectAll()
         theObj.select_set(state=True)
@@ -184,16 +191,13 @@ class MeshSequenceController:
             deselectAll()
             tmpObject.select_set(state=True)
             bpy.ops.object.delete()
-            # add the new mesh's name to the sequence object's text property
-            # add the '/' character as a delimiter
-            # http://stackoverflow.com/questions/1976007/what-characters-are-forbidden-in-windows-and-linux-directory-names
-            _obj.mesh_sequence_settings.meshNames += tmpMesh.name + '/'
+
+            newMeshNameElement = _obj.mesh_sequence_settings.meshNameArray.add()
+            newMeshNameElement.name = tmpMesh.name
             numFrames += 1
 
         _obj.mesh_sequence_settings.numMeshes = numFrames + 1
         if(numFrames > 0):
-            # remove the last '/' from the string
-            _obj.mesh_sequence_settings.meshNames = _obj.mesh_sequence_settings.meshNames[:-1]
             self.setFrameObj(_obj, scn.frame_current)
 
             _obj.select_set(state=True)
@@ -202,20 +206,26 @@ class MeshSequenceController:
         return numFrames
 
     # this is used when a mesh sequence object has been saved and subsequently found in a .blend file
-    def loadSequenceFromData(self, _obj):
+    def loadSequenceFromBlendFile(self, _obj):
         scn = bpy.context.scene
-        t_meshNames = _obj.mesh_sequence_settings.meshNames.split('/')
+        # if meshNames is not blank, we have an old file that must be converted to the new CollectionProperty format
+        if _obj.mesh_sequence_settings.meshNames:
+            # split meshNames
+            # store them in mesh_sequence_settings.meshNameArray
+            for meshName in _obj.mesh_sequence_settings.meshNames.split('/'):
+                meshNameArrayElement = _obj.mesh_sequence_settings.meshNameArray.add()
+                meshNameArrayElement.name = meshName
+
         # count the number of mesh names (helps with backwards compatibility)
-        _obj.mesh_sequence_settings.numMeshes = len(t_meshNames)
+        _obj.mesh_sequence_settings.numMeshes = len(_obj.mesh_sequence_settings.meshNameArray)
 
         # make sure the meshes know they're part of a mesh sequence (helps with backwards compatibility)
-        for t_meshName in t_meshNames:
-            bpy.data.meshes[t_meshName].inMeshSequence = True
+        for meshName in _obj.mesh_sequence_settings.meshNameArray:
+            bpy.data.meshes[meshName.name].inMeshSequence = True
 
         deselectAll()
 
-        scn.objects.active = _obj
-        _obj.select = True
+        _obj.select_set(state=True)
         self.setFrameObj(_obj, scn.frame_current)
 
         _obj.mesh_sequence_settings.loaded = True
@@ -226,13 +236,17 @@ class MeshSequenceController:
         if countMatchingFiles(_directory, _filePrefix, fileExtension) == 0:
             return 0
 
+        meshNamesArray = _object.mesh_sequence_settings.meshNameArray
         # mark the existing meshes for cleanup (keep the first 'emptyMesh' one)
-        for meshName in _object.mesh_sequence_settings.meshNames.split('/')[1:]:
-            bpy.data.meshes[meshName].use_fake_user = False
-            bpy.data.meshes[meshName].inMeshSequence = False
+        for meshNameElement in meshNamesArray[1:]:
+            bpy.data.meshes[meshNameElement.name].use_fake_user = False
+            bpy.data.meshes[meshNameElement.name].inMeshSequence = False
 
-        # re-initialize _object.meshNames
-        _object.mesh_sequence_settings.meshNames = 'emptyMesh/'
+        # re-initialize _object.meshNameArray
+        emptyMeshName = meshNamesArray[0].name
+        meshNamesArray.clear()
+        emptyMeshNameElement = meshNamesArray.add()
+        emptyMeshNameElement.name = emptyMeshName
 
         # temporarily set the speed to 1 while we reload
         originalSpeed = _object.mesh_sequence_settings.speed
@@ -246,8 +260,7 @@ class MeshSequenceController:
         return numMeshes
 
     def getMesh(self, _obj, _idx):
-        names = _obj.mesh_sequence_settings.meshNames.split('/')
-        name = names[_idx]
+        name = _obj.mesh_sequence_settings.meshNameArray[_idx].name
         return bpy.data.meshes[name]
 
     def setFrame(self, _frame):
@@ -346,10 +359,10 @@ class MeshSequenceController:
         # create a dictionary mapping meshes to new objects, meshToObject
         meshToObject = {}
 
-        meshNames = _obj.mesh_sequence_settings.meshNames.split('/')
+        meshNameElements = _obj.mesh_sequence_settings.meshNameArray
         # for each mesh (including the empty mesh):
-        for meshName in meshNames:
-            currentMesh = bpy.data.meshes[meshName]
+        for meshName in meshNameElements:
+            currentMesh = bpy.data.meshes[meshName.name]
             # even though it's kinda still part of a mesh sequence, it's not really anymore
             currentMesh.inMeshSequence = False
             tmpObj = bpy.data.objects.new('o_' + currentMesh.name, currentMesh)
@@ -370,14 +383,14 @@ class MeshSequenceController:
         # If this is a single-material sequence, make sure the material is copied to the whole sequence
         # This assumes that the first mesh in the sequence has a material
         if _obj.mesh_sequence_settings.perFrameMaterial is False:
-            objMaterials = bpy.data.meshes[meshNames[1]].materials
-            meshesIter = iter(meshNames)
+            objMaterials = bpy.data.meshes[meshNameElements[1].name].materials
+            meshesIter = iter(meshNameElements)
             # skip the emptyMesh
             next(meshesIter)
             # skip the first mesh (we'll copy the material from this one into the rest of them)
             next(meshesIter)
             for meshName in meshesIter:
-                currentMesh = bpy.data.meshes[meshName]
+                currentMesh = bpy.data.meshes[meshName.name]
                 currentMesh.materials.clear()
                 for material in objMaterials:
                     currentMesh.materials.append(material)
@@ -417,9 +430,8 @@ class MeshSequenceController:
                 numFreed += 1
         for t_obj in bpy.data.objects:
             if t_obj.mesh_sequence_settings.initialized is True and t_obj.mesh_sequence_settings.loaded is True:
-                t_meshNames = t_obj.mesh_sequence_settings.meshNames
-                for t_meshName in t_meshNames.split('/'):
-                    bpy.data.meshes[t_meshName].use_fake_user = True
+                for t_meshName in t_obj.mesh_sequence_settings.meshNameArray:
+                    bpy.data.meshes[t_meshName.name].use_fake_user = True
                     numFreed -= 1
         # the remaining meshes with no real or fake users will be garbage collected when Blender is closed
         print(numFreed, " meshes freed")
