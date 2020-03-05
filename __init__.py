@@ -24,7 +24,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 0, 2, "alpha.2"),
+    "version": (2, 0, 2, "alpha.3"),
     "blender": (2, 80, 0),
     "location": "View 3D > Add > Mesh > Mesh Sequence",
     "warning": "",
@@ -39,7 +39,7 @@ def register():
     bpy.utils.register_class(MeshNameProp)
     bpy.utils.register_class(MeshSequenceSettings)
     bpy.types.Object.mesh_sequence_settings = bpy.props.PointerProperty(type=MeshSequenceSettings)
-    bpy.app.handlers.load_post.append(initSequenceController)
+    bpy.app.handlers.load_post.append(initializeSequences)
     bpy.app.handlers.frame_change_pre.append(updateFrame)
     bpy.utils.register_class(AddMeshSequence)
     bpy.utils.register_class(LoadMeshSequence)
@@ -49,12 +49,10 @@ def register():
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(MeshSequencePanel)
     bpy.types.VIEW3D_MT_mesh_add.append(menu_func)
-    # UNCOMMENT THIS FUNCTION CALL WHEN RUNNING FROM THE TEXT EDITOR
-    # initSequenceController(0)
 
 
 def unregister():
-    bpy.app.handlers.load_post.remove(initSequenceController)
+    bpy.app.handlers.load_post.remove(initializeSequences)
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
     bpy.utils.unregister_class(AddMeshSequence)
     bpy.utils.unregister_class(LoadMeshSequence)
