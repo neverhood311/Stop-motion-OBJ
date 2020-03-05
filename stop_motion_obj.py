@@ -132,7 +132,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
 
 
 @persistent
-def initializeSequences():
+def initializeSequences(scene):
     for obj in bpy.data.objects:
         if obj.mesh_sequence_settings.initialized is True:
             loadSequenceFromBlendFile(obj)
@@ -160,23 +160,22 @@ def newMeshSequence():
 
 
 def loadSequenceFromMeshFiles(_obj, _dir, _file):
-    deselectAll()
-
     # error out early if there are no files that match the file prefix
+    full_dirpath = bpy.path.abspath(_dir)
     fileExtension = fileExtensionFromTypeNumber(int(_obj.mesh_sequence_settings.fileFormat))
-    if countMatchingFiles(_dir, _file, fileExtension) == 0:
+    if countMatchingFiles(full_dirpath, _file, fileExtension) == 0:
         return 0
 
     scn = bpy.context.scene
     importFunc = importFuncFromTypeNumber(int(_obj.mesh_sequence_settings.fileFormat))
 
-    full_dirpath = bpy.path.abspath(_dir)
     full_filepath = os.path.join(full_dirpath, _file + '*.' + fileExtension)
 
     numFrames = 0
     unsortedFiles = glob.glob(full_filepath)
     sortedFiles = sorted(unsortedFiles, key=alphanumKey)
 
+    deselectAll()
     for file in sortedFiles:
         # import the mesh file
         importFunc(filepath=file)
