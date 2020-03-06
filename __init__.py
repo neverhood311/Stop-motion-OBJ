@@ -49,6 +49,8 @@ def register():
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(MeshSequencePanel)
     bpy.types.VIEW3D_MT_mesh_add.append(menu_func)
+    # TODO: we need a render_pre handler that locks the interface before rending if there are any streamed sequences in the scene
+    # TODO: we also need a render_post handler that unlocks the interface if it was locked by the render_pre handler
 
 
 def unregister():

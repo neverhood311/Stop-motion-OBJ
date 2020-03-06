@@ -79,7 +79,9 @@ def importFuncFromTypeNumber(_typeNumber):
 
 
 class MeshNameProp(bpy.types.PropertyGroup):
-    name: bpy.props.StringProperty()
+    key: bpy.props.StringProperty()
+    basename: bpy.props.StringProperty()
+    inMemory: bpy.props.BoolProperty(default=False)
 
 
 class MeshSequenceSettings(bpy.types.PropertyGroup):
@@ -111,8 +113,17 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
     # material mode (one material total or one material per frame)
     perFrameMaterial: bpy.props.BoolProperty(
         name='Material per Frame',
-        default=False
-    )
+        default=False)
+
+    cacheMode: bpy.props.EnumProperty(
+        items=[('0', 'Cached', 'The full sequence is loaded into memory and saved in the .blend file'),
+               ('1', 'Streaming', 'The sequence is loaded on-demand and not saved in the .blend file')],
+        name='Cache Mode',
+        default='0')
+
+    # TODO: the number of frames to keep in memory if you're in streaming mode
+    # TODO: whether to enable/disable loading frames as they're required
+    # TODO: a list of frames that are currently cached
 
     speed: bpy.props.FloatProperty(
         name='Playback Speed',
@@ -120,8 +131,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         soft_min=0.01,
         step=25,
         precision=2,
-        default=1
-    )
+        default=1)
 
     fileFormat: bpy.props.EnumProperty(
         items=[('0', 'OBJ', 'Wavefront OBJ'),
@@ -135,7 +145,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
 def initializeSequences(scene):
     for obj in bpy.data.objects:
         if obj.mesh_sequence_settings.initialized is True:
-            loadSequenceFromBlendFile(obj)
+            loadCachedSequenceFromBlendFile(obj)
     freeUnusedMeshes()
 
 
@@ -150,13 +160,54 @@ def newMeshSequence():
     theMesh.inMeshSequence = True
     # add the mesh's name to the object's mesh_sequence_settings
     emptyMeshNameElement = theObj.mesh_sequence_settings.meshNameArray.add()
-    emptyMeshNameElement.name = theMesh.name
+    emptyMeshNameElement.key = theMesh.name
+    emptyMeshNameElement.inMemory = True
 
     deselectAll()
     theObj.select_set(state=True)
 
     theObj.mesh_sequence_settings.initialized = True
     return theObj
+
+
+def loadStreamedSequenceFromMeshFiles(obj, directory, filePrefix):
+    # count the number of matching files
+    absDirectory = bpy.path.abspath(directory)
+    fileExtension = fileExtensionFromTypeNumber(int(obj.mesh_sequence_settings.fileFormat))
+    if countMatchingFiles(absDirectory, filePrefix, fileExtension) == 0:
+        return 0
+
+    # load the first frame
+    importFunc = importFuncFromTypeNumber(int(obj.mesh_sequence_settings.fileFormat))
+    wildcardAbsPath = os.path.join(absDirectory, filePrefix + '*.' + fileExtension)
+    numFrames = 0
+    unsortedFilenames = glob.glob(wildcardAbsPath)
+    sortedFilenames = sorted(unsortedFilenames, key=alphanumKey)
+    deselectAll()
+    for filename in sortedFilenames:
+        newMeshNameElement = obj.mesh_sequence_settings.meshNameArray.add()
+        newMeshNameElement.basename = os.path.basename(filename)
+
+        # if this is the first one, import it
+        if numFrames == 0:
+            importFunc(filepath=filename)
+            tmpObject = bpy.context.selected_objects[0]
+            tmpMesh = tmpObject.data
+            tmpMesh.use_fake_user = True
+            tmpMesh.inMeshSequence = True
+            deselectAll()
+            tmpObject.select_set(state=True)
+            bpy.ops.object.delete()
+            newMeshNameElement.key = tmpMesh.name
+            newMeshNameElement.inMemory = True
+
+        # TODO: load the one for the current frame?
+        numFrames += 1
+
+    obj.mesh_sequence_settings.numMeshes = numFrames + 1
+    obj.mesh_sequence_settings.loaded = True
+    obj.select_set(state=True)
+    return numFrames
 
 
 def loadSequenceFromMeshFiles(_obj, _dir, _file):
@@ -166,11 +217,8 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
     if countMatchingFiles(full_dirpath, _file, fileExtension) == 0:
         return 0
 
-    scn = bpy.context.scene
     importFunc = importFuncFromTypeNumber(int(_obj.mesh_sequence_settings.fileFormat))
-
     full_filepath = os.path.join(full_dirpath, _file + '*.' + fileExtension)
-
     numFrames = 0
     unsortedFiles = glob.glob(full_filepath)
     sortedFiles = sorted(unsortedFiles, key=alphanumKey)
@@ -189,12 +237,14 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
         bpy.ops.object.delete()
 
         newMeshNameElement = _obj.mesh_sequence_settings.meshNameArray.add()
-        newMeshNameElement.name = tmpMesh.name
+        newMeshNameElement.key = tmpMesh.name
+        newMeshNameElement.basename = os.path.basename(file)
+        newMeshNameElement.inMemory = True
         numFrames += 1
 
     _obj.mesh_sequence_settings.numMeshes = numFrames + 1
     if(numFrames > 0):
-        setFrameObj(_obj, scn.frame_current)
+        setFrameObj(_obj, bpy.context.scene.frame_current)
 
         _obj.select_set(state=True)
         _obj.mesh_sequence_settings.loaded = True
@@ -203,7 +253,7 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
 
 
 # this is used when a mesh sequence object has been saved and subsequently found in a .blend file
-def loadSequenceFromBlendFile(_obj):
+def loadCachedSequenceFromBlendFile(_obj):
     scn = bpy.context.scene
     # if meshNames is not blank, we have an old file that must be converted to the new CollectionProperty format
     if _obj.mesh_sequence_settings.meshNames:
@@ -211,7 +261,8 @@ def loadSequenceFromBlendFile(_obj):
         # store them in mesh_sequence_settings.meshNameArray
         for meshName in _obj.mesh_sequence_settings.meshNames.split('/'):
             meshNameArrayElement = _obj.mesh_sequence_settings.meshNameArray.add()
-            meshNameArrayElement.name = meshName
+            meshNameArrayElement.key = meshName
+            meshNameArrayElement.inMemory = True
 
     # count the number of mesh names (helps with backwards compatibility)
     _obj.mesh_sequence_settings.numMeshes = len(_obj.mesh_sequence_settings.meshNameArray)
@@ -237,14 +288,14 @@ def reloadSequenceFromMeshFiles(_object, _directory, _filePrefix):
     meshNamesArray = _object.mesh_sequence_settings.meshNameArray
     # mark the existing meshes for cleanup (keep the first 'emptyMesh' one)
     for meshNameElement in meshNamesArray[1:]:
-        bpy.data.meshes[meshNameElement.name].use_fake_user = False
-        bpy.data.meshes[meshNameElement.name].inMeshSequence = False
+        bpy.data.meshes[meshNameElement.key].use_fake_user = False
+        bpy.data.meshes[meshNameElement.key].inMeshSequence = False
 
     # re-initialize _object.meshNameArray
-    emptyMeshName = meshNamesArray[0].name
+    emptyMeshName = meshNamesArray[0].key
     meshNamesArray.clear()
     emptyMeshNameElement = meshNamesArray.add()
-    emptyMeshNameElement.name = emptyMeshName
+    emptyMeshNameElement.key = emptyMeshName
 
     # temporarily set the speed to 1 while we reload
     originalSpeed = _object.mesh_sequence_settings.speed
@@ -258,15 +309,23 @@ def reloadSequenceFromMeshFiles(_object, _directory, _filePrefix):
     return numMeshes
 
 
-def getMeshNameFromIndex(_obj, idx):
-    name = _obj.mesh_sequence_settings.meshNameArray[idx].name
-    return bpy.data.meshes[name]
+def getMeshFromIndex(_obj, idx):
+    key = _obj.mesh_sequence_settings.meshNameArray[idx].key
+    return bpy.data.meshes[key]
+
+
+def getMeshPropFromIndex(obj, idx):
+    return obj.mesh_sequence_settings.meshNameArray[idx]
 
 
 def setFrameNumber(frameNum):
     for obj in bpy.data.objects:
         if obj.mesh_sequence_settings.initialized is True and obj.mesh_sequence_settings.loaded is True:
-            setFrameObj(obj, frameNum)
+            cacheMode = int(obj.mesh_sequence_settings.cacheMode)
+            if cacheMode == 0:
+                setFrameObj(obj, frameNum)
+            elif cacheMode == 1:
+                setFrameObjStreamed(obj, frameNum)
 
 
 def getMeshIdxFromFrameNumber(_obj, frameNum):
@@ -305,7 +364,7 @@ def setFrameObj(_obj, frameNum):
     # store the current mesh for grabbing the material later
     prev_mesh = _obj.data
     idx = getMeshIdxFromFrameNumber(_obj, frameNum)
-    next_mesh = getMeshNameFromIndex(_obj, idx)
+    next_mesh = getMeshFromIndex(_obj, idx)
 
     if (next_mesh != prev_mesh):
         # swap the meshes
@@ -319,13 +378,58 @@ def setFrameObj(_obj, frameNum):
                     _obj.data.materials.append(material)
 
 
+def setFrameObjStreamed(obj, frameNum):
+    # store the current mesh for grabbing the material later
+    prev_mesh = obj.data
+    # TODO: figure out which frame to show
+    idx = getMeshIdxFromFrameNumber(obj, frameNum)
+    nextMeshProp = getMeshPropFromIndex(obj, idx)
+
+    # if it's not already loaded
+    next_mesh = None
+    if nextMeshProp.inMemory is False:
+        next_mesh = importStreamedFile(obj, idx)
+    else:
+        next_mesh = getMeshFromIndex(obj, idx)
+
+    if next_mesh != prev_mesh:
+        # swap the old one with the new one
+        obj.data = next_mesh
+
+        # if we need to, copy the materials from the old one onto the new one
+        if obj.mesh_sequence_settings.perFrameMaterial is False:
+            if len(prev_mesh.materials) > 0:
+                obj.data.materials.clear()
+                for material in prev_mesh.materials:
+                    obj.data.materials.append(material)
+
+
+def importStreamedFile(obj, idx):
+    mss = obj.mesh_sequence_settings
+    absDirectory = bpy.path.abspath(mss.dirPath)
+    importFunc = importFuncFromTypeNumber(int(mss.fileFormat))
+    filename = os.path.join(absDirectory, mss.meshNameArray[idx].basename)
+    deselectAll()
+    importFunc(filepath=filename)
+    tmpObject = bpy.context.selected_objects[0]
+    tmpMesh = tmpObject.data
+    tmpMesh.use_fake_user = True
+    tmpMesh.inMeshSequence = True
+    deselectAll()
+    tmpObject.select_set(state=True)
+    bpy.ops.object.delete()
+    mss.meshNameArray[idx].key = tmpMesh.name
+    mss.meshNameArray[idx].inMemory = True
+    return tmpMesh
+
+
 def shadeSequence(_obj, smooth):
     deselectAll()
     _obj.select_set(state=True)
     # grab the current mesh so we can put it back later
     origMesh = _obj.data
     for idx in range(1, _obj.mesh_sequence_settings.numMeshes):
-        _obj.data = getMeshNameFromIndex(_obj, idx)
+        _obj.data = getMeshFromIndex(_obj, idx)
         if(smooth):
             bpy.ops.object.shade_smooth()
         else:
@@ -366,7 +470,7 @@ def bakeSequence(_obj):
     meshNameElements = _obj.mesh_sequence_settings.meshNameArray
     # for each mesh (including the empty mesh):
     for meshName in meshNameElements:
-        currentMesh = bpy.data.meshes[meshName.name]
+        currentMesh = bpy.data.meshes[meshName.key]
         # even though it's kinda still part of a mesh sequence, it's not really anymore
         currentMesh.inMeshSequence = False
         tmpObj = bpy.data.objects.new('o_' + currentMesh.name, currentMesh)
@@ -402,7 +506,7 @@ def bakeSequence(_obj):
     for frameNum in range(scn.frame_start, scn.frame_end + 1):
         # figure out which mesh is visible
         idx = getMeshIdxFromFrameNumber(_obj, frameNum)
-        frameMesh = getMeshNameFromIndex(_obj, idx)
+        frameMesh = getMeshFromIndex(_obj, idx)
 
         # use the dictionary to find which object the mesh belongs to
         frameObj = meshToObject[frameMesh]
@@ -436,7 +540,7 @@ def freeUnusedMeshes():
     for t_obj in bpy.data.objects:
         if t_obj.mesh_sequence_settings.initialized is True and t_obj.mesh_sequence_settings.loaded is True:
             for t_meshName in t_obj.mesh_sequence_settings.meshNameArray:
-                bpy.data.meshes[t_meshName.name].use_fake_user = True
+                bpy.data.meshes[t_meshName.key].use_fake_user = True
                 numFreed -= 1
     # the remaining meshes with no real or fake users will be garbage collected when Blender is closed
     print(numFreed, " meshes freed")
@@ -471,8 +575,18 @@ class LoadMeshSequence(bpy.types.Operator):
         dirPath = obj.mesh_sequence_settings.dirPath
         fileName = obj.mesh_sequence_settings.fileName
 
-        num = loadSequenceFromMeshFiles(obj, dirPath, fileName)
-        if num == 0:
+        meshCount = 0
+        cacheModeNum = int(obj.mesh_sequence_settings.cacheMode)
+
+        # cached
+        if cacheModeNum == 0:
+            meshCount = loadSequenceFromMeshFiles(obj, dirPath, fileName)
+
+        # streaming
+        elif cacheModeNum == 1:
+            meshCount = loadStreamedSequenceFromMeshFiles(obj, dirPath, fileName)
+
+        if meshCount == 0:
             self.report({'ERROR'}, "No matching files found. Make sure the Root Folder, File Name, and File Format are correct.")
             return {'CANCELLED'}
 
@@ -566,6 +680,9 @@ class MeshSequencePanel(bpy.types.Panel):
 
                 row = layout.row()
                 row.prop(objSettings, "perFrameMaterial")
+
+                row = layout.row()
+                row.prop(objSettings, "cacheMode")
 
                 row = layout.row()
                 row.operator("ms.load_mesh_sequence")
