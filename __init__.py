@@ -51,6 +51,8 @@ def register():
     bpy.types.VIEW3D_MT_mesh_add.append(menu_func)
     # TODO: we need a render_pre handler that locks the interface before rending if there are any streamed sequences in the scene
     # TODO: we also need a render_post handler that unlocks the interface if it was locked by the render_pre handler
+    # TODO: can we use atexit to detect the program closing and cleanup meshes?
+    #   otherwise, we might want a button to let the user clear the cache before saving the file
 
 
 def unregister():
