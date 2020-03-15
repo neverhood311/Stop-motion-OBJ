@@ -36,6 +36,15 @@ def deselectAll():
     for ob in bpy.context.scene.objects:
         ob.select_set(state=False)
 
+
+# We have to use this function instead of bpy.context.selected_objects because there's no "selected_objects" within the render context
+def getSelectedObjects():
+    selected_objects = []
+    for ob in bpy.context.scene.objects:
+        if ob.select_get() is True:
+            selected_objects.append(ob)
+    return selected_objects
+
 # set the frame number for all mesh sequence objects
 # COMMENT THIS persistent OUT WHEN RUNNING FROM THE TEXT EDITOR
 @persistent
@@ -427,6 +436,7 @@ def setFrameObjStreamed(obj, frameNum):
                     for material in prev_mesh.materials:
                         obj.data.materials.append(material)
 
+    # TODO: remove meshes until you're down to the cachSize (e.g. if you have 10 meshes in memory and you changed your cache size to 5)
     if mss.cacheSize > 0 and mss.numMeshesInMemory > mss.cacheSize:
         # find and delete the one closest to the end of the array
         idxToDelete = len(mss.meshNameArray) - 1
@@ -437,6 +447,8 @@ def setFrameObjStreamed(obj, frameNum):
             removeMeshFromCache(obj, idxToDelete)
 
 
+# This function will be called from within both the Editor context and the Render context
+# Keep that in mind when using bpy.context
 def importStreamedFile(obj, idx):
     mss = obj.mesh_sequence_settings
     absDirectory = bpy.path.abspath(mss.dirPath)
@@ -444,12 +456,13 @@ def importStreamedFile(obj, idx):
     filename = os.path.join(absDirectory, mss.meshNameArray[idx].basename)
     deselectAll()
     importFunc(filepath=filename)
-    tmpObject = bpy.context.selected_objects[0]
+    tmpObject = getSelectedObjects()[0]
     tmpMesh = tmpObject.data
     tmpMesh.use_fake_user = True
     tmpMesh.inMeshSequence = True
     deselectAll()
     tmpObject.select_set(state=True)
+    # TODO: I don't think this bpy.ops.object.delete() works in render mode/locked interface mode
     bpy.ops.object.delete()
     mss.meshNameArray[idx].key = tmpMesh.name
     mss.meshNameArray[idx].inMemory = True
