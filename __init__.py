@@ -24,7 +24,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 0, 2, "alpha.3"),
+    "version": (2, 0, 2, "alpha.4"),
     "blender": (2, 80, 0),
     "location": "View 3D > Add > Mesh > Mesh Sequence",
     "warning": "",
@@ -49,11 +49,19 @@ def register():
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(MeshSequencePanel)
     bpy.types.VIEW3D_MT_mesh_add.append(menu_func)
+    bpy.app.handlers.render_init.append(renderInitHandler)
+    bpy.app.handlers.render_complete.append(renderCompleteHandler)
+    bpy.app.handlers.render_cancel.append(renderCancelHandler)
+    # TODO: can we use atexit to detect the program closing and cleanup meshes?
+    #   otherwise, we might want a button to let the user clear the cache before saving the file
 
 
 def unregister():
     bpy.app.handlers.load_post.remove(initializeSequences)
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
+    bpy.app.handlers.render_init.remove(renderInitHandler)
+    bpy.app.handlers.render_complete.remove(renderCompleteHandler)
+    bpy.app.handlers.render_cancel.remove(renderCancelHandler)
     bpy.utils.unregister_class(AddMeshSequence)
     bpy.utils.unregister_class(LoadMeshSequence)
     bpy.utils.unregister_class(ReloadMeshSequence)
