@@ -53,6 +53,37 @@ def updateFrame(scene):
     setFrameNumber(scn.frame_current)
 
 
+# global variables
+storedUseLockInterface = False
+forceMeshLoad = False
+
+
+@persistent
+def renderInitHandler(scene):
+    global storedUseLockInterface
+    storedUseLockInterface = bpy.data.scenes["Scene"].render.use_lock_interface
+    bpy.data.scenes["Scene"].render.use_lock_interface = True
+    global forceMeshLoad
+    forceMeshLoad = True
+
+
+@persistent
+def renderCompleteHandler(scene):
+    renderStopped()
+
+
+@persistent
+def renderCancelHandler(scene):
+    renderStopped()
+
+
+def renderStopped():
+    global storedUseLockInterface
+    bpy.data.scenes["Scene"].render.use_lock_interface = storedUseLockInterface
+    global forceMeshLoad
+    forceMeshLoad = False
+
+
 # runs every time the start frame of an object is changed
 def updateStartFrame(self, context):
     updateFrame(0)
@@ -229,7 +260,7 @@ def loadStreamingSequenceFromMeshFiles(obj, directory, filePrefix):
     if numFrames > 0:
         mss.loaded = True
 
-        setFrameObjStreamed(obj, bpy.context.scene.frame_current)
+        setFrameObjStreamed(obj, bpy.context.scene.frame_current, True)
 
         # TODO: this select_set is not working
         obj.select_set(state=True)
@@ -368,7 +399,8 @@ def setFrameNumber(frameNum):
             if cacheMode == 'cached':
                 setFrameObj(obj, frameNum)
             elif cacheMode == 'streaming':
-                setFrameObjStreamed(obj, frameNum)
+                global forceMeshLoad
+                setFrameObjStreamed(obj, frameNum, forceLoad=forceMeshLoad)
 
 
 def getMeshIdxFromFrameNumber(_obj, frameNum):
@@ -421,13 +453,13 @@ def setFrameObj(_obj, frameNum):
                     _obj.data.materials.append(material)
 
 
-def setFrameObjStreamed(obj, frameNum):
+def setFrameObjStreamed(obj, frameNum, forceLoad=False):
     mss = obj.mesh_sequence_settings
     idx = getMeshIdxFromFrameNumber(obj, frameNum)
     nextMeshProp = getMeshPropFromIndex(obj, idx)
 
     # if we want to load new meshes as needed and it's not already loaded
-    if nextMeshProp.inMemory is False and mss.streamDuringPlayback is True:
+    if nextMeshProp.inMemory is False and (mss.streamDuringPlayback is True or forceLoad is True):
         # load the mesh into memory
         importStreamedFile(obj, idx)
 
