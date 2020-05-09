@@ -765,6 +765,10 @@ class MeshSequencePanel(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_context = 'object'
 
+    @classmethod
+    def poll(cls, context):
+        return context.object.mesh_sequence_settings.initialized == True
+
     def draw(self, context):
         layout = self.layout
         obj = context.object
