@@ -333,7 +333,7 @@ def loadSequenceFromBlendFile(_obj):
         mss.numMeshesInMemory = len(mss.meshNameArray) - 1
         # make sure the meshes know they're part of a mesh sequence (helps with backwards compatibility)
         for meshName in mss.meshNameArray:
-            bpy.data.meshes[meshName.name].inMeshSequence = True
+            bpy.data.meshes[meshName.key].inMeshSequence = True
     elif mss.cacheMode == 'streaming':
         mss.numMeshesInMemory = 0
 
@@ -593,14 +593,14 @@ def bakeSequence(_obj):
     # If this is a single-material sequence, make sure the material is copied to the whole sequence
     # This assumes that the first mesh in the sequence has a material
     if _obj.mesh_sequence_settings.perFrameMaterial is False:
-        objMaterials = bpy.data.meshes[meshNameElements[1].name].materials
+        objMaterials = bpy.data.meshes[meshNameElements[1].key].materials
         meshesIter = iter(meshNameElements)
         # skip the emptyMesh
         next(meshesIter)
         # skip the first mesh (we'll copy the material from this one into the rest of them)
         next(meshesIter)
         for meshName in meshesIter:
-            currentMesh = bpy.data.meshes[meshName.name]
+            currentMesh = bpy.data.meshes[meshName.key]
             currentMesh.materials.clear()
             for material in objMaterials:
                 currentMesh.materials.append(material)
