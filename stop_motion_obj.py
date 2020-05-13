@@ -96,22 +96,22 @@ def countMatchingFiles(_directory, _filePrefix, _fileExtension):
     return len(files)
 
 
-def fileExtensionFromTypeNumber(_typeNumber):
-    if(_typeNumber == 0):
+def fileExtensionFromType(_type):
+    if(_type == 'obj'):
         return 'obj'
-    elif(_typeNumber == 1):
+    elif(_type == 'stl'):
         return 'stl'
-    elif(_typeNumber == 2):
+    elif(_type == 'ply'):
         return 'ply'
     return ''
 
 
-def importFuncFromTypeNumber(_typeNumber):
-    if (_typeNumber == 0):
+def importFuncFromType(_type):
+    if (_type == 'obj'):
         return bpy.ops.import_scene.obj
-    elif (_typeNumber == 1):
+    elif (_type == 'stl'):
         return bpy.ops.import_mesh.stl
-    elif (_typeNumber == 2):
+    elif (_type == 'ply'):
         return bpy.ops.import_mesh.ply
     return None
 
@@ -182,11 +182,11 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         default=1)
 
     fileFormat: bpy.props.EnumProperty(
-        items=[('0', 'OBJ', 'Wavefront OBJ'),
-               ('1', 'STL', 'STereoLithography'),
-               ('2', 'PLY', 'Stanford PLY')],
+        items=[('obj', 'OBJ', 'Wavefront OBJ'),
+               ('stl', 'STL', 'STereoLithography'),
+               ('ply', 'PLY', 'Stanford PLY')],
         name='File Format',
-        default='0')
+        default='obj')
 
 
 @persistent
@@ -222,7 +222,7 @@ def loadStreamingSequenceFromMeshFiles(obj, directory, filePrefix):
     # count the number of matching files
     mss = obj.mesh_sequence_settings
     absDirectory = bpy.path.abspath(directory)
-    fileExtension = fileExtensionFromTypeNumber(int(mss.fileFormat))
+    fileExtension = fileExtensionFromType(mss.fileFormat)
     if countMatchingFiles(absDirectory, filePrefix, fileExtension) == 0:
         return 0
 
@@ -270,11 +270,11 @@ def loadStreamingSequenceFromMeshFiles(obj, directory, filePrefix):
 def loadSequenceFromMeshFiles(_obj, _dir, _file):
     # error out early if there are no files that match the file prefix
     full_dirpath = bpy.path.abspath(_dir)
-    fileExtension = fileExtensionFromTypeNumber(int(_obj.mesh_sequence_settings.fileFormat))
+    fileExtension = fileExtensionFromType(_obj.mesh_sequence_settings.fileFormat)
     if countMatchingFiles(full_dirpath, _file, fileExtension) == 0:
         return 0
 
-    importFunc = importFuncFromTypeNumber(int(_obj.mesh_sequence_settings.fileFormat))
+    importFunc = importFuncFromType(_obj.mesh_sequence_settings.fileFormat)
     full_filepath = os.path.join(full_dirpath, _file + '*.' + fileExtension)
     numFrames = 0
     unsortedFiles = glob.glob(full_filepath)
@@ -352,7 +352,7 @@ def loadSequenceFromBlendFile(_obj):
 
 def reloadSequenceFromMeshFiles(_object, _directory, _filePrefix):
     # if there are no files that match the file prefix, error out early before making changes
-    fileExtension = fileExtensionFromTypeNumber(int(_object.mesh_sequence_settings.fileFormat))
+    fileExtension = fileExtensionFromType(_object.mesh_sequence_settings.fileFormat)
     if countMatchingFiles(_directory, _filePrefix, fileExtension) == 0:
         return 0
 
@@ -496,7 +496,7 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False):
 def importStreamedFile(obj, idx):
     mss = obj.mesh_sequence_settings
     absDirectory = bpy.path.abspath(mss.dirPath)
-    importFunc = importFuncFromTypeNumber(int(mss.fileFormat))
+    importFunc = importFuncFromType(mss.fileFormat)
     filename = os.path.join(absDirectory, mss.meshNameArray[idx].basename)
     deselectAll()
     importFunc(filepath=filename)

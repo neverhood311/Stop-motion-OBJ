@@ -4,6 +4,8 @@ from bpy_extras.io_utils import (
     orientation_helper
     )
 
+from .stop_motion_obj import MeshSequenceSettings
+
 # The properties panel added to the Object Properties Panel list
 class MeshSequencePanel(bpy.types.Panel):
     bl_idname = 'OBJ_SEQUENCE_PT_properties'
@@ -74,6 +76,45 @@ class MeshSequencePanel(bpy.types.Panel):
                     row.prop(objSettings, "streamDuringPlayback")
 
 
+class OBJImportSettings(bpy.types.PropertyGroup):
+    use_edges: bpy.props.BoolProperty(name="Lines", description="Import lines and faces with 2 verts as edge", default=True)
+    use_smooth_groups: bpy.props.BoolProperty(name="Smooth Groups", description="Surround smooth groups by sharp edges", default=True)
+    use_split_objects: bpy.props.BoolProperty(name="Object", description="Import OBJ Objects into Blender Objects", default=True)
+    use_split_groups: bpy.props.BoolProperty(name="Group", description="Import OBJ Groups into Blender Objects", default=False)
+    use_groups_as_vgroups: bpy.props.BoolProperty(name="Poly Groups", description="Import OBJ groups as vertex groups", default=False)
+    use_image_search: bpy.props.BoolProperty(name="Image Search", description="Search subdirs for any associated images (Warning: may be slow)", default=True)
+    split_mode: bpy.props.EnumProperty(
+        name="Split",
+        items=(('ON', "Split", "Split geometry, omits unused vertices"),
+               ('OFF', "Keep Vert Order", "Keep vertex order from file")))
+    global_clight_size: bpy.props.FloatProperty(
+        name="Clamp Size",
+        description="Clamp bounds under this value (zero to disable)",
+        min=0.0,
+        max=1000.0,
+        soft_min=0.0,
+        soft_max=1000.0,
+        default=0.0)
+
+
+class STLImportSettings(bpy.types.PropertyGroup):
+    global_scale: bpy.props.FloatProperty(
+        name="Scale",
+        soft_min=0.001,
+        soft_max=1000.0,
+        min=1e-6,
+        max=1e6,
+        default=1.0)
+    use_scene_unit: bpy.props.BoolProperty(
+        name="Scene Unit",
+        description="Apply current scene's unit (as defined by unit scale) to imported data",
+        default=False)
+    use_facet_normal: bpy.props.BoolProperty(
+        name="Facet Normals",
+        description="Use (import) facet normals (note that this will still give flat shading)",
+        default=False)
+
+
 @orientation_helper(axis_forward='-Z', axis_up='Y')
 class ImportSequence(bpy.types.Operator, ImportHelper):
     """Load a mesh sequence"""
@@ -81,33 +122,18 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
     bl_label = "Import"
     bl_options = {'UNDO'}
 
-    fileFormat: bpy.props.EnumProperty(
-        items=[('obj', 'OBJ', 'Wavefront OBJ'),
-               ('stl', 'STL', 'STereoLithography'),
-               ('ply', 'PLY', 'Stanford PLY')],
-        name='File Format',
-        default='obj')
-
-    obj_split_mode: bpy.props.EnumProperty(
-        name="Split",
-        items=(('ON', "Split", "Split geometry, omits unused verts"),
-               ('OFF', "Keep Vert Order", "Keep vertex order from file")))
-    
-    stl_use_facet_normal: bpy.props.BoolProperty(
-        name="Facet Normals",
-        description="Use (import) facet normals (note that this will still give flat shading)",
-        default=False
-    )
-
-    # TODO: we need all popular settings for OBJ, STL, and PLY represented here
-
-    # material mode (one material total or one material per frame)
-    perFrameMaterial: bpy.props.BoolProperty(
-        name='Material per Frame',
-        default=False)
+    objSettings: bpy.props.PointerProperty(type=OBJImportSettings)
+    stlSettings: bpy.props.PointerProperty(type=STLImportSettings)
+    mss: bpy.props.PointerProperty(type=MeshSequenceSettings)
 
     def execute(self, context):
         print("Imported a sequence")
+        # TODO:
+        # the input parameters should be stored on 'self'
+        # create a new mesh sequence
+        # load the mesh sequence
+        # (basically what's happening in the LoadMeshSequence operator)
+        # TODO: return {'FINISHED'}
 
     # we need this function so it doesn't try to render any UI elements. The ImportSequencePanel will do all the drawing
     def draw(self, context):
@@ -129,13 +155,28 @@ class FileImportSettingsPanel(bpy.types.Panel):
     def draw(self, context):
         op = context.space_data.active_operator
         layout = self.layout
-        layout.row().prop(op, "fileFormat")
+        layout.row().prop(op.mss, "fileFormat")
 
-        if op.fileFormat == 'obj':
-            layout.row().prop(op, "obj_split_mode")
-        elif op.fileFormat == 'stl':
-            layout.row().prop(op, "stl_use_facet_normal")
-        # TODO: we need the rest of the OBJ, STL, and PLY settings here
+        if op.mss.fileFormat == 'obj':
+            layout.prop(op.objSettings, 'use_image_search')
+            layout.prop(op.objSettings, 'use_smooth_groups')
+            layout.prop(op.objSettings, 'use_edges')
+            layout.prop(op.objSettings, 'global_clight_size')
+            layout.prop(op.objSettings, 'split_mode')
+
+            col = layout.column()
+            if op.objSettings.split_mode == 'ON':
+                col.prop(op.objSettings, "use_split_objects", text="Split by Object")
+                col.prop(op.objSettings, "use_split_groups", text="Split by Group")
+            else:
+                col.prop(op.objSettings, "use_groups_as_vgroups")
+
+        elif op.mss.fileFormat == 'stl':
+            layout.row().prop(op.stlSettings, "global_scale")
+            layout.row().prop(op.stlSettings, "use_scene_unit")
+            layout.row().prop(op.stlSettings, "use_facet_normal")
+        elif op.mss.fileFormat == 'ply':
+            layout.label(text="No .ply settings")
 
 
 class TransformSettingsPanel(bpy.types.Panel):
@@ -156,7 +197,6 @@ class TransformSettingsPanel(bpy.types.Panel):
         sfile = context.space_data
         operator = sfile.active_operator
 
-        layout.prop(operator, "global_clight_size")
         layout.prop(operator, "axis_forward")
         layout.prop(operator, "axis_up")
 
@@ -174,7 +214,9 @@ class SequenceImportSettingsPanel(bpy.types.Panel):
     def draw(self, context):
         op = context.space_data.active_operator
         layout = self.layout
-        layout.row().prop(op, "perFrameMaterial")
+        layout.row().prop(op.mss, "fileName")
+        layout.row().prop(op.mss, "perFrameMaterial")
+        layout.row().prop(op.mss, "cacheMode")
 
 
 def menu_func_import_sequence(self, context):
