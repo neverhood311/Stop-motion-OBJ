@@ -19,12 +19,13 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from .stop_motion_obj import *
+from .panels import *
 
 bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 0, 2, "alpha.6"),
+    "version": (2, 0, 2, "alpha.7"),
     "blender": (2, 80, 0),
     "location": "View 3D > Add > Mesh > Mesh Sequence",
     "warning": "",
@@ -52,6 +53,15 @@ def register():
     bpy.app.handlers.render_init.append(renderInitHandler)
     bpy.app.handlers.render_complete.append(renderCompleteHandler)
     bpy.app.handlers.render_cancel.append(renderCancelHandler)
+
+    bpy.types.TOPBAR_MT_file_import.append(menu_func_import_sequence)
+    bpy.utils.register_class(ImportSequence)
+
+    # the order here is important since it is the order in which these sections will be drawn
+    bpy.utils.register_class(FileImportSettingsPanel)
+    bpy.utils.register_class(TransformSettingsPanel)
+    bpy.utils.register_class(SequenceImportSettingsPanel)
+
     # TODO: can we use atexit to detect the program closing and cleanup meshes?
     #   otherwise, we might want a button to let the user clear the cache before saving the file
 
@@ -73,6 +83,11 @@ def unregister():
     bpy.utils.unregister_class(MeshNameProp)
     bpy.types.VIEW3D_MT_mesh_add.remove(menu_func)
 
+    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_sequence)
+    bpy.utils.unregister_class(ImportSequence)
+    bpy.utils.unregister_class(FileImportSettingsPanel)
+    bpy.utils.unregister_class(TransformSettingsPanel)
+    bpy.utils.unregister_class(SequenceImportSettingsPanel)
 
 if __name__ == "__main__":
     register()
