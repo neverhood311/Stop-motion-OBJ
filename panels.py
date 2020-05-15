@@ -1,10 +1,10 @@
 import bpy
 from bpy_extras.io_utils import (
     ImportHelper,
-    orientation_helper
-    )
+    orientation_helper,
+    axis_conversion)
 
-from .stop_motion_obj import MeshSequenceSettings
+from .stop_motion_obj import *
 
 # The properties panel added to the Object Properties Panel list
 class MeshSequencePanel(bpy.types.Panel):
@@ -76,43 +76,26 @@ class MeshSequencePanel(bpy.types.Panel):
                     row.prop(objSettings, "streamDuringPlayback")
 
 
-class OBJImportSettings(bpy.types.PropertyGroup):
-    use_edges: bpy.props.BoolProperty(name="Lines", description="Import lines and faces with 2 verts as edge", default=True)
-    use_smooth_groups: bpy.props.BoolProperty(name="Smooth Groups", description="Surround smooth groups by sharp edges", default=True)
-    use_split_objects: bpy.props.BoolProperty(name="Object", description="Import OBJ Objects into Blender Objects", default=True)
-    use_split_groups: bpy.props.BoolProperty(name="Group", description="Import OBJ Groups into Blender Objects", default=False)
-    use_groups_as_vgroups: bpy.props.BoolProperty(name="Poly Groups", description="Import OBJ groups as vertex groups", default=False)
-    use_image_search: bpy.props.BoolProperty(name="Image Search", description="Search subdirs for any associated images (Warning: may be slow)", default=True)
-    split_mode: bpy.props.EnumProperty(
-        name="Split",
-        items=(('ON', "Split", "Split geometry, omits unused vertices"),
-               ('OFF', "Keep Vert Order", "Keep vertex order from file")))
-    global_clight_size: bpy.props.FloatProperty(
-        name="Clamp Size",
-        description="Clamp bounds under this value (zero to disable)",
-        min=0.0,
-        max=1000.0,
-        soft_min=0.0,
-        soft_max=1000.0,
-        default=0.0)
+class SequenceImportSettings(bpy.types.PropertyGroup):
+    fileNamePrefix: bpy.props.StringProperty(name='File Name')
 
+    # material mode (one material total or one material per frame)
+    perFrameMaterial: bpy.props.BoolProperty(
+        name='Material per Frame',
+        default=False)
 
-class STLImportSettings(bpy.types.PropertyGroup):
-    global_scale: bpy.props.FloatProperty(
-        name="Scale",
-        soft_min=0.001,
-        soft_max=1000.0,
-        min=1e-6,
-        max=1e6,
-        default=1.0)
-    use_scene_unit: bpy.props.BoolProperty(
-        name="Scene Unit",
-        description="Apply current scene's unit (as defined by unit scale) to imported data",
-        default=False)
-    use_facet_normal: bpy.props.BoolProperty(
-        name="Facet Normals",
-        description="Use (import) facet normals (note that this will still give flat shading)",
-        default=False)
+    # Whether to load the entire sequence into memory or to load meshes on-demand
+    cacheMode: bpy.props.EnumProperty(
+        items=[('cached', 'Cached', 'The full sequence is loaded into memory and saved in the .blend file'),
+               ('streaming', 'Streaming', 'The sequence is loaded on-demand and not saved in the .blend file')],
+        name='Cache Mode',
+        default='cached')
+    fileFormat: bpy.props.EnumProperty(
+        items=[('obj', 'OBJ', 'Wavefront OBJ'),
+               ('stl', 'STL', 'STereoLithography'),
+               ('ply', 'PLY', 'Stanford PLY')],
+        name='File Format',
+        default='obj')
 
 
 @orientation_helper(axis_forward='-Z', axis_up='Y')
@@ -122,18 +105,63 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
     bl_label = "Import"
     bl_options = {'UNDO'}
 
-    objSettings: bpy.props.PointerProperty(type=OBJImportSettings)
-    stlSettings: bpy.props.PointerProperty(type=STLImportSettings)
-    mss: bpy.props.PointerProperty(type=MeshSequenceSettings)
+    objSettings: bpy.props.PointerProperty(type=OBJImporter)
+    stlSettings: bpy.props.PointerProperty(type=STLImporter)
+    plySettings: bpy.props.PointerProperty(type=PLYImporter)
+    sequenceSettings: bpy.props.PointerProperty(type=SequenceImportSettings)
 
     def execute(self, context):
         print("Imported a sequence")
-        # TODO:
+        if self.sequenceSettings.fileNamePrefix == "":
+            self.report({'ERROR_INVALID_INPUT'}, "Please enter a file name prefix")
+            return {'CANCELLED'}
+
         # the input parameters should be stored on 'self'
         # create a new mesh sequence
-        # load the mesh sequence
-        # (basically what's happening in the LoadMeshSequence operator)
-        # TODO: return {'FINISHED'}
+        seqObj = newMeshSequence()
+        mss = seqObj.mesh_sequence_settings
+
+        # deep copy self.sequenceSettings data into the new object's mss data, including dirPath
+        mss.dirPath = self.filepath
+        mss.fileName = self.sequenceSettings.fileNamePrefix
+        mss.perFrameMaterial = self.sequenceSettings.perFrameMaterial
+        mss.cacheMode = self.sequenceSettings.cacheMode
+        mss.fileFormat = self.sequenceSettings.fileFormat
+
+        if mss.fileFormat == 'obj':
+            #setattr(seqObj.mesh_sequence_settings, "fileImporter", OBJImporter(self.objSettings))
+            seqObj.mesh_sequence_settings.fileImporter = OBJImporter(self.objSettings)
+            seqObj.mesh_sequence_settings.fileImporter.axis_forward = self.axis_forward
+            seqObj.mesh_sequence_settings.fileImporter.axis_up = self.axis_up
+        elif mss.fileFormat == 'stl':
+            seqObj.mesh_sequence_settings.fileImporter = STLImporter(self.stlSettings)
+            seqObj.mesh_sequence_settings.fileImporter.axis_forward = self.axis_forward
+            seqObj.mesh_sequence_settings.fileImporter.axis_up = self.axis_up
+        elif mss.fileFormat == 'ply':
+            # currently, the PLY import addon doesn't support import transformations
+            seqObj.mesh_sequence_settings.fileImporter = PLYImporter(self.plySettings)
+
+        meshCount = 0
+
+        # cached
+        if mss.cacheMode == 'cached':
+            meshCount = loadSequenceFromMeshFiles(seqObj, mss.dirPath, mss.fileName)
+
+        # streaming
+        elif mss.cacheMode == 'streaming':
+            meshCount = loadStreamingSequenceFromMeshFiles(seqObj, mss.dirPath, mss.fileName)
+
+        # reset self.sequenceSettings data to defaults
+        self.sequenceSettings.fileNamePrefix = ""
+        self.sequenceSettings.cacheMode = "cached"
+        self.sequenceSettings.fileFormat = "obj"
+        self.sequenceSettings.perFrameMaterial = False
+
+        if meshCount == 0:
+            self.report({'ERROR'}, "No matching files found. Make sure the Root Folder, File Name, and File Format are correct.")
+            return {'CANCELLED'}
+
+        return {'FINISHED'}
 
     # we need this function so it doesn't try to render any UI elements. The ImportSequencePanel will do all the drawing
     def draw(self, context):
@@ -155,9 +183,9 @@ class FileImportSettingsPanel(bpy.types.Panel):
     def draw(self, context):
         op = context.space_data.active_operator
         layout = self.layout
-        layout.row().prop(op.mss, "fileFormat")
+        layout.row().prop(op.sequenceSettings, "fileFormat")
 
-        if op.mss.fileFormat == 'obj':
+        if op.sequenceSettings.fileFormat == 'obj':
             layout.prop(op.objSettings, 'use_image_search')
             layout.prop(op.objSettings, 'use_smooth_groups')
             layout.prop(op.objSettings, 'use_edges')
@@ -171,11 +199,11 @@ class FileImportSettingsPanel(bpy.types.Panel):
             else:
                 col.prop(op.objSettings, "use_groups_as_vgroups")
 
-        elif op.mss.fileFormat == 'stl':
+        elif op.sequenceSettings.fileFormat == 'stl':
             layout.row().prop(op.stlSettings, "global_scale")
             layout.row().prop(op.stlSettings, "use_scene_unit")
             layout.row().prop(op.stlSettings, "use_facet_normal")
-        elif op.mss.fileFormat == 'ply':
+        elif op.sequenceSettings.fileFormat == 'ply':
             layout.label(text="No .ply settings")
 
 
@@ -214,9 +242,13 @@ class SequenceImportSettingsPanel(bpy.types.Panel):
     def draw(self, context):
         op = context.space_data.active_operator
         layout = self.layout
-        layout.row().prop(op.mss, "fileName")
-        layout.row().prop(op.mss, "perFrameMaterial")
-        layout.row().prop(op.mss, "cacheMode")
+        row = layout.row()
+        if op.sequenceSettings.fileNamePrefix == "":
+            row.alert = True
+
+        row.prop(op.sequenceSettings, "fileNamePrefix")
+        layout.row().prop(op.sequenceSettings, "perFrameMaterial")
+        layout.row().prop(op.sequenceSettings, "cacheMode")
 
 
 def menu_func_import_sequence(self, context):
