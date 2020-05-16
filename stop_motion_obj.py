@@ -96,24 +96,98 @@ def countMatchingFiles(_directory, _filePrefix, _fileExtension):
     return len(files)
 
 
-def fileExtensionFromTypeNumber(_typeNumber):
-    if(_typeNumber == 0):
+def fileExtensionFromType(_type):
+    if(_type == 'obj'):
         return 'obj'
-    elif(_typeNumber == 1):
+    elif(_type == 'stl'):
         return 'stl'
-    elif(_typeNumber == 2):
+    elif(_type == 'ply'):
         return 'ply'
     return ''
 
 
-def importFuncFromTypeNumber(_typeNumber):
-    if (_typeNumber == 0):
-        return bpy.ops.import_scene.obj
-    elif (_typeNumber == 1):
-        return bpy.ops.import_mesh.stl
-    elif (_typeNumber == 2):
-        return bpy.ops.import_mesh.ply
-    return None
+class MeshImporter(bpy.types.PropertyGroup):
+    # OBJ import parameters
+    obj_use_edges: bpy.props.BoolProperty(name="Lines", description="Import lines and faces with 2 verts as edge", default=True)
+    obj_use_smooth_groups: bpy.props.BoolProperty(name="Smooth Groups", description="Surround smooth groups by sharp edges", default=True)
+    obj_use_split_objects: bpy.props.BoolProperty(name="Object", description="Import OBJ Objects into Blender Objects", default=True)
+    obj_use_split_groups: bpy.props.BoolProperty(name="Group", description="Import OBJ Groups into Blender Objects", default=False)
+    obj_use_groups_as_vgroups: bpy.props.BoolProperty(name="Poly Groups", description="Import OBJ groups as vertex groups", default=False)
+    obj_use_image_search: bpy.props.BoolProperty(name="Image Search", description="Search subdirs for any associated images (Warning: may be slow)", default=True)
+    obj_split_mode: bpy.props.EnumProperty(
+        name="Split",
+        items=(('ON', "Split", "Split geometry, omits unused vertices"),
+               ('OFF', "Keep Vert Order", "Keep vertex order from file")))
+    obj_global_clight_size: bpy.props.FloatProperty(
+        name="Clamp Size",
+        description="Clamp bounds under this value (zero to disable)",
+        min=0.0,
+        max=1000.0,
+        soft_min=0.0,
+        soft_max=1000.0,
+        default=0.0)
+
+    # STL import parameters
+    stl_global_scale: bpy.props.FloatProperty(
+        name="Scale",
+        soft_min=0.001,
+        soft_max=1000.0,
+        min=1e-6,
+        max=1e6,
+        default=1.0)
+    stl_use_scene_unit: bpy.props.BoolProperty(
+        name="Scene Unit",
+        description="Apply current scene's unit (as defined by unit scale) to imported data",
+        default=False)
+    stl_use_facet_normal: bpy.props.BoolProperty(
+        name="Facet Normals",
+        description="Use (import) facet normals (note that this will still give flat shading)",
+        default=False)
+
+    # (PLY has no import parameters)
+    # Shared import parameters
+    axis_forward: bpy.props.StringProperty(name="Axis Forward",default="-Z")
+    axis_up: bpy.props.StringProperty(name="Axis Up",default="Y")
+
+    def draw(self):
+        pass
+
+    def load(self, fileType, filePath):
+        if fileType == 'obj':
+            self.loadOBJ(filePath)
+        elif fileType == 'stl':
+            self.loadSTL(filePath)
+        elif fileType == 'ply':
+            self.loadPLY(filePath)
+
+    def loadOBJ(self, filePath):
+        # call the obj load function with all the correct parameters
+        bpy.ops.import_scene.obj(
+            filepath=filePath,
+            use_edges=self.obj_use_edges,
+            use_smooth_groups=self.obj_use_smooth_groups,
+            use_split_objects=self.obj_use_split_objects,
+            use_split_groups=self.obj_use_split_groups,
+            use_groups_as_vgroups=self.obj_use_groups_as_vgroups,
+            use_image_search=self.obj_use_image_search,
+            split_mode=self.obj_split_mode,
+            global_clight_size=self.obj_global_clight_size,
+            axis_forward=self.axis_forward,
+            axis_up=self.axis_up)
+
+    def loadSTL(self, filePath):
+        # call the stl load function with all the correct parameters
+        bpy.ops.import_mesh.stl(
+            filepath=filePath,
+            global_scale=self.stl_global_scale,
+            use_scene_unit=self.stl_use_scene_unit,
+            use_facet_normal=self.stl_use_facet_normal,
+            axis_forward=self.axis_forward,
+            axis_up=self.axis_up)
+    
+    def loadPLY(self, filePath):
+        # call the ply load function with all the correct parameters
+        bpy.ops.import_mesh.ply(filepath=filePath)
 
 
 class MeshNameProp(bpy.types.PropertyGroup):
@@ -123,15 +197,38 @@ class MeshNameProp(bpy.types.PropertyGroup):
 
 
 class MeshSequenceSettings(bpy.types.PropertyGroup):
+    fileImporter: bpy.props.PointerProperty(type=MeshImporter)
+
     dirPath: bpy.props.StringProperty(
         name="Root Folder",
         description="Only .OBJ files will be listed",
         subtype="DIR_PATH")
     fileName: bpy.props.StringProperty(name='File Name')
+
+    # material mode (one material total or one material per frame)
+    perFrameMaterial: bpy.props.BoolProperty(
+        name='Material per Frame',
+        default=False)
+
+    # Whether to load the entire sequence into memory or to load meshes on-demand
+    cacheMode: bpy.props.EnumProperty(
+        items=[('cached', 'Cached', 'The full sequence is loaded into memory and saved in the .blend file'),
+               ('streaming', 'Streaming', 'The sequence is loaded on-demand and not saved in the .blend file')],
+        name='Cache Mode',
+        default='cached')
+
+    fileFormat: bpy.props.EnumProperty(
+        items=[('obj', 'OBJ', 'Wavefront OBJ'),
+               ('stl', 'STL', 'STereoLithography'),
+               ('ply', 'PLY', 'Stanford PLY')],
+        name='File Format',
+        default='obj')
+
     startFrame: bpy.props.IntProperty(
         name='Start Frame',
         update=updateStartFrame,
         default=1)
+
     # TODO: deprecate meshNames
     meshNames: bpy.props.StringProperty()
     meshNameArray: bpy.props.CollectionProperty(type=MeshNameProp)
@@ -147,19 +244,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
                ('2', 'Repeat', 'Repeat the animation'),
                ('3', 'Bounce', 'Play in reverse at the end of the frame range')],
         name='Frame Mode',
-        default='1')
-
-    # material mode (one material total or one material per frame)
-    perFrameMaterial: bpy.props.BoolProperty(
-        name='Material per Frame',
-        default=False)
-
-    # Whether to load the entire sequence into memory or to load meshes on-demand
-    cacheMode: bpy.props.EnumProperty(
-        items=[('cached', 'Cached', 'The full sequence is loaded into memory and saved in the .blend file'),
-               ('streaming', 'Streaming', 'The sequence is loaded on-demand and not saved in the .blend file')],
-        name='Cache Mode',
-        default='cached')
+        default='1')    
 
     # the number of frames to keep in memory if you're in streaming mode
     cacheSize: bpy.props.IntProperty(
@@ -179,14 +264,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         soft_min=0.01,
         step=25,
         precision=2,
-        default=1)
-
-    fileFormat: bpy.props.EnumProperty(
-        items=[('0', 'OBJ', 'Wavefront OBJ'),
-               ('1', 'STL', 'STereoLithography'),
-               ('2', 'PLY', 'Stanford PLY')],
-        name='File Format',
-        default='0')
+        default=1) 
 
 
 @persistent
@@ -222,7 +300,7 @@ def loadStreamingSequenceFromMeshFiles(obj, directory, filePrefix):
     # count the number of matching files
     mss = obj.mesh_sequence_settings
     absDirectory = bpy.path.abspath(directory)
-    fileExtension = fileExtensionFromTypeNumber(int(mss.fileFormat))
+    fileExtension = fileExtensionFromType(mss.fileFormat)
     if countMatchingFiles(absDirectory, filePrefix, fileExtension) == 0:
         return 0
 
@@ -270,20 +348,22 @@ def loadStreamingSequenceFromMeshFiles(obj, directory, filePrefix):
 def loadSequenceFromMeshFiles(_obj, _dir, _file):
     # error out early if there are no files that match the file prefix
     full_dirpath = bpy.path.abspath(_dir)
-    fileExtension = fileExtensionFromTypeNumber(int(_obj.mesh_sequence_settings.fileFormat))
+    fileExtension = fileExtensionFromType(_obj.mesh_sequence_settings.fileFormat)
     if countMatchingFiles(full_dirpath, _file, fileExtension) == 0:
         return 0
 
-    importFunc = importFuncFromTypeNumber(int(_obj.mesh_sequence_settings.fileFormat))
+    #importFunc = importFuncFromType(_obj.mesh_sequence_settings.fileFormat)
     full_filepath = os.path.join(full_dirpath, _file + '*.' + fileExtension)
     numFrames = 0
     unsortedFiles = glob.glob(full_filepath)
     sortedFiles = sorted(unsortedFiles, key=alphanumKey)
 
+    mss = _obj.mesh_sequence_settings
+
     deselectAll()
     for file in sortedFiles:
         # import the mesh file
-        importFunc(filepath=file)
+        mss.fileImporter.load(mss.fileFormat, file)
         tmpObject = bpy.context.selected_objects[0]
         # IMPORTANT: don't copy it; just copy the pointer. This cuts memory usage in half.
         tmpMesh = tmpObject.data
@@ -293,19 +373,19 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
         tmpObject.select_set(state=True)
         bpy.ops.object.delete()
 
-        newMeshNameElement = _obj.mesh_sequence_settings.meshNameArray.add()
+        newMeshNameElement = mss.meshNameArray.add()
         newMeshNameElement.key = tmpMesh.name
         newMeshNameElement.basename = os.path.basename(file)
         newMeshNameElement.inMemory = True
         numFrames += 1
 
-    _obj.mesh_sequence_settings.numMeshes = numFrames + 1
-    _obj.mesh_sequence_settings.numMeshesInMemory = numFrames
+    mss.numMeshes = numFrames + 1
+    mss.numMeshesInMemory = numFrames
     if(numFrames > 0):
         setFrameObj(_obj, bpy.context.scene.frame_current)
 
         _obj.select_set(state=True)
-        _obj.mesh_sequence_settings.loaded = True
+        mss.loaded = True
 
     return numFrames
 
@@ -352,7 +432,7 @@ def loadSequenceFromBlendFile(_obj):
 
 def reloadSequenceFromMeshFiles(_object, _directory, _filePrefix):
     # if there are no files that match the file prefix, error out early before making changes
-    fileExtension = fileExtensionFromTypeNumber(int(_object.mesh_sequence_settings.fileFormat))
+    fileExtension = fileExtensionFromType(_object.mesh_sequence_settings.fileFormat)
     if countMatchingFiles(_directory, _filePrefix, fileExtension) == 0:
         return 0
 
@@ -496,10 +576,9 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False):
 def importStreamedFile(obj, idx):
     mss = obj.mesh_sequence_settings
     absDirectory = bpy.path.abspath(mss.dirPath)
-    importFunc = importFuncFromTypeNumber(int(mss.fileFormat))
     filename = os.path.join(absDirectory, mss.meshNameArray[idx].basename)
     deselectAll()
-    importFunc(filepath=filename)
+    mss.fileImporter.load(mss.fileFormat, filename)
     tmpObject = getSelectedObjects()[0]
     tmpMesh = tmpObject.data
     # we don't want to save streamed meshes to the .blend file
@@ -651,53 +730,6 @@ def freeUnusedMeshes():
     print(numFreed, " meshes freed")
 
 
-class AddMeshSequence(bpy.types.Operator):
-    """Add Mesh Sequence"""
-    # what the operator is called
-    bl_idname = "ms.add_mesh_sequence"
-    # what shows up in the menu
-    bl_label = "Mesh Sequence"
-    bl_options = {'UNDO'}
-
-    def execute(self, context):
-        newMeshSequence()
-        return {'FINISHED'}
-
-
-# the function for adding "Mesh Sequence" to the Add > Mesh menu
-def menu_func(self, context):
-    self.layout.operator(AddMeshSequence.bl_idname, icon="PLUGIN")
-
-
-class LoadMeshSequence(bpy.types.Operator):
-    """Load Mesh Sequence"""
-    bl_idname = "ms.load_mesh_sequence"
-    bl_label = "Load Mesh Sequence"
-    bl_options = {'UNDO'}
-
-    def execute(self, context):
-        obj = context.object
-        mss = obj.mesh_sequence_settings
-        dirPath = mss.dirPath
-        fileName = mss.fileName
-
-        meshCount = 0
-
-        # cached
-        if mss.cacheMode == 'cached':
-            meshCount = loadSequenceFromMeshFiles(obj, dirPath, fileName)
-
-        # streaming
-        elif mss.cacheMode == 'streaming':
-            meshCount = loadStreamingSequenceFromMeshFiles(obj, dirPath, fileName)
-
-        if meshCount == 0:
-            self.report({'ERROR'}, "No matching files found. Make sure the Root Folder, File Name, and File Format are correct.")
-            return {'CANCELLED'}
-
-        return {'FINISHED'}
-
-
 class ReloadMeshSequence(bpy.types.Operator):
     """Reload From Disk"""
     bl_idname = "ms.reload_mesh_sequence"
@@ -755,75 +787,3 @@ class BakeMeshSequence(bpy.types.Operator):
         # update the frame so the right shape is visible
         bpy.context.scene.frame_current = bpy.context.scene.frame_current
         return {'FINISHED'}
-
-
-# The properties panel added to the Object Properties Panel list
-class MeshSequencePanel(bpy.types.Panel):
-    bl_idname = 'OBJ_SEQUENCE_PT_properties'
-    bl_label = 'Mesh Sequence'
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = 'object'
-
-    @classmethod
-    def poll(cls, context):
-        return context.object.mesh_sequence_settings.initialized == True
-
-    def draw(self, context):
-        layout = self.layout
-        obj = context.object
-
-        objSettings = obj.mesh_sequence_settings
-        if objSettings.initialized is True:
-            # Only show options for loading a sequence if one hasn't been loaded yet
-            if objSettings.loaded is False:
-                layout.label(text="Load Mesh Sequence:", icon='FILE_FOLDER')
-                row = layout.row()
-                row.prop(objSettings, "dirPath")
-
-                row = layout.row()
-                row.prop(objSettings, "fileName")
-
-                row = layout.row()
-                row.prop(objSettings, "fileFormat")
-
-                row = layout.row()
-                row.prop(objSettings, "perFrameMaterial")
-
-                row = layout.row()
-                row.prop(objSettings, "cacheMode")
-
-                row = layout.row()
-                row.operator("ms.load_mesh_sequence")
-
-            if objSettings.loaded is True:
-                row = layout.row()
-                row.prop(objSettings, "startFrame")
-
-                row = layout.row()
-                row.prop(objSettings, "frameMode")
-
-                row = layout.row()
-                row.prop(objSettings, "speed")
-
-                if objSettings.cacheMode == 'cached':
-                    row = layout.row()
-                    row.operator("ms.reload_mesh_sequence")
-
-                    layout.row().separator()
-                    row = layout.row(align=True)
-                    row.label(text="Shading:")
-                    row.operator("ms.batch_shade_smooth")
-                    row.operator("ms.batch_shade_flat")
-
-                    layout.row().separator()
-                    row = layout.row()
-                    box = row.box()
-                    box.operator("ms.bake_sequence")
-
-                elif objSettings.cacheMode == 'streaming':
-                    row = layout.row()
-                    row.prop(objSettings, "cacheSize")
-
-                    row = layout.row()
-                    row.prop(objSettings, "streamDuringPlayback")
