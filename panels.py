@@ -105,9 +105,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
     bl_label = "Import"
     bl_options = {'UNDO'}
 
-    objSettings: bpy.props.PointerProperty(type=OBJImporter)
-    stlSettings: bpy.props.PointerProperty(type=STLImporter)
-    plySettings: bpy.props.PointerProperty(type=PLYImporter)
+    importSettings: bpy.props.PointerProperty(type=MeshImporter)
     sequenceSettings: bpy.props.PointerProperty(type=SequenceImportSettings)
 
     def execute(self, context):
@@ -116,9 +114,17 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
             self.report({'ERROR_INVALID_INPUT'}, "Please enter a file name prefix")
             return {'CANCELLED'}
 
+        # TODO: do we actually need to store these? It's encoded in the rotation of seqObj
+        self.importSettings.axis_forward = self.axis_forward
+        self.importSettings.axis_up = self.axis_up
+
         # the input parameters should be stored on 'self'
         # create a new mesh sequence
         seqObj = newMeshSequence()
+        # TODO: we need to apply the axis_forward and axis_up to seqObj, not to each imported mesh!!!
+        global_matrix = axis_conversion(from_forward=self.axis_forward,from_up=self.axis_up).to_4x4()
+        seqObj.matrix_world = global_matrix
+
         mss = seqObj.mesh_sequence_settings
 
         # deep copy self.sequenceSettings data into the new object's mss data, including dirPath
@@ -127,19 +133,8 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         mss.perFrameMaterial = self.sequenceSettings.perFrameMaterial
         mss.cacheMode = self.sequenceSettings.cacheMode
         mss.fileFormat = self.sequenceSettings.fileFormat
-
-        if mss.fileFormat == 'obj':
-            #setattr(seqObj.mesh_sequence_settings, "fileImporter", OBJImporter(self.objSettings))
-            seqObj.mesh_sequence_settings.fileImporter = OBJImporter(self.objSettings)
-            seqObj.mesh_sequence_settings.fileImporter.axis_forward = self.axis_forward
-            seqObj.mesh_sequence_settings.fileImporter.axis_up = self.axis_up
-        elif mss.fileFormat == 'stl':
-            seqObj.mesh_sequence_settings.fileImporter = STLImporter(self.stlSettings)
-            seqObj.mesh_sequence_settings.fileImporter.axis_forward = self.axis_forward
-            seqObj.mesh_sequence_settings.fileImporter.axis_up = self.axis_up
-        elif mss.fileFormat == 'ply':
-            # currently, the PLY import addon doesn't support import transformations
-            seqObj.mesh_sequence_settings.fileImporter = PLYImporter(self.plySettings)
+        
+        self.copyImportSettings(self.importSettings, mss.fileImporter)
 
         meshCount = 0
 
@@ -152,16 +147,34 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
             meshCount = loadStreamingSequenceFromMeshFiles(seqObj, mss.dirPath, mss.fileName)
 
         # reset self.sequenceSettings data to defaults
+        # TODO: let's put this in a function
         self.sequenceSettings.fileNamePrefix = ""
         self.sequenceSettings.cacheMode = "cached"
         self.sequenceSettings.fileFormat = "obj"
         self.sequenceSettings.perFrameMaterial = False
+        self.axis_forward = "-Z"
+        self.axis_up = "Y"
 
         if meshCount == 0:
             self.report({'ERROR'}, "No matching files found. Make sure the Root Folder, File Name, and File Format are correct.")
             return {'CANCELLED'}
 
         return {'FINISHED'}
+
+    def copyImportSettings(self, source, dest):
+        dest.axis_forward = source.axis_forward
+        dest.axis_up = source.axis_up
+        dest.obj_use_edges = source.obj_use_edges
+        dest.obj_use_smooth_groups = source.obj_use_smooth_groups
+        dest.obj_use_split_objects = source.obj_use_split_objects
+        dest.obj_use_split_groups = source.obj_use_split_groups
+        dest.obj_use_groups_as_vgroups = source.obj_use_groups_as_vgroups
+        dest.obj_use_image_search = source.obj_use_image_search
+        dest.obj_split_mode = source.obj_split_mode
+        dest.obj_global_clight_size = source.obj_global_clight_size
+        dest.stl_global_scale = source.stl_global_scale
+        dest.stl_use_scene_unit = source.stl_use_scene_unit
+        dest.stl_use_facet_normal = source.stl_use_facet_normal
 
     # we need this function so it doesn't try to render any UI elements. The ImportSequencePanel will do all the drawing
     def draw(self, context):
@@ -186,23 +199,23 @@ class FileImportSettingsPanel(bpy.types.Panel):
         layout.row().prop(op.sequenceSettings, "fileFormat")
 
         if op.sequenceSettings.fileFormat == 'obj':
-            layout.prop(op.objSettings, 'use_image_search')
-            layout.prop(op.objSettings, 'use_smooth_groups')
-            layout.prop(op.objSettings, 'use_edges')
-            layout.prop(op.objSettings, 'global_clight_size')
-            layout.prop(op.objSettings, 'split_mode')
+            layout.prop(op.importSettings, 'obj_use_image_search')
+            layout.prop(op.importSettings, 'obj_use_smooth_groups')
+            layout.prop(op.importSettings, 'obj_use_edges')
+            layout.prop(op.importSettings, 'obj_global_clight_size')
+            layout.prop(op.importSettings, 'obj_split_mode')
 
             col = layout.column()
-            if op.objSettings.split_mode == 'ON':
-                col.prop(op.objSettings, "use_split_objects", text="Split by Object")
-                col.prop(op.objSettings, "use_split_groups", text="Split by Group")
+            if op.importSettings.obj_split_mode == 'ON':
+                col.prop(op.importSettings, "obj_use_split_objects", text="Split by Object")
+                col.prop(op.importSettings, "obj_use_split_groups", text="Split by Group")
             else:
-                col.prop(op.objSettings, "use_groups_as_vgroups")
+                col.prop(op.importSettings, "obj_use_groups_as_vgroups")
 
         elif op.sequenceSettings.fileFormat == 'stl':
-            layout.row().prop(op.stlSettings, "global_scale")
-            layout.row().prop(op.stlSettings, "use_scene_unit")
-            layout.row().prop(op.stlSettings, "use_facet_normal")
+            layout.row().prop(op.importSettings, "stl_global_scale")
+            layout.row().prop(op.importSettings, "stl_use_scene_unit")
+            layout.row().prop(op.importSettings, "stl_use_facet_normal")
         elif op.sequenceSettings.fileFormat == 'ply':
             layout.label(text="No .ply settings")
 

@@ -37,7 +37,7 @@ bl_info = {
 
 def register():
     bpy.types.Mesh.inMeshSequence = bpy.props.BoolProperty()
-    bpy.utils.register_class(FileImporter)
+    bpy.utils.register_class(MeshImporter)
     bpy.utils.register_class(MeshNameProp)
     bpy.utils.register_class(MeshSequenceSettings)
     bpy.types.Object.mesh_sequence_settings = bpy.props.PointerProperty(type=MeshSequenceSettings)
@@ -61,9 +61,6 @@ def register():
     bpy.utils.register_class(FileImportSettingsPanel)
     bpy.utils.register_class(TransformSettingsPanel)
     bpy.utils.register_class(SequenceImportSettingsPanel)
-    bpy.utils.register_class(OBJImporter)
-    bpy.utils.register_class(STLImporter)
-    bpy.utils.register_class(PLYImporter)
     bpy.utils.register_class(SequenceImportSettings)
     bpy.utils.register_class(ImportSequence)
 
@@ -92,10 +89,7 @@ def unregister():
     bpy.utils.unregister_class(FileImportSettingsPanel)
     bpy.utils.unregister_class(TransformSettingsPanel)
     bpy.utils.unregister_class(SequenceImportSettingsPanel)
-    bpy.utils.unregister_class(FileImporter)
-    bpy.utils.unregister_class(OBJImporter)
-    bpy.utils.unregister_class(STLImporter)
-    bpy.utils.unregister_class(PLYImporter)
+    bpy.utils.unregister_class(MeshImporter)
     bpy.utils.unregister_class(SequenceImportSettings)
 
     # make sure you register any classes ImportSequence depends on before registering this

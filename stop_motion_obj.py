@@ -106,31 +106,19 @@ def fileExtensionFromType(_type):
     return ''
 
 
-#def importFuncFromType(_type):
-#    if (_type == 'obj'):
-#        return bpy.ops.import_scene.obj
-#    elif (_type == 'stl'):
-#        return bpy.ops.import_mesh.stl
-#    elif (_type == 'ply'):
-#        return bpy.ops.import_mesh.ply
-#    return None
-
-class FileImporter(bpy.types.PropertyGroup):
-    pass
-
-
-class OBJImporter(FileImporter):
-    use_edges: bpy.props.BoolProperty(name="Lines", description="Import lines and faces with 2 verts as edge", default=True)
-    use_smooth_groups: bpy.props.BoolProperty(name="Smooth Groups", description="Surround smooth groups by sharp edges", default=True)
-    use_split_objects: bpy.props.BoolProperty(name="Object", description="Import OBJ Objects into Blender Objects", default=True)
-    use_split_groups: bpy.props.BoolProperty(name="Group", description="Import OBJ Groups into Blender Objects", default=False)
-    use_groups_as_vgroups: bpy.props.BoolProperty(name="Poly Groups", description="Import OBJ groups as vertex groups", default=False)
-    use_image_search: bpy.props.BoolProperty(name="Image Search", description="Search subdirs for any associated images (Warning: may be slow)", default=True)
-    split_mode: bpy.props.EnumProperty(
+class MeshImporter(bpy.types.PropertyGroup):
+    # OBJ import parameters
+    obj_use_edges: bpy.props.BoolProperty(name="Lines", description="Import lines and faces with 2 verts as edge", default=True)
+    obj_use_smooth_groups: bpy.props.BoolProperty(name="Smooth Groups", description="Surround smooth groups by sharp edges", default=True)
+    obj_use_split_objects: bpy.props.BoolProperty(name="Object", description="Import OBJ Objects into Blender Objects", default=True)
+    obj_use_split_groups: bpy.props.BoolProperty(name="Group", description="Import OBJ Groups into Blender Objects", default=False)
+    obj_use_groups_as_vgroups: bpy.props.BoolProperty(name="Poly Groups", description="Import OBJ groups as vertex groups", default=False)
+    obj_use_image_search: bpy.props.BoolProperty(name="Image Search", description="Search subdirs for any associated images (Warning: may be slow)", default=True)
+    obj_split_mode: bpy.props.EnumProperty(
         name="Split",
         items=(('ON', "Split", "Split geometry, omits unused vertices"),
                ('OFF', "Keep Vert Order", "Keep vertex order from file")))
-    global_clight_size: bpy.props.FloatProperty(
+    obj_global_clight_size: bpy.props.FloatProperty(
         name="Clamp Size",
         description="Clamp bounds under this value (zero to disable)",
         min=0.0,
@@ -138,71 +126,73 @@ class OBJImporter(FileImporter):
         soft_min=0.0,
         soft_max=1000.0,
         default=0.0)
-    axis_forward: "-Z"
-    axis_up: "Y"
-    
-    def load(self, filename):
-        # call the obj load function with all the correct parameters
-        print("I loaded an OBJ file")
-        bpy.ops.import_scene.obj(
-            filepath=filename,
-            use_edges=self.use_edges,
-            use_smooth_groups=self.use_smooth_groups,
-            use_split_objects=self.use_split_objects,
-            use_split_groups=self.use_split_groups,
-            use_groups_as_vgroups=self.use_groups_as_vgroups,
-            use_image_search=self.use_image_search,
-            split_mode=self.split_mode,
-            global_clight_size=self.global_clight_size,
-            axis_forward=self.axis_forward,
-            axis_up=self.axis_up)
 
-    def draw(self):
-        pass
-
-
-class STLImporter(FileImporter):
-    global_scale: bpy.props.FloatProperty(
+    # STL import parameters
+    stl_global_scale: bpy.props.FloatProperty(
         name="Scale",
         soft_min=0.001,
         soft_max=1000.0,
         min=1e-6,
         max=1e6,
         default=1.0)
-    use_scene_unit: bpy.props.BoolProperty(
+    stl_use_scene_unit: bpy.props.BoolProperty(
         name="Scene Unit",
         description="Apply current scene's unit (as defined by unit scale) to imported data",
         default=False)
-    use_facet_normal: bpy.props.BoolProperty(
+    stl_use_facet_normal: bpy.props.BoolProperty(
         name="Facet Normals",
         description="Use (import) facet normals (note that this will still give flat shading)",
         default=False)
-    axis_forward: "-Z"
-    axis_up: "Y"
 
-    def load(self, filename):
-        # call the stl load function with all the correct parameters
-        print("I loaded an STL file")
-        bpy.ops.import_mesh.ply(
-            filepath=filename,
-            global_scale=self.global_scale,
-            use_scene_unit=self.use_scene_unit,
-            use_facet_normal=self.use_facet_normal,
+    # (PLY has no import parameters)
+    # Shared import parameters
+    axis_forward: bpy.props.StringProperty(name="Axis Forward",default="-Z")
+    axis_up: bpy.props.StringProperty(name="Axis Up",default="Y")
+
+    def draw(self):
+        pass
+
+    def load(self, fileType, filePath):
+        if fileType == 'obj':
+            self.loadOBJ(filePath)
+        elif fileType == 'stl':
+            self.loadSTL(filePath)
+        elif fileType == 'ply':
+            self.loadPLY(filePath)
+
+    def loadOBJ(self, filePath):
+        # call the obj load function with all the correct parameters
+        print("I loaded an OBJ file")
+        print("axis_forward: " + self.axis_forward)
+        print("axis_up: " + self.axis_up)
+        bpy.ops.import_scene.obj(
+            filepath=filePath,
+            use_edges=self.obj_use_edges,
+            use_smooth_groups=self.obj_use_smooth_groups,
+            use_split_objects=self.obj_use_split_objects,
+            use_split_groups=self.obj_use_split_groups,
+            use_groups_as_vgroups=self.obj_use_groups_as_vgroups,
+            use_image_search=self.obj_use_image_search,
+            split_mode=self.obj_split_mode,
+            global_clight_size=self.obj_global_clight_size,
             axis_forward=self.axis_forward,
             axis_up=self.axis_up)
 
-    def draw(self):
-        pass
-
-
-class PLYImporter(FileImporter):
-    def load(self, filename):
+    def loadSTL(self, filePath):
+        # call the stl load function with all the correct parameters
+        print("I loaded an STL file")
+        bpy.ops.import_mesh.stl(
+            filepath=filePath,
+            global_scale=self.stl_global_scale,
+            use_scene_unit=self.stl_use_scene_unit,
+            use_facet_normal=self.stl_use_facet_normal,
+            axis_forward=self.axis_forward,
+            axis_up=self.axis_up)
+    
+    def loadPLY(self, filePath):
         # call the ply load function with all the correct parameters
         print("I loaded a PLY file")
-        bpy.ops.import_mesh.ply(filepath=filename)
-
-    def draw(self):
-        pass
+        bpy.ops.import_mesh.ply(filepath=filePath)
 
 
 class MeshNameProp(bpy.types.PropertyGroup):
@@ -212,7 +202,7 @@ class MeshNameProp(bpy.types.PropertyGroup):
 
 
 class MeshSequenceSettings(bpy.types.PropertyGroup):
-    fileImporter: bpy.props.PointerProperty(type=FileImporter)
+    fileImporter: bpy.props.PointerProperty(type=MeshImporter)
 
     dirPath: bpy.props.StringProperty(
         name="Root Folder",
@@ -378,7 +368,7 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
     deselectAll()
     for file in sortedFiles:
         # import the mesh file
-        mss.fileImporter.load(file)
+        mss.fileImporter.load(mss.fileFormat, file)
         tmpObject = bpy.context.selected_objects[0]
         # IMPORTANT: don't copy it; just copy the pointer. This cuts memory usage in half.
         tmpMesh = tmpObject.data
@@ -593,7 +583,7 @@ def importStreamedFile(obj, idx):
     absDirectory = bpy.path.abspath(mss.dirPath)
     filename = os.path.join(absDirectory, mss.meshNameArray[idx].basename)
     deselectAll()
-    mss.fileImporter.load(filename)
+    mss.fileImporter.load(mss.fileFormat, filename)
     tmpObject = getSelectedObjects()[0]
     tmpMesh = tmpObject.data
     # we don't want to save streamed meshes to the .blend file
