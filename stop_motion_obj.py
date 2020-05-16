@@ -162,9 +162,6 @@ class MeshImporter(bpy.types.PropertyGroup):
 
     def loadOBJ(self, filePath):
         # call the obj load function with all the correct parameters
-        print("I loaded an OBJ file")
-        print("axis_forward: " + self.axis_forward)
-        print("axis_up: " + self.axis_up)
         bpy.ops.import_scene.obj(
             filepath=filePath,
             use_edges=self.obj_use_edges,
@@ -180,7 +177,6 @@ class MeshImporter(bpy.types.PropertyGroup):
 
     def loadSTL(self, filePath):
         # call the stl load function with all the correct parameters
-        print("I loaded an STL file")
         bpy.ops.import_mesh.stl(
             filepath=filePath,
             global_scale=self.stl_global_scale,
@@ -191,7 +187,6 @@ class MeshImporter(bpy.types.PropertyGroup):
     
     def loadPLY(self, filePath):
         # call the ply load function with all the correct parameters
-        print("I loaded a PLY file")
         bpy.ops.import_mesh.ply(filepath=filePath)
 
 
@@ -733,53 +728,6 @@ def freeUnusedMeshes():
 
     # the remaining meshes with no real or fake users will be garbage collected when Blender is closed
     print(numFreed, " meshes freed")
-
-
-class AddMeshSequence(bpy.types.Operator):
-    """Add Mesh Sequence"""
-    # what the operator is called
-    bl_idname = "ms.add_mesh_sequence"
-    # what shows up in the menu
-    bl_label = "Mesh Sequence"
-    bl_options = {'UNDO'}
-
-    def execute(self, context):
-        newMeshSequence()
-        return {'FINISHED'}
-
-
-# the function for adding "Mesh Sequence" to the Add > Mesh menu
-def menu_func(self, context):
-    self.layout.operator(AddMeshSequence.bl_idname, icon="PLUGIN")
-
-
-class LoadMeshSequence(bpy.types.Operator):
-    """Load Mesh Sequence"""
-    bl_idname = "ms.load_mesh_sequence"
-    bl_label = "Load Mesh Sequence"
-    bl_options = {'UNDO'}
-
-    def execute(self, context):
-        obj = context.object
-        mss = obj.mesh_sequence_settings
-        dirPath = mss.dirPath
-        fileName = mss.fileName
-
-        meshCount = 0
-
-        # cached
-        if mss.cacheMode == 'cached':
-            meshCount = loadSequenceFromMeshFiles(obj, dirPath, fileName)
-
-        # streaming
-        elif mss.cacheMode == 'streaming':
-            meshCount = loadStreamingSequenceFromMeshFiles(obj, dirPath, fileName)
-
-        if meshCount == 0:
-            self.report({'ERROR'}, "No matching files found. Make sure the Root Folder, File Name, and File Format are correct.")
-            return {'CANCELLED'}
-
-        return {'FINISHED'}
 
 
 class ReloadMeshSequence(bpy.types.Operator):

@@ -21,59 +21,37 @@ class MeshSequencePanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         objSettings = context.object.mesh_sequence_settings
-        if objSettings.initialized is True:
-            # Only show options for loading a sequence if one hasn't been loaded yet
-            if objSettings.loaded is False:
-                layout.label(text="Load Mesh Sequence:", icon='FILE_FOLDER')
+        if objSettings.initialized is True and objSettings.loaded is True:
+            row = layout.row()
+            row.prop(objSettings, "startFrame")
+
+            row = layout.row()
+            row.prop(objSettings, "frameMode")
+
+            row = layout.row()
+            row.prop(objSettings, "speed")
+
+            if objSettings.cacheMode == 'cached':
                 row = layout.row()
-                row.prop(objSettings, "dirPath")
+                row.operator("ms.reload_mesh_sequence")
+
+                layout.row().separator()
+                row = layout.row(align=True)
+                row.label(text="Shading:")
+                row.operator("ms.batch_shade_smooth")
+                row.operator("ms.batch_shade_flat")
+
+                layout.row().separator()
+                row = layout.row()
+                box = row.box()
+                box.operator("ms.bake_sequence")
+
+            elif objSettings.cacheMode == 'streaming':
+                row = layout.row()
+                row.prop(objSettings, "cacheSize")
 
                 row = layout.row()
-                row.prop(objSettings, "fileName")
-
-                row = layout.row()
-                row.prop(objSettings, "fileFormat")
-
-                row = layout.row()
-                row.prop(objSettings, "perFrameMaterial")
-
-                row = layout.row()
-                row.prop(objSettings, "cacheMode")
-
-                row = layout.row()
-                row.operator("ms.load_mesh_sequence")
-
-            if objSettings.loaded is True:
-                row = layout.row()
-                row.prop(objSettings, "startFrame")
-
-                row = layout.row()
-                row.prop(objSettings, "frameMode")
-
-                row = layout.row()
-                row.prop(objSettings, "speed")
-
-                if objSettings.cacheMode == 'cached':
-                    row = layout.row()
-                    row.operator("ms.reload_mesh_sequence")
-
-                    layout.row().separator()
-                    row = layout.row(align=True)
-                    row.label(text="Shading:")
-                    row.operator("ms.batch_shade_smooth")
-                    row.operator("ms.batch_shade_flat")
-
-                    layout.row().separator()
-                    row = layout.row()
-                    box = row.box()
-                    box.operator("ms.bake_sequence")
-
-                elif objSettings.cacheMode == 'streaming':
-                    row = layout.row()
-                    row.prop(objSettings, "cacheSize")
-
-                    row = layout.row()
-                    row.prop(objSettings, "streamDuringPlayback")
+                row.prop(objSettings, "streamDuringPlayback")
 
 
 class SequenceImportSettings(bpy.types.PropertyGroup):
@@ -102,7 +80,7 @@ class SequenceImportSettings(bpy.types.PropertyGroup):
 class ImportSequence(bpy.types.Operator, ImportHelper):
     """Load a mesh sequence"""
     bl_idname = "ms.import_sequence"
-    bl_label = "Import"
+    bl_label = "Select Folder"
     bl_options = {'UNDO'}
 
     importSettings: bpy.props.PointerProperty(type=MeshImporter)
