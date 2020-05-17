@@ -737,6 +737,10 @@ class ReloadMeshSequence(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     def execute(self, context):
+        if context.mode != 'OBJECT':
+            self.report({'ERROR'}, "You may reload a mesh sequence only while in Object mode")
+            return {'CANCELLED'}
+
         obj = context.object
         dirPath = obj.mesh_sequence_settings.dirPath
         fileName = obj.mesh_sequence_settings.fileName
@@ -756,6 +760,10 @@ class BatchShadeSmooth(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     def execute(self, context):
+        if context.mode != 'OBJECT':
+            self.report({'ERROR'}, "You may batch shade only while in Object mode")
+            return {'CANCELLED'}
+
         obj = context.object
         # True for smooth
         shadeSequence(obj, True)
@@ -769,6 +777,10 @@ class BatchShadeFlat(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     def execute(self, context):
+        if context.mode != 'OBJECT':
+            self.report({'ERROR'}, "You may batch shade only while in Object mode")
+            return {'CANCELLED'}
+
         obj = context.object
         # False for flat
         shadeSequence(obj, False)
@@ -782,6 +794,10 @@ class BakeMeshSequence(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     def execute(self, context):
+        if context.mode != 'OBJECT':
+            self.report({'ERROR'}, "You may bake a sequence only while in Object mode")
+            return {'CANCELLED'}
+
         obj = context.object
         bakeSequence(obj)
         # update the frame so the right shape is visible

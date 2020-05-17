@@ -25,11 +25,11 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 0, 2, "alpha.7"),
+    "version": (2, 0, 2, "alpha.8"),
     "blender": (2, 80, 0),
-    "location": "View 3D > Add > Mesh > Mesh Sequence",
+    "location": "File > Import > Mesh Sequence",
     "warning": "",
-    "category": "Add Mesh",
+    "category": "Import",
     "wiki_url": "https://github.com/neverhood311/Stop-motion-OBJ",
     "tracker_url": "https://github.com/neverhood311/Stop-motion-OBJ/issues"
 }
@@ -47,7 +47,7 @@ def register():
     bpy.utils.register_class(BatchShadeSmooth)
     bpy.utils.register_class(BatchShadeFlat)
     bpy.utils.register_class(BakeMeshSequence)
-    bpy.utils.register_class(MeshSequencePanel)
+    bpy.utils.register_class(SMO_PT_MeshSequencePanel)
     bpy.app.handlers.render_init.append(renderInitHandler)
     bpy.app.handlers.render_complete.append(renderCompleteHandler)
     bpy.app.handlers.render_cancel.append(renderCancelHandler)
@@ -55,9 +55,9 @@ def register():
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import_sequence)
 
     # the order here is important since it is the order in which these sections will be drawn
-    bpy.utils.register_class(FileImportSettingsPanel)
-    bpy.utils.register_class(TransformSettingsPanel)
-    bpy.utils.register_class(SequenceImportSettingsPanel)
+    bpy.utils.register_class(SMO_PT_FileImportSettingsPanel)
+    bpy.utils.register_class(SMO_PT_TransformSettingsPanel)
+    bpy.utils.register_class(SMO_PT_SequenceImportSettingsPanel)
     bpy.utils.register_class(SequenceImportSettings)
     bpy.utils.register_class(ImportSequence)
 
@@ -75,14 +75,14 @@ def unregister():
     bpy.utils.unregister_class(BatchShadeSmooth)
     bpy.utils.unregister_class(BatchShadeFlat)
     bpy.utils.unregister_class(BakeMeshSequence)
-    bpy.utils.unregister_class(MeshSequencePanel)
+    bpy.utils.unregister_class(SMO_PT_MeshSequencePanel)
     bpy.utils.unregister_class(MeshSequenceSettings)
     bpy.utils.unregister_class(MeshNameProp)
 
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_sequence)
-    bpy.utils.unregister_class(FileImportSettingsPanel)
-    bpy.utils.unregister_class(TransformSettingsPanel)
-    bpy.utils.unregister_class(SequenceImportSettingsPanel)
+    bpy.utils.unregister_class(SMO_PT_FileImportSettingsPanel)
+    bpy.utils.unregister_class(SMO_PT_TransformSettingsPanel)
+    bpy.utils.unregister_class(SMO_PT_SequenceImportSettingsPanel)
     bpy.utils.unregister_class(MeshImporter)
     bpy.utils.unregister_class(SequenceImportSettings)
 

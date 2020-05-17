@@ -7,7 +7,7 @@ from bpy_extras.io_utils import (
 from .stop_motion_obj import *
 
 # The properties panel added to the Object Properties Panel list
-class MeshSequencePanel(bpy.types.Panel):
+class SMO_PT_MeshSequencePanel(bpy.types.Panel):
     bl_idname = 'OBJ_SEQUENCE_PT_properties'
     bl_label = 'Mesh Sequence'
     bl_space_type = 'PROPERTIES'
@@ -33,10 +33,12 @@ class MeshSequencePanel(bpy.types.Panel):
 
             if objSettings.cacheMode == 'cached':
                 row = layout.row()
+                row.enabled = context.mode == 'OBJECT'
                 row.operator("ms.reload_mesh_sequence")
 
                 layout.row().separator()
                 row = layout.row(align=True)
+                row.enabled = context.mode == 'OBJECT'
                 row.label(text="Shading:")
                 row.operator("ms.batch_shade_smooth")
                 row.operator("ms.batch_shade_flat")
@@ -44,6 +46,7 @@ class MeshSequencePanel(bpy.types.Panel):
                 layout.row().separator()
                 row = layout.row()
                 box = row.box()
+                box.enabled = context.mode == 'OBJECT'
                 box.operator("ms.bake_sequence")
 
             elif objSettings.cacheMode == 'streaming':
@@ -87,7 +90,6 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
     sequenceSettings: bpy.props.PointerProperty(type=SequenceImportSettings)
 
     def execute(self, context):
-        print("Imported a sequence")
         if self.sequenceSettings.fileNamePrefix == "":
             self.report({'ERROR_INVALID_INPUT'}, "Please enter a file name prefix")
             return {'CANCELLED'}
@@ -159,7 +161,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         pass
 
 
-class FileImportSettingsPanel(bpy.types.Panel):
+class SMO_PT_FileImportSettingsPanel(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "File Settings"
@@ -198,7 +200,7 @@ class FileImportSettingsPanel(bpy.types.Panel):
             layout.label(text="No .ply settings")
 
 
-class TransformSettingsPanel(bpy.types.Panel):
+class SMO_PT_TransformSettingsPanel(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Transform"
@@ -220,7 +222,7 @@ class TransformSettingsPanel(bpy.types.Panel):
         layout.prop(operator, "axis_up")
 
 
-class SequenceImportSettingsPanel(bpy.types.Panel):
+class SMO_PT_SequenceImportSettingsPanel(bpy.types.Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
     bl_label = "Sequence Settings"
