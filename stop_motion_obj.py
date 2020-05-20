@@ -484,35 +484,48 @@ def setFrameNumber(frameNum):
 
 
 def getMeshIdxFromFrameNumber(_obj, frameNum):
-    numFrames = _obj.mesh_sequence_settings.numMeshes - 1
-    # convert the frame number into an array index
-    idx = frameNum - (_obj.mesh_sequence_settings.startFrame - 1)
+    numRealMeshes = _obj.mesh_sequence_settings.numMeshes - 1
+
+    # convert the frame number into a zero-based array index
+    offsetFromStart = frameNum - _obj.mesh_sequence_settings.startFrame
+
     # adjust for playback speed
-    idx = int(idx * _obj.mesh_sequence_settings.speed)
+    scaledIdxFloat = offsetFromStart * _obj.mesh_sequence_settings.speed
+    finalIdx = 0
     frameMode = int(_obj.mesh_sequence_settings.frameMode)
     # 0: Blank
-    if(frameMode == 0):
-        if(idx < 1 or idx >= numFrames + 1):
-            idx = 0
+    if frameMode == 0:
+        finalIdx = int(scaledIdxFloat)
+        if(finalIdx < 0 or finalIdx >= numRealMeshes):
+            finalIdx = -1
     # 1: Extend (default)
-    elif(frameMode == 1):
-        if(idx < 1):
-            idx = 1
-        elif(idx >= numFrames + 1):
-            idx = numFrames
+    elif frameMode == 1:
+        finalIdx = int(scaledIdxFloat)
+        if finalIdx < 0:
+            finalIdx = 0
+        elif finalIdx >= numRealMeshes:
+            finalIdx = numRealMeshes - 1
     # 2: Repeat
-    elif(frameMode == 2):
-        idx = ((idx - 1) % (numFrames)) + 1
+    elif frameMode == 2:
+        # shift the index into the positive domain; the math is easier to comprehend
+        if scaledIdxFloat < 0:
+            scaledIdxFloat += numRealMeshes * 10
+
+        finalIdx = int(scaledIdxFloat % numRealMeshes)
     # 3: Bounce
-    elif(frameMode == 3):
-        idx -= 1
-        tmp = int(idx / numFrames)
-        if(tmp % 2 == 0):
-            idx = idx % numFrames
+    elif frameMode == 3:
+        # shift the index into the positive domain; the math is easier to comprehend
+        if scaledIdxFloat < 0:
+            scaledIdxFloat += numRealMeshes * 10
+
+        numCycles = int(int(scaledIdxFloat) / numRealMeshes)
+        if(numCycles % 2 == 0):
+            finalIdx = finalIdx % numRealMeshes
         else:
-            idx = (numFrames - 1) - (idx % numFrames)
-        idx += 1
-    return idx
+            finalIdx = (numRealMeshes - 1) - (finalIdx % numRealMeshes)
+
+    # account for the fact that everything is shifted by 1 because of "emptyMesh" at index 0
+    return finalIdx + 1
 
 
 def setFrameObj(_obj, frameNum):
