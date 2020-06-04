@@ -23,7 +23,7 @@ import os
 import re
 import glob
 from bpy.app.handlers import persistent
-
+from multiprocessing import Pool
 
 def alphanumKey(string):
     """ Turn a string into a list of string and number chunks.
@@ -551,6 +551,7 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False):
     idx = getMeshIdxFromFrameNumber(obj, frameNum)
     nextMeshProp = getMeshPropFromIndex(obj, idx)
 
+    print("importing streamed file")
     # if we want to load new meshes as needed and it's not already loaded
     if nextMeshProp.inMemory is False and (mss.streamDuringPlayback is True or forceLoad is True):
         # load the mesh into memory
@@ -558,11 +559,13 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False):
 
     # if the mesh is in memory, show it
     if nextMeshProp.inMemory is True:
+        print("getting mesh from index")
         next_mesh = getMeshFromIndex(obj, idx)
 
         # store the current mesh for grabbing the material later
         prev_mesh = obj.data
         if next_mesh != prev_mesh:
+            print("swapping meshes")
             # swap the old one with the new one
             obj.data = next_mesh
 
@@ -574,6 +577,7 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False):
                         obj.data.materials.append(material)
 
     # TODO: remove meshes until you're down to the cachSize (e.g. if you have 10 meshes in memory and you changed your cache size to 5)
+    print("checking cache for removal")
     if mss.cacheSize > 0 and mss.numMeshesInMemory > mss.cacheSize:
         # find and delete the one closest to the end of the array
         idxToDelete = len(mss.meshNameArray) - 1
@@ -581,7 +585,10 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False):
             idxToDelete -= 1
 
         if idxToDelete >= 0:
+            print("removing mesh #" + str(idxToDelete))
             removeMeshFromCache(obj, idxToDelete)
+
+    print("done setting streamed mesh")
 
 
 # This function will be called from within both the Editor context and the Render context
@@ -816,3 +823,17 @@ class BakeMeshSequence(bpy.types.Operator):
         # update the frame so the right shape is visible
         bpy.context.scene.frame_current = bpy.context.scene.frame_current
         return {'FINISHED'}
+
+
+class RunInParallel(bpy.types.Operator):
+    """Run something in parallel"""
+    bl_idname = "ms.run_parallel"
+    bl_label = "Run something in parallel"
+    bl_options = {'UNDO'}
+
+    def f(self, name):
+        print('hello' + name)
+
+    def execute(self, context):
+        p = Pool(4)
+        print(p.map(self.f, [1, 2, 3]))

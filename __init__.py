@@ -63,6 +63,7 @@ def register():
 
     # TODO: can we use atexit to detect the program closing and cleanup meshes?
     #   otherwise, we might want a button to let the user clear the cache before saving the file
+    bpy.utils.register_class(RunInParallel)
 
 
 def unregister():
@@ -88,6 +89,8 @@ def unregister():
 
     # make sure you register any classes ImportSequence depends on before registering this
     bpy.utils.unregister_class(ImportSequence)
+
+    bpy.utils.unregister_class(RunInParallel)
 
 if __name__ == "__main__":
     register()
