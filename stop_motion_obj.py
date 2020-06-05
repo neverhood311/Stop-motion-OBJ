@@ -24,7 +24,7 @@ import re
 import glob
 from bpy.app.handlers import persistent
 
-
+# (major, minor, revision, development)
 currentScriptVersion = (2, 1, 0, "alpha.10")
 legacyScriptVersion = (2, 0, 2, "legacy")
 
