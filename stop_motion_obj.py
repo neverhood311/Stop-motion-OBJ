@@ -24,6 +24,9 @@ import re
 import glob
 from bpy.app.handlers import persistent
 
+# (major, minor, revision, development)
+currentScriptVersion = (2, 1, 0, "alpha.10")
+legacyScriptVersion = (2, 0, 2, "legacy")
 
 def alphanumKey(string):
     """ Turn a string into a list of string and number chunks.
@@ -105,6 +108,22 @@ def fileExtensionFromType(_type):
         return 'ply'
     return ''
 
+
+class SequenceVersion(bpy.types.PropertyGroup):
+    # version number for the sequence. If the sequence doesn't already have a version, it will retain this legacy version
+    versionMajor: bpy.props.IntProperty(name="Major Version", default=legacyScriptVersion[0])
+    versionMinor: bpy.props.IntProperty(name="Minor Version", default=legacyScriptVersion[1])
+    versionRevision: bpy.props.IntProperty(name="Revision Version", default=legacyScriptVersion[2])
+    versionDevelopment: bpy.props.StringProperty(name="Development Version", default=legacyScriptVersion[3])
+
+    def draw(self):
+        pass
+
+    def toString(self):
+        mainVersionStr = str(self.versionMajor) + '.' + str(self.versionMinor) + '.' + str(self.versionRevision)
+        if self.versionDevelopment == "":
+            return mainVersionStr
+        return mainVersionStr + '.' + self.versionDevelopment
 
 class MeshImporter(bpy.types.PropertyGroup):
     # OBJ import parameters
@@ -197,6 +216,7 @@ class MeshNameProp(bpy.types.PropertyGroup):
 
 
 class MeshSequenceSettings(bpy.types.PropertyGroup):
+    version: bpy.props.PointerProperty(type=SequenceVersion)
     fileImporter: bpy.props.PointerProperty(type=MeshImporter)
 
     dirPath: bpy.props.StringProperty(
@@ -284,15 +304,23 @@ def newMeshSequence():
     theMesh.name = 'emptyMesh'
     theMesh.use_fake_user = True
     theMesh.inMeshSequence = True
+    
     # add the mesh's name to the object's mesh_sequence_settings
-    emptyMeshNameElement = theObj.mesh_sequence_settings.meshNameArray.add()
+    mss = theObj.mesh_sequence_settings
+    emptyMeshNameElement = mss.meshNameArray.add()
     emptyMeshNameElement.key = theMesh.name
     emptyMeshNameElement.inMemory = True
 
     deselectAll()
     theObj.select_set(state=True)
 
-    theObj.mesh_sequence_settings.initialized = True
+    # set the current script version
+    global currentScriptVersion
+    mss.version.versionMajor = currentScriptVersion[0]
+    mss.version.versionMinor = currentScriptVersion[1]
+    mss.version.versionRevision = currentScriptVersion[2]
+    mss.version.versionDevelopment = currentScriptVersion[3]
+    mss.initialized = True
     return theObj
 
 

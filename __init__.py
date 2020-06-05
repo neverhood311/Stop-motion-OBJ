@@ -25,7 +25,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 0, 2, "alpha.9"),
+    "version": (2, 1, 0, "alpha.10"),
     "blender": (2, 80, 0),
     "location": "File > Import > Mesh Sequence",
     "warning": "",
@@ -37,6 +37,7 @@ bl_info = {
 
 def register():
     bpy.types.Mesh.inMeshSequence = bpy.props.BoolProperty()
+    bpy.utils.register_class(SequenceVersion)
     bpy.utils.register_class(MeshImporter)
     bpy.utils.register_class(MeshNameProp)
     bpy.utils.register_class(MeshSequenceSettings)
@@ -48,6 +49,7 @@ def register():
     bpy.utils.register_class(BatchShadeFlat)
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(SMO_PT_MeshSequencePanel)
+    bpy.utils.register_class(SMO_PT_MeshSequenceAdvancedPanel)
     bpy.app.handlers.render_init.append(renderInitHandler)
     bpy.app.handlers.render_complete.append(renderCompleteHandler)
     bpy.app.handlers.render_cancel.append(renderCancelHandler)
@@ -76,6 +78,7 @@ def unregister():
     bpy.utils.unregister_class(BatchShadeFlat)
     bpy.utils.unregister_class(BakeMeshSequence)
     bpy.utils.unregister_class(SMO_PT_MeshSequencePanel)
+    bpy.utils.unregister_class(SMO_PT_MeshSequenceAdvancedPanel)
     bpy.utils.unregister_class(MeshSequenceSettings)
     bpy.utils.unregister_class(MeshNameProp)
 
@@ -84,6 +87,7 @@ def unregister():
     bpy.utils.unregister_class(SMO_PT_TransformSettingsPanel)
     bpy.utils.unregister_class(SMO_PT_SequenceImportSettingsPanel)
     bpy.utils.unregister_class(MeshImporter)
+    bpy.utils.unregister_class(SequenceVersion)
     bpy.utils.unregister_class(SequenceImportSettings)
 
     # make sure you register any classes ImportSequence depends on before registering this
