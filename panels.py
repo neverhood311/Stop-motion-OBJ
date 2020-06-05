@@ -1,3 +1,23 @@
+# ##### BEGIN GPL LICENSE BLOCK #####
+#
+#   Stop motion OBJ: A Mesh sequence importer for Blender
+#   Copyright (C) 2016-2020  Justin Jensen
+#
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# ##### END GPL LICENSE BLOCK #####
+
 import bpy
 from bpy_extras.io_utils import (
     ImportHelper,
@@ -55,6 +75,24 @@ class SMO_PT_MeshSequencePanel(bpy.types.Panel):
 
                 row = layout.row()
                 row.prop(objSettings, "streamDuringPlayback")
+            
+
+class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
+    bl_label = 'Advanced'
+    bl_parent_id = "OBJ_SEQUENCE_PT_properties"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_options = {'DEFAULT_CLOSED'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.object.mesh_sequence_settings.initialized == True
+
+    def draw(self, context):
+        layout = self.layout
+        objSettings = context.object.mesh_sequence_settings
+        if objSettings.initialized is True:
+            layout.row().label(text="Version: " + objSettings.version.toString())
 
 
 class SequenceImportSettings(bpy.types.PropertyGroup):
@@ -101,7 +139,6 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         # the input parameters should be stored on 'self'
         # create a new mesh sequence
         seqObj = newMeshSequence()
-        # TODO: we need to apply the axis_forward and axis_up to seqObj, not to each imported mesh!!!
         global_matrix = axis_conversion(from_forward=self.axis_forward,from_up=self.axis_up).to_4x4()
         seqObj.matrix_world = global_matrix
 
