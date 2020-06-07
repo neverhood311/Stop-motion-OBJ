@@ -1,4 +1,39 @@
+dist: xenial
+os:
+  - linux
+env:
+  global:
+    - BLENDER_CACHE=$HOME/.cache/blender
+    - BL_ADDON-Stop_motion_OBJ
+  matrix:
+    - BLENDER_VERSION="2.80"
+    - BLENDER_VERSION="2.81a"
+    - BLENDER_VERSION="2.82a"
+    - BLENDER_VERSION="2.83"
 language: python
+python:
+  - 3.7
+
+cache:
+  apt: true
+  directories:
+    - $HOME/.cache/pip
+    - ${BLENDER_CACHE}
+
+addons:
+  apt:
+    packages:
+      - blender
+
+before_install:
+  - mkdir -p ${BLENDER_CACHE}
+  - ls ${BLENDER_CACHE}
+
+install:
+  - cd $TRAVIS_BUILD_DIR
+  - python3 --version
+  - pip install -r blender_requirements.txt
+  - pip list
 
 # TODO: pr test: make sure GIT_TAG doesn't already exist
 # if [ "$(git tag -l $VERSION_TAG)" != "" ]; then
