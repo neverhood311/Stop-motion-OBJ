@@ -35,6 +35,9 @@ install:
   - pip install -r blender_requirements.txt
   - pip list
 
+script:
+  - pytest
+
 # TODO: pr test: make sure GIT_TAG doesn't already exist
 # if [ "$(git tag -l $VERSION_TAG)" != "" ]; then
 #    echo "*** Tag already exists. Does version in project.json need updating?"
