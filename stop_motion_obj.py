@@ -23,10 +23,8 @@ import os
 import re
 import glob
 from bpy.app.handlers import persistent
+from .version import *
 
-# (major, minor, revision, development)
-currentScriptVersion = (2, 1, 0, "alpha.10")
-legacyScriptVersion = (2, 0, 2, "legacy")
 
 def alphanumKey(string):
     """ Turn a string into a list of string and number chunks.
