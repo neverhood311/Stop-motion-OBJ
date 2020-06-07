@@ -1,0 +1,42 @@
+language: python
+
+# TODO: pr test: make sure GIT_TAG doesn't already exist
+# if [ "$(git tag -l $VERSION_TAG)" != "" ]; then
+#    echo "*** Tag already exists. Does version in project.json need updating?"
+#    exit 1
+#fi
+
+before_deploy:
+  # https://www.geeksforgeeks.org/awk-command-unixlinux-examples/
+  - export GIT_TAG=`cat version.py | grep currentScriptVersion | head -1 | awk -F= '{ print $2 }' | sed 's/[\",()]//g' | awk '{printf "v%s.%s.%s", $1, $2, $3; if(NF >= 4) print "." $4}'`
+  - git tag $GIT_TAG -a -m "Generated tag from TravisCI for build $TRAVIS_BUILD_NUMBER"
+  - mkdir Stop-motion-OBJ
+  - cp *.py README.md LICENSE Stop-motion-OBJ
+  - zip Stop-motion-OBJ-$GIT_TAG.zip Stop-motion-OBJ
+
+# TODO: get a Github OAuth token
+deploy:
+  - provider: releases
+    prerelease: false
+    api_key:
+      secure: K/pWg0Sa7OhpTR444gSU6skQw6y3/yz3Xvz2QFUAW0RLn8P+CbfX8e0BXhBc45UZ0P7uKnwyJxOsAbhqBb5lUjLN2N6dwm/dGRDuPaQnAiWlFCzFKbX5JC1YFlzf2TxcAFuxJaQ0j01GD5kkdFLtrtOhM/AAHdSRcVpY4Vzid+h6sJVBAc7ycUMe2jVS0LVyUj6J1rpGjRO1bhPrJ1YAKp4Zqd78NKMy6g38gtL12gGx+ls4XLcwglyIh0ecQHGByqqq4KyZsMU8d6iFgfkkSmcHgPLqMrGe+sDdZ0RFJi6fKnIld6DYuiFQoKXb0hsjiHNtRRCD3n7u5Z2t+ZZsv0yWnUqjEg5LTWnnVaevU4OP4HPjiY3fzqXDC13uFk3SdvZeG/I5MoEY3IGpR9IYGmzqik9/mwAw30SPstv2WKpGt9AzwXzEvED2y5tG8Tri7kuRDMQlsWuxSsDOXb97NTSthJR8yv0K6SoOzqHDOla4/jRmjzKip9IOBMi0ZgNoglm/MSZNJMr36Cv3yewnHZgvDlLWi2SWVOfaqfVMA1E+4a6yd2KlPaNHJn0ETSM4cU6T9CJ80SBB85RR+92txI8YuOJ2vL79NR3mNmbmgmUQAdvBbje6D1Niqw/RAgQB9fb64aeUvZVh5jsWH67jKOK5ibcf9WZ6mLx4fyUP1EQ=
+    file: "Stop-motion-OBJ-$GIT_TAG.zip"
+    skip_cleanup: true
+    draft: true
+    on:
+      branch:
+        - master
+      tags: true
+  - provider: releases
+    prerelease: true
+    api_key:
+      secure: K/pWg0Sa7OhpTR444gSU6skQw6y3/yz3Xvz2QFUAW0RLn8P+CbfX8e0BXhBc45UZ0P7uKnwyJxOsAbhqBb5lUjLN2N6dwm/dGRDuPaQnAiWlFCzFKbX5JC1YFlzf2TxcAFuxJaQ0j01GD5kkdFLtrtOhM/AAHdSRcVpY4Vzid+h6sJVBAc7ycUMe2jVS0LVyUj6J1rpGjRO1bhPrJ1YAKp4Zqd78NKMy6g38gtL12gGx+ls4XLcwglyIh0ecQHGByqqq4KyZsMU8d6iFgfkkSmcHgPLqMrGe+sDdZ0RFJi6fKnIld6DYuiFQoKXb0hsjiHNtRRCD3n7u5Z2t+ZZsv0yWnUqjEg5LTWnnVaevU4OP4HPjiY3fzqXDC13uFk3SdvZeG/I5MoEY3IGpR9IYGmzqik9/mwAw30SPstv2WKpGt9AzwXzEvED2y5tG8Tri7kuRDMQlsWuxSsDOXb97NTSthJR8yv0K6SoOzqHDOla4/jRmjzKip9IOBMi0ZgNoglm/MSZNJMr36Cv3yewnHZgvDlLWi2SWVOfaqfVMA1E+4a6yd2KlPaNHJn0ETSM4cU6T9CJ80SBB85RR+92txI8YuOJ2vL79NR3mNmbmgmUQAdvBbje6D1Niqw/RAgQB9fb64aeUvZVh5jsWH67jKOK5ibcf9WZ6mLx4fyUP1EQ=
+    file: "Stop-motion-OBJ-$GIT_TAG.zip"
+    skip_cleanup: true
+    draft: true
+    on:
+      branch:
+        except:
+          - master
+      tags: true
+  
