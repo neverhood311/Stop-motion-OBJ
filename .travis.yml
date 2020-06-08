@@ -25,6 +25,12 @@ addons:
     packages:
       - blender
 
+branches:
+  only:
+    - master
+    - /^version-.*$/ # TODO: remove this in the future. It's only there to support the "version-3" branch
+    - dev # TODO: create and use a "dev" branch for staging
+
 before_install:
   - mkdir -p ${BLENDER_CACHE}
   - ls ${BLENDER_CACHE}
