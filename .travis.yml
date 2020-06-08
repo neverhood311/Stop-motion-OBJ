@@ -55,10 +55,11 @@ before_deploy:
   - export TRAVIS_TAG=`cat version.py | grep currentScriptVersion | head -1 | awk -F= '{ print $2 }' | sed 's/[\",()]//g' | awk '{printf "v%s.%s.%s", $1, $2, $3; if(NF >= 4) print "." $4}'`
   # - git tag $TRAVIS_TAG -a -m "Generated tag from TravisCI for build $TRAVIS_BUILD_NUMBER"
   # - git push origin --tags
+  - cd $TRAVIS_BUILD_DIR
   - rm -rf Stop-motion-OBJ
   - mkdir Stop-motion-OBJ
   - cp *.py README.md LICENSE Stop-motion-OBJ
-  - export RELEASE_ZIP=Stop-motion-OBJ-${TRAVIS_TAG}.zip
+  - export RELEASE_ZIP=${TRAVIS_BUILD_DIR}/Stop-motion-OBJ-${TRAVIS_TAG}.zip
   - zip $RELEASE_ZIP Stop-motion-OBJ
 
 deploy:
@@ -67,17 +68,19 @@ deploy:
     prerelease: false
     token: $GITHUB_PERSONAL_ACCESS_TOKEN
     file: $RELEASE_ZIP
-    cleanup: false
+    name: $TRAVIS_TAG
+    skip_cleanup: true
     draft: true
     on:
       all_branches: true
       condition: $TRAVIS_BRANCH =~ ^master$
-  # all other branches
+  # "version-X.X" and "dev" branches
   - provider: releases
     prerelease: true
     token: $GITHUB_PERSONAL_ACCESS_TOKEN
     file: $RELEASE_ZIP
-    cleanup: false
+    name: $TRAVIS_TAG
+    skip_cleanup: true
     draft: true
     on:
       all_branches: true
