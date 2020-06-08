@@ -56,11 +56,11 @@ before_deploy:
   # - git tag $TRAVIS_TAG -a -m "Generated tag from TravisCI for build $TRAVIS_BUILD_NUMBER"
   # - git push origin --tags
   - cd $TRAVIS_BUILD_DIR
-  - rm -rf Stop-motion-OBJ
-  - mkdir Stop-motion-OBJ
-  - cp *.py README.md LICENSE Stop-motion-OBJ
+  - rm -rf ${TRAVIS_BUILD_DIR}/Stop-motion-OBJ
+  - mkdir ${TRAVIS_BUILD_DIR}/Stop-motion-OBJ
+  - cp ${TRAVIS_BUILD_DIR}/*.py ${TRAVIS_BUILD_DIR}/README.md ${TRAVIS_BUILD_DIR}/LICENSE ${TRAVIS_BUILD_DIR}/Stop-motion-OBJ
   - export RELEASE_ZIP=${TRAVIS_BUILD_DIR}/Stop-motion-OBJ-${TRAVIS_TAG}.zip
-  - zip $RELEASE_ZIP Stop-motion-OBJ
+  - zip $RELEASE_ZIP ${TRAVIS_BUILD_DIR}/Stop-motion-OBJ
 
 deploy:
   # Master branch
