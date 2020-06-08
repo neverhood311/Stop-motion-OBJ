@@ -82,4 +82,4 @@ deploy:
     draft: true
     on:
       all_branches: true
-      condition: ! $TRAVIS_BRANCH =~ ^master$
+      condition: $TRAVIS_BRANCH =~ (^version-.*$|^dev$)
