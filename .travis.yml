@@ -6,8 +6,8 @@ env:
     - BLENDER_CACHE=$HOME/.cache/blender
     - BL_ADDON-Stop_motion_OBJ
   matrix:
-    - BLENDER_VERSION="2.80"
-    - BLENDER_VERSION="2.81a"
+    #- BLENDER_VERSION="2.80"
+    #- BLENDER_VERSION="2.81a"
     - BLENDER_VERSION="2.82a"
     - BLENDER_VERSION="2.83"
 language: python
