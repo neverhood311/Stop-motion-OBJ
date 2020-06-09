@@ -4,7 +4,7 @@ os:
 env:
   global:
     - BLENDER_CACHE=$HOME/.cache/blender
-    - BL_ADDON-Stop_motion_OBJ
+    - BL_ADDON=Stop_motion_OBJ
   jobs:
     #- BLENDER_VERSION="2.80"
     #- BLENDER_VERSION="2.81a"
@@ -25,6 +25,9 @@ addons:
     packages:
       - blender
 
+# This job is run any time there's an update to a branch (like when a commit is pushed or a PR is merged)
+#   and when a PR is created. But only for these branches
+# You can enable/disable jobs for branch updates and/or PR creation in the settings for Stop-motion-OBJ on travis-ci.com
 branches:
   only:
     - master
@@ -42,6 +45,8 @@ install:
   - pip list
 
 script:
+  - export VERSION_TAG=`cat version.py | grep currentScriptVersion | head -1 | awk -F= '{ print $2 }' | sed 's/[\",()]//g' | awk '{printf "v%s.%s.%s", $1, $2, $3; if(NF >= 4) print "." $4}'`
+  - if [ "$(git tag -l $VERSION_TAG)" != "" ]; then echo "*** Tag already exists. Does version need updating?"; exit 1; fi
   - pytest
 
 # TODO: pr test: make sure GIT_TAG doesn't already exist
@@ -51,36 +56,45 @@ script:
 #fi
 
 before_deploy:
+  # $TRAVIS_BUILD_DIR is the directory where the repo is cloned. You can treat it as the root folder of the repository
+  - cd $TRAVIS_BUILD_DIR
+  # extract the version number from version.py and massage it into the correct format
+  # also store it in $TRAVIS_TAG, which will later populate the git tag when we create a release
   # https://www.geeksforgeeks.org/awk-command-unixlinux-examples/
   - export TRAVIS_TAG=`cat version.py | grep currentScriptVersion | head -1 | awk -F= '{ print $2 }' | sed 's/[\",()]//g' | awk '{printf "v%s.%s.%s", $1, $2, $3; if(NF >= 4) print "." $4}'`
+  # if we have Travis create only draft releases, we probably don't need to automatically create git tags since the GitHub release page creates a tag when we publish a release
   # - git tag $TRAVIS_TAG -a -m "Generated tag from TravisCI for build $TRAVIS_BUILD_NUMBER"
   # - git push origin --tags
+  # make sure this temporary folder doesn't already exist
   - rm -rf Stop-motion-OBJ
   - mkdir Stop-motion-OBJ
+  # copy all the source files to a temporary folder
   - cp *.py README.md LICENSE Stop-motion-OBJ
+  # create the file name for the distributable
   - export RELEASE_ZIP=${TRAVIS_BUILD_DIR}/Stop-motion-OBJ-${TRAVIS_TAG}.zip
+  # zip up the temporary folder with all of its contents (the -r is very important!)
   - zip -r $RELEASE_ZIP Stop-motion-OBJ
 
 deploy:
   # Master branch
-  - provider: releases
-    prerelease: false
-    token: $GITHUB_PERSONAL_ACCESS_TOKEN
+  - provider: releases # 'releases' refers to GitHub Releases
+    prerelease: false # this is the real deal, not a pre-release
+    token: $GITHUB_PERSONAL_ACCESS_TOKEN  # this variable is a secret key and is stored in the project settings for Stop Motion OBJ on travis-ci.com
     file: $RELEASE_ZIP
     name: $TRAVIS_TAG
-    skip_cleanup: true
-    draft: true
+    cleanup: false  # make sure the .zip file doesn't get deleted before it gets published
+    draft: true # don't automatically publish the release. We need a chance to screen it and/or add release notes
     on:
-      all_branches: true
-      condition: $TRAVIS_BRANCH =~ ^master$
+      all_branches: true  # run this deploy phase for every branch
+      condition: $TRAVIS_BRANCH =~ ^master$ # psych! Only for branches named "master"
   # "version-X.X" and "dev" branches
   - provider: releases
-    prerelease: true
+    prerelease: true  # this is just a pre-release
     token: $GITHUB_PERSONAL_ACCESS_TOKEN
     file: $RELEASE_ZIP
     name: $TRAVIS_TAG
-    skip_cleanup: true
+    cleanup: false
     draft: true
     on:
-      all_branches: true
-      condition: $TRAVIS_BRANCH =~ (^version-.*$|^dev$)
+      all_branches: true  # also run this deploy phase for every branch
+      condition: $TRAVIS_BRANCH =~ (^version-.*$|^dev$) # gotcha again! This only runs for "dev" and "version-X" branches
