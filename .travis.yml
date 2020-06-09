@@ -35,6 +35,12 @@ branches:
     - dev # TODO: create and use a "dev" branch for staging
 
 before_install:
+  - export VERSION_TAG=`cat version.py | grep currentScriptVersion | head -1 | awk -F= '{ print $2 }' | sed 's/[\",()]//g' | awk '{printf "v%s.%s.%s", $1, $2, $3; if(NF >= 4) print "." $4}'`
+  #- if [ "$(git tag -l $VERSION_TAG)" != "" ]; then echo "*** Tag already exists. Does version need updating?"; exit 1; fi
+  # attempt to create a git tag for this version. If it fails, it means you may have forgotten to update the version number
+  # if it succeeds, we won't actually push the tag here; we just wanted to see whether it was already there
+  - git fetch --tags
+  - git tag $VERSION_TAG
   - mkdir -p ${BLENDER_CACHE}
   - ls ${BLENDER_CACHE}
 
@@ -45,8 +51,6 @@ install:
   - pip list
 
 script:
-  - export VERSION_TAG=`cat version.py | grep currentScriptVersion | head -1 | awk -F= '{ print $2 }' | sed 's/[\",()]//g' | awk '{printf "v%s.%s.%s", $1, $2, $3; if(NF >= 4) print "." $4}'`
-  - if [ "$(git tag -l $VERSION_TAG)" != "" ]; then echo "*** Tag already exists. Does version need updating?"; exit 1; fi
   - pytest
 
 # TODO: pr test: make sure GIT_TAG doesn't already exist
