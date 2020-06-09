@@ -20,10 +20,11 @@ cache:
     - $HOME/.cache/pip
     - ${BLENDER_CACHE}
 
-addons:
-  apt:
-    packages:
-      - blender
+# TODO: uncomment this section once we're ready to do proper unit tests
+#addons:
+#  apt:
+#    packages:
+#      - blender
 
 # This job is run any time there's an update to a branch (like when a commit is pushed or a PR is merged)
 #   and when a PR is created. But only for these branches
@@ -36,7 +37,6 @@ branches:
 
 before_install:
   - export VERSION_TAG=`cat version.py | grep currentScriptVersion | head -1 | awk -F= '{ print $2 }' | sed 's/[\",()]//g' | awk '{printf "v%s.%s.%s", $1, $2, $3; if(NF >= 4) print "." $4}'`
-  #- if [ "$(git tag -l $VERSION_TAG)" != "" ]; then echo "*** Tag already exists. Does version need updating?"; exit 1; fi
   # attempt to create a git tag for this version. If it fails, it means you may have forgotten to update the version number
   # if it succeeds, we won't actually push the tag here; we just wanted to see whether it was already there
   - git fetch --tags
@@ -44,20 +44,15 @@ before_install:
   - mkdir -p ${BLENDER_CACHE}
   - ls ${BLENDER_CACHE}
 
-install:
-  - cd $TRAVIS_BUILD_DIR
-  - python3 --version
-  - pip install -r blender_requirements.txt
-  - pip list
+# TODO: uncomment this section once we're ready to do proper unit tests
+#  install:
+#  - cd $TRAVIS_BUILD_DIR
+#  - python3 --version
+#  - pip install -r blender_requirements.txt
+#  - pip list
 
 script:
   - pytest
-
-# TODO: pr test: make sure GIT_TAG doesn't already exist
-# if [ "$(git tag -l $VERSION_TAG)" != "" ]; then
-#    echo "*** Tag already exists. Does version in project.json need updating?"
-#    exit 1
-#fi
 
 before_deploy:
   # $TRAVIS_BUILD_DIR is the directory where the repo is cloned. You can treat it as the root folder of the repository
