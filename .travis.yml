@@ -81,7 +81,7 @@ deploy:
     token: $GITHUB_PERSONAL_ACCESS_TOKEN  # this variable is a secret key and is stored in the project settings for Stop Motion OBJ on travis-ci.com
     file: $RELEASE_ZIP
     name: $TRAVIS_TAG
-    cleanup: false  # make sure the .zip file doesn't get deleted before it gets published
+    skip_cleanup: true  # make sure the .zip file doesn't get deleted before it gets published
     draft: true # don't automatically publish the release. We need a chance to screen it and/or add release notes
     on:
       all_branches: true  # run this deploy phase for every branch
@@ -92,7 +92,7 @@ deploy:
     token: $GITHUB_PERSONAL_ACCESS_TOKEN
     file: $RELEASE_ZIP
     name: $TRAVIS_TAG
-    cleanup: false
+    skip_cleanup: true
     draft: true
     on:
       all_branches: true  # also run this deploy phase for every branch
