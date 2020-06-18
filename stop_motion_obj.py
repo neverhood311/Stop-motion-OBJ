@@ -750,6 +750,21 @@ def bakeSequence(_obj):
     _obj.select_set(state=True)
     bpy.ops.object.delete()
 
+def deepDeleteSequence(obj):
+    mss = obj.mesh_sequence_settings
+    if mss.initialized is True and mss.loaded is True:
+        for meshName in mss.meshNameArray:
+
+            # skip the current mesh for now; we'll delete it as the final step
+            if obj.data.name != meshName.key:
+                if bpy.data.meshes.find(meshName.key) != -1:
+                    meshToDelete = bpy.data.meshes[meshName.key]
+                    meshToDelete.use_fake_user = False
+                    bpy.data.meshes.remove(meshToDelete)
+    
+    if bpy.data.meshes.find(obj.data.name) != -1:
+        bpy.data.meshes.remove(obj.data)
+
 
 def freeUnusedMeshes():
     numFreed = 0
@@ -842,3 +857,16 @@ class BakeMeshSequence(bpy.types.Operator):
         # update the frame so the right shape is visible
         bpy.context.scene.frame_current = bpy.context.scene.frame_current
         return {'FINISHED'}
+
+
+class DeepDeleteSequence(bpy.types.Operator):
+    """Deep Delete Sequence"""
+    bl_idname = "ms.deep_delete_sequence"
+    bl_label = "Delete Sequence"
+    bl_options = {'UNDO'}
+
+    def execute(self, context):
+        obj = context.object
+        deepDeleteSequence(obj)
+        return {'FINISHED'}
+

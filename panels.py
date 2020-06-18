@@ -91,6 +91,12 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         objSettings = context.object.mesh_sequence_settings
+        if objSettings.loaded is True:
+            row = layout.row()
+            box = row.box()
+            box.enabled = context.mode == 'OBJECT'
+            box.operator("ms.deep_delete_sequence")
+
         if objSettings.initialized is True:
             layout.row().label(text="Version: " + objSettings.version.toString())
 
