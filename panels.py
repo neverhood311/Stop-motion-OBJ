@@ -133,6 +133,9 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
     importSettings: bpy.props.PointerProperty(type=MeshImporter)
     sequenceSettings: bpy.props.PointerProperty(type=SequenceImportSettings)
 
+    # for now, we'll just show any file type that Stop Motion OBJ supports
+    filter_glob: bpy.props.StringProperty(default="*.stl;*.obj;*.mtl;*.ply")
+
     def execute(self, context):
         if self.sequenceSettings.fileNamePrefix == "":
             self.report({'ERROR_INVALID_INPUT'}, "Please enter a file name prefix")
