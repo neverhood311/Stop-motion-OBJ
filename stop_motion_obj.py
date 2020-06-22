@@ -750,20 +750,47 @@ def bakeSequence(_obj):
     _obj.select_set(state=True)
     bpy.ops.object.delete()
 
+
 def deepDeleteSequence(obj):
     mss = obj.mesh_sequence_settings
-    if mss.initialized is True and mss.loaded is True:
-        for meshName in mss.meshNameArray:
-
-            # skip the current mesh for now; we'll delete it as the final step
-            if obj.data.name != meshName.key:
-                if bpy.data.meshes.find(meshName.key) != -1:
-                    meshToDelete = bpy.data.meshes[meshName.key]
-                    meshToDelete.use_fake_user = False
-                    bpy.data.meshes.remove(meshToDelete)
+    if mss.initialized is not True or mss.loaded is not True:
+        return
     
-    if bpy.data.meshes.find(obj.data.name) != -1:
-        bpy.data.meshes.remove(obj.data)
+    # make a list of all unique material and image texture used by any mesh in the sequence
+    meshes = []
+    materials = []
+    images = []
+    for meshName in mss.meshNameArray:
+        # add unique meshes to the list
+        if meshName.key not in meshes:
+            meshes.append(meshName.key)
+            
+        mesh = bpy.data.meshes[meshName.key]
+        for material in mesh.materials:
+            # add unique materials to the list
+            if material.name not in materials:
+                materials.append(material.name)
+            
+            # we're assuming the default import paradigm was used for creating materials:
+            if hasattr(material, "node_tree") and "Image Texture" in material.node_tree.nodes:
+                imageKey = material.node_tree.nodes['Image Texture'].image.name
+                if imageKey not in images:
+                    images.append(imageKey)
+
+    # delete all meshes in the sequence
+    for meshKey in meshes:
+        if meshKey in bpy.data.meshes:
+            bpy.data.meshes.remove(bpy.data.meshes[meshKey])
+            
+    # delete each material that no longer has any meshes referencing it
+    for materialKey in materials:
+        if materialKey in bpy.data.materials and bpy.data.materials[materialKey].users == 0:
+            bpy.data.materials.remove(bpy.data.materials[materialKey])
+
+    # delete each image that no longer has any materials referencing it
+    for imageKey in images:
+        if imageKey in bpy.data.images and bpy.data.images[imageKey].users == 0:
+            bpy.data.images.remove(bpy.data.images[imageKey])
 
 
 def freeUnusedMeshes():
