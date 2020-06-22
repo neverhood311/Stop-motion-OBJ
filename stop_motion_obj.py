@@ -842,9 +842,9 @@ class BatchShadeFlat(bpy.types.Operator):
 
 
 class BakeMeshSequence(bpy.types.Operator):
-    """Bake Mesh Sequence"""
+    """Bake Sequence"""
     bl_idname = "ms.bake_sequence"
-    bl_label = "Bake Mesh Sequence"
+    bl_label = "Bake Sequence"
     bl_options = {'UNDO'}
 
     def execute(self, context):

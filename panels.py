@@ -101,7 +101,6 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
         objSettings = context.object.mesh_sequence_settings
         if objSettings.loaded is True:
             if objSettings.cacheMode == 'cached':
-                layout.row().separator()
                 row = layout.row(align=True)
                 row.enabled = context.mode == 'OBJECT'
                 row.label(text="Shading:")
@@ -112,7 +111,6 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
                 row.enabled = context.mode == 'OBJECT'
                 row.operator("ms.reload_mesh_sequence")
 
-                layout.row().separator()
                 row = layout.row()
                 row.enabled = context.mode == 'OBJECT'
                 row.operator("ms.bake_sequence")
@@ -121,7 +119,8 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
             row.enabled = context.mode == 'OBJECT'
             row.operator("ms.deep_delete_sequence")
 
-            layout.row().label(text="Version: " + objSettings.version.toString())
+            layout.row().separator()
+            layout.row().label(text="Sequence version: " + objSettings.version.toString())
 
 
 class SequenceImportSettings(bpy.types.PropertyGroup):
