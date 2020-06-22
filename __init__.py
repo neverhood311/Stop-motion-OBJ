@@ -25,7 +25,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 1, 0, "alpha.15"),
+    "version": (2, 1, 0, "alpha.16"),
     "blender": (2, 80, 0),
     "location": "File > Import > Mesh Sequence",
     "warning": "",
@@ -50,6 +50,8 @@ def register():
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(DeepDeleteSequence)
     bpy.utils.register_class(SMO_PT_MeshSequencePanel)
+    bpy.utils.register_class(SMO_PT_MeshSequencePlaybackPanel)
+    bpy.utils.register_class(SMO_PT_MeshSequenceStreamingPanel)
     bpy.utils.register_class(SMO_PT_MeshSequenceAdvancedPanel)
     bpy.app.handlers.render_init.append(renderInitHandler)
     bpy.app.handlers.render_complete.append(renderCompleteHandler)
@@ -64,9 +66,6 @@ def register():
     bpy.utils.register_class(SequenceImportSettings)
     bpy.utils.register_class(ImportSequence)
 
-    # TODO: can we use atexit to detect the program closing and cleanup meshes?
-    #   otherwise, we might want a button to let the user clear the cache before saving the file
-
 
 def unregister():
     bpy.app.handlers.load_post.remove(initializeSequences)
@@ -80,6 +79,8 @@ def unregister():
     bpy.utils.unregister_class(BakeMeshSequence)
     bpy.utils.unregister_class(DeepDeleteSequence)
     bpy.utils.unregister_class(SMO_PT_MeshSequencePanel)
+    bpy.utils.unregister_class(SMO_PT_MeshSequencePlaybackPanel)
+    bpy.utils.unregister_class(SMO_PT_MeshSequenceStreamingPanel)
     bpy.utils.unregister_class(SMO_PT_MeshSequenceAdvancedPanel)
     bpy.utils.unregister_class(MeshSequenceSettings)
     bpy.utils.unregister_class(MeshNameProp)
