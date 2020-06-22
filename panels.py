@@ -39,43 +39,51 @@ class SMO_PT_MeshSequencePanel(bpy.types.Panel):
         return context.object.mesh_sequence_settings.initialized == True
 
     def draw(self, context):
+        pass
+
+
+class SMO_PT_MeshSequencePlaybackPanel(bpy.types.Panel):
+    bl_label = 'Playback'
+    bl_parent_id = "OBJ_SEQUENCE_PT_properties"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+
+    @classmethod
+    def poll(cls, context):
+        return context.object.mesh_sequence_settings.initialized == True
+    
+    def draw(self, context):
         layout = self.layout
         objSettings = context.object.mesh_sequence_settings
         if objSettings.initialized is True and objSettings.loaded is True:
-            row = layout.row()
-            row.prop(objSettings, "startFrame")
+            layout.use_property_split = True
+            layout.use_property_decorate = False
+            col = layout.column(align=False)
+            col.prop(objSettings, "startFrame")
+            col.prop(objSettings, "frameMode")
+            col.prop(objSettings, "speed")
 
-            row = layout.row()
-            row.prop(objSettings, "frameMode")
 
-            row = layout.row()
-            row.prop(objSettings, "speed")
+class SMO_PT_MeshSequenceStreamingPanel(bpy.types.Panel):
+    bl_label = 'Streaming'
+    bl_parent_id = "OBJ_SEQUENCE_PT_properties"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
 
-            if objSettings.cacheMode == 'cached':
-                row = layout.row()
-                row.enabled = context.mode == 'OBJECT'
-                row.operator("ms.reload_mesh_sequence")
+    @classmethod
+    def poll(cls, context):
+        mss = context.object.mesh_sequence_settings
+        return mss.initialized == True and mss.cacheMode == 'streaming'
+    
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        objSettings = context.object.mesh_sequence_settings
+        col = layout.column(align=False)
+        col.prop(objSettings, "cacheSize")
+        col.prop(objSettings, "streamDuringPlayback")
 
-                layout.row().separator()
-                row = layout.row(align=True)
-                row.enabled = context.mode == 'OBJECT'
-                row.label(text="Shading:")
-                row.operator("ms.batch_shade_smooth")
-                row.operator("ms.batch_shade_flat")
-
-                layout.row().separator()
-                row = layout.row()
-                box = row.box()
-                box.enabled = context.mode == 'OBJECT'
-                box.operator("ms.bake_sequence")
-
-            elif objSettings.cacheMode == 'streaming':
-                row = layout.row()
-                row.prop(objSettings, "cacheSize")
-
-                row = layout.row()
-                row.prop(objSettings, "streamDuringPlayback")
-            
 
 class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
     bl_label = 'Advanced'
@@ -92,13 +100,27 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
         layout = self.layout
         objSettings = context.object.mesh_sequence_settings
         if objSettings.loaded is True:
-            row = layout.row()
-            box = row.box()
-            box.enabled = context.mode == 'OBJECT'
-            box.operator("ms.deep_delete_sequence")
+            if objSettings.cacheMode == 'cached':
+                row = layout.row(align=True)
+                row.enabled = context.mode == 'OBJECT'
+                row.label(text="Shading:")
+                row.operator("ms.batch_shade_smooth")
+                row.operator("ms.batch_shade_flat")
 
-        if objSettings.initialized is True:
-            layout.row().label(text="Version: " + objSettings.version.toString())
+                row = layout.row()
+                row.enabled = context.mode == 'OBJECT'
+                row.operator("ms.reload_mesh_sequence")
+
+                row = layout.row()
+                row.enabled = context.mode == 'OBJECT'
+                row.operator("ms.bake_sequence")
+
+            row = layout.row()
+            row.enabled = context.mode == 'OBJECT'
+            row.operator("ms.deep_delete_sequence")
+
+            layout.row().separator()
+            layout.row().label(text="Sequence version: " + objSettings.version.toString())
 
 
 class SequenceImportSettings(bpy.types.PropertyGroup):

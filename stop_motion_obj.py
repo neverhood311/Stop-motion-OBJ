@@ -261,7 +261,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
                ('1', 'Extend', 'First and last frames are duplicated'),
                ('2', 'Repeat', 'Repeat the animation'),
                ('3', 'Bounce', 'Play in reverse at the end of the frame range')],
-        name='Frame Mode',
+        name='Mode',
         default='1')    
 
     # the number of frames to keep in memory if you're in streaming mode
@@ -272,12 +272,12 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
 
     # whether to enable/disable loading frames as they're required
     streamDuringPlayback: bpy.props.BoolProperty(
-        name='Stream Meshes During Playback',
+        name='Stream During Playback',
         description='Load meshes into memory as they are needed. If not checked, only the meshes currently in memory will appear.',
         default=True)
 
     speed: bpy.props.FloatProperty(
-        name='Playback Speed',
+        name='Speed',
         min=0.0001,
         soft_min=0.01,
         step=25,
@@ -842,9 +842,9 @@ class BatchShadeFlat(bpy.types.Operator):
 
 
 class BakeMeshSequence(bpy.types.Operator):
-    """Bake Mesh Sequence"""
+    """Bake Sequence"""
     bl_idname = "ms.bake_sequence"
-    bl_label = "Bake Mesh Sequence"
+    bl_label = "Bake Sequence"
     bl_options = {'UNDO'}
 
     def execute(self, context):
