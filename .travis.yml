@@ -57,11 +57,10 @@ script:
 before_deploy:
   # $TRAVIS_BUILD_DIR is the directory where the repo is cloned. You can treat it as the root folder of the repository
   - cd $TRAVIS_BUILD_DIR
-  - cd src
   # extract the version number from version.py and massage it into the correct format
   # also store it in $TRAVIS_TAG, which will later populate the git tag when we create a release
   # https://www.geeksforgeeks.org/awk-command-unixlinux-examples/
-  - export TRAVIS_TAG=`cat version.py | grep currentScriptVersion | head -1 | awk -F= '{ print $2 }' | sed 's/[\",()]//g' | awk '{printf "v%s.%s.%s", $1, $2, $3; if(NF >= 4) print "." $4}'`
+  - export TRAVIS_TAG=`cat src/version.py | grep currentScriptVersion | head -1 | awk -F= '{ print $2 }' | sed 's/[\",()]//g' | awk '{printf "v%s.%s.%s", $1, $2, $3; if(NF >= 4) print "." $4}'`
   # if we have Travis create only draft releases, we probably don't need to automatically create git tags since the GitHub release page creates a tag when we publish a release
   # - git tag $TRAVIS_TAG -a -m "Generated tag from TravisCI for build $TRAVIS_BUILD_NUMBER"
   # - git push origin --tags
@@ -69,9 +68,9 @@ before_deploy:
   - rm -rf Stop-motion-OBJ
   - mkdir Stop-motion-OBJ
   # copy all the source files to a temporary folder
-  - cp *.py README.md LICENSE Stop-motion-OBJ
+  - cp src/*.py README.md LICENSE Stop-motion-OBJ
   # create the file name for the distributable
-  - export RELEASE_ZIP=${TRAVIS_BUILD_DIR}/src/Stop-motion-OBJ-${TRAVIS_TAG}.zip
+  - export RELEASE_ZIP=${TRAVIS_BUILD_DIR}/Stop-motion-OBJ-${TRAVIS_TAG}.zip
   # zip up the temporary folder with all of its contents (the -r is very important!)
   - zip -r $RELEASE_ZIP Stop-motion-OBJ
 
