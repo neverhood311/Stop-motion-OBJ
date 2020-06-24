@@ -46,6 +46,17 @@ def getSelectedObjects():
             selected_objects.append(ob)
     return selected_objects
 
+
+def createUniqueMeshName(basename):
+    attempts = 1
+    uniqueName = basename
+    while attempts < 1000 and uniqueName in bpy.data.meshes:
+        uniqueName = "%s.%03d" % (basename, attempts)
+        attempts += 1
+    
+    return uniqueName
+
+
 # set the frame number for all mesh sequence objects
 # COMMENT THIS persistent OUT WHEN RUNNING FROM THE TEXT EDITOR
 @persistent
@@ -299,7 +310,7 @@ def newMeshSequence():
     theObj = bpy.context.object
     theObj.name = 'sequence'
     theMesh = theObj.data
-    theMesh.name = 'emptyMesh'
+    theMesh.name = createUniqueMeshName('emptyMesh')
     theMesh.use_fake_user = True
     theMesh.inMeshSequence = True
     
@@ -445,7 +456,7 @@ def loadSequenceFromBlendFile(_obj):
 
         # reset key and inMemory for meshes that were not saved in the .blend file
         for meshName in mss.meshNameArray:
-            if bpy.data.meshes.find(meshName.key) == -1 and meshName.key != 'emptyMesh':
+            if bpy.data.meshes.find(meshName.key) == -1 and not meshName.key.startswith('emptyMesh'):
                 meshName.key = ''
                 meshName.inMemory = False
 
