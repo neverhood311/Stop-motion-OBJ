@@ -138,14 +138,16 @@ class MeshImporter(bpy.types.PropertyGroup):
     # OBJ import parameters
     obj_use_edges: bpy.props.BoolProperty(name="Lines", description="Import lines and faces with 2 verts as edge", default=True)
     obj_use_smooth_groups: bpy.props.BoolProperty(name="Smooth Groups", description="Surround smooth groups by sharp edges", default=True)
-    obj_use_split_objects: bpy.props.BoolProperty(name="Object", description="Import OBJ Objects into Blender Objects", default=True)
-    obj_use_split_groups: bpy.props.BoolProperty(name="Group", description="Import OBJ Groups into Blender Objects", default=False)
+
+    # There will come a day when we'll support multi-object sequences. But it is not this day.
+    # obj_use_split_objects: bpy.props.BoolProperty(name="Object", description="Import OBJ Objects into Blender Objects", default=True)
+    # obj_use_split_groups: bpy.props.BoolProperty(name="Group", description="Import OBJ Groups into Blender Objects", default=False)
+    # obj_split_mode: bpy.props.EnumProperty(
+    #     name="Split",
+    #     items=(('ON', "Split", "Split geometry, omits unused vertices"),
+    #            ('OFF', "Keep Vert Order", "Keep vertex order from file")))
     obj_use_groups_as_vgroups: bpy.props.BoolProperty(name="Poly Groups", description="Import OBJ groups as vertex groups", default=False)
     obj_use_image_search: bpy.props.BoolProperty(name="Image Search", description="Search subdirs for any associated images (Warning: may be slow)", default=True)
-    obj_split_mode: bpy.props.EnumProperty(
-        name="Split",
-        items=(('ON', "Split", "Split geometry, omits unused vertices"),
-               ('OFF', "Keep Vert Order", "Keep vertex order from file")))
     obj_global_clight_size: bpy.props.FloatProperty(
         name="Clamp Size",
         description="Clamp bounds under this value (zero to disable)",
@@ -194,11 +196,11 @@ class MeshImporter(bpy.types.PropertyGroup):
             filepath=filePath,
             use_edges=self.obj_use_edges,
             use_smooth_groups=self.obj_use_smooth_groups,
-            use_split_objects=self.obj_use_split_objects,
-            use_split_groups=self.obj_use_split_groups,
+            use_split_objects=False,
+            use_split_groups=False,
             use_groups_as_vgroups=self.obj_use_groups_as_vgroups,
             use_image_search=self.obj_use_image_search,
-            split_mode=self.obj_split_mode,
+            split_mode="OFF",
             global_clight_size=self.obj_global_clight_size,
             axis_forward=self.axis_forward,
             axis_up=self.axis_up)

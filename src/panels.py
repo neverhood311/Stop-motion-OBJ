@@ -214,11 +214,11 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         dest.axis_up = source.axis_up
         dest.obj_use_edges = source.obj_use_edges
         dest.obj_use_smooth_groups = source.obj_use_smooth_groups
-        dest.obj_use_split_objects = source.obj_use_split_objects
-        dest.obj_use_split_groups = source.obj_use_split_groups
+        dest.obj_use_split_objects = False
+        dest.obj_use_split_groups = False
         dest.obj_use_groups_as_vgroups = source.obj_use_groups_as_vgroups
         dest.obj_use_image_search = source.obj_use_image_search
-        dest.obj_split_mode = source.obj_split_mode
+        dest.obj_split_mode = "OFF"
         dest.obj_global_clight_size = source.obj_global_clight_size
         dest.stl_global_scale = source.stl_global_scale
         dest.stl_use_scene_unit = source.stl_use_scene_unit
@@ -251,14 +251,9 @@ class SMO_PT_FileImportSettingsPanel(bpy.types.Panel):
             layout.prop(op.importSettings, 'obj_use_smooth_groups')
             layout.prop(op.importSettings, 'obj_use_edges')
             layout.prop(op.importSettings, 'obj_global_clight_size')
-            layout.prop(op.importSettings, 'obj_split_mode')
 
             col = layout.column()
-            if op.importSettings.obj_split_mode == 'ON':
-                col.prop(op.importSettings, "obj_use_split_objects", text="Split by Object")
-                col.prop(op.importSettings, "obj_use_split_groups", text="Split by Group")
-            else:
-                col.prop(op.importSettings, "obj_use_groups_as_vgroups")
+            col.prop(op.importSettings, "obj_use_groups_as_vgroups")
 
         elif op.sequenceSettings.fileFormat == 'stl':
             layout.row().prop(op.importSettings, "stl_global_scale")
