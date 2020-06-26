@@ -355,6 +355,7 @@ def loadStreamingSequenceFromMeshFiles(obj, directory, filePrefix):
         newMeshNameElement.basename = os.path.basename(filename)
         newMeshNameElement.inMemory = False
 
+        # TODO: what should we do with this?
         # if this is the first one, import it
         '''if numFrames == 0:
             importFunc(filepath=filename)

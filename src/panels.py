@@ -200,12 +200,18 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         self.sequenceSettings.cacheMode = "cached"
         self.sequenceSettings.fileFormat = "obj"
         self.sequenceSettings.perFrameMaterial = False
+
+        # TODO: do we need these? I thought they were already set above using axis_conversion
         self.axis_forward = "-Z"
         self.axis_up = "Y"
 
         if meshCount == 0:
             self.report({'ERROR'}, "No matching files found. Make sure the Root Folder, File Name, and File Format are correct.")
             return {'CANCELLED'}
+        
+        # get the name of the first mesh, remove trailing numbers and _ and .
+        firstMeshName = os.path.splitext(mss.meshNameArray[1].basename)[0].rstrip('._0123456789')
+        seqObj.name = firstMeshName + '_sequence'
 
         return {'FINISHED'}
 
