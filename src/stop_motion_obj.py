@@ -96,6 +96,22 @@ def renderStopped():
     forceMeshLoad = False
 
 
+@persistent
+def makeDirPathsRelative(scene):
+    # if this .blend file hasn't been saved yet, quit
+    if bpy.data.is_saved is False:
+        return
+
+    for obj in bpy.data.objects:
+        mss = obj.mesh_sequence_settings
+        if mss.initialized is True and mss.loaded is True:
+            # if any are using relative paths that have not yet been relative-ized, then relative-ize them
+            if mss.dirPathIsRelative is True and mss.dirPathNeedsRelativizing is True:
+                newRelPath = bpy.path.relpath(mss.dirPath)
+                mss.dirPath = newRelPath
+                mss.dirPathNeedsRelativizing = False
+
+
 # runs every time the start frame of an object is changed
 def updateStartFrame(self, context):
     updateFrame(0)
@@ -235,6 +251,15 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         description="Only .OBJ files will be listed",
         subtype="DIR_PATH")
     fileName: bpy.props.StringProperty(name='File Name')
+    dirPathIsRelative: bpy.props.BoolProperty(
+        name="Relative Paths",
+        description="Store relative paths for Streaming sequences and for reloading Cached sequences",
+        default=False)
+
+    dirPathNeedsRelativizing: bpy.props.BoolProperty(
+        name="DirPath Needs Relativizing",
+        description="Whether dirPath still needs to be converted into a relative path",
+        default=False)
 
     # material mode (one material total or one material per frame)
     perFrameMaterial: bpy.props.BoolProperty(

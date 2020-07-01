@@ -143,6 +143,10 @@ class SequenceImportSettings(bpy.types.PropertyGroup):
                ('ply', 'PLY', 'Stanford PLY')],
         name='File Format',
         default='obj')
+    dirPathIsRelative: bpy.props.BoolProperty(
+        name="Relative Paths",
+        description="Store relative paths for Streaming sequences and for reloading Cached sequences",
+        default=False)
 
 
 @orientation_helper(axis_forward='-Z', axis_up='Y')
@@ -181,6 +185,11 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         mss.perFrameMaterial = self.sequenceSettings.perFrameMaterial
         mss.cacheMode = self.sequenceSettings.cacheMode
         mss.fileFormat = self.sequenceSettings.fileFormat
+        mss.dirPathIsRelative = self.sequenceSettings.dirPathIsRelative
+
+        # this needs to be set to True if dirPath is supposed to be relative
+        # once the path is made relative, it will be set to False
+        mss.dirPathNeedsRelativizing = mss.dirPathIsRelative
         
         self.copyImportSettings(self.importSettings, mss.fileImporter)
 
@@ -304,13 +313,17 @@ class SMO_PT_SequenceImportSettingsPanel(bpy.types.Panel):
     def draw(self, context):
         op = context.space_data.active_operator
         layout = self.layout
-        row = layout.row()
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        col = layout.column(align=False)
+
+        row = col.row()
         if op.sequenceSettings.fileNamePrefix == "":
             row.alert = True
-
         row.prop(op.sequenceSettings, "fileNamePrefix")
-        layout.row().prop(op.sequenceSettings, "perFrameMaterial")
-        layout.row().prop(op.sequenceSettings, "cacheMode")
+        col.prop(op.sequenceSettings, "cacheMode")
+        col.prop(op.sequenceSettings, "perFrameMaterial")
+        col.prop(op.sequenceSettings, "dirPathIsRelative")
 
 
 def menu_func_import_sequence(self, context):
