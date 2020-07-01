@@ -25,7 +25,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 1, 0, "beta.4"),
+    "version": (2, 1, 0, "beta.5"),
     "blender": (2, 80, 0),
     "location": "File > Import > Mesh Sequence",
     "warning": "",
@@ -66,6 +66,9 @@ def register():
     bpy.utils.register_class(SequenceImportSettings)
     bpy.utils.register_class(ImportSequence)
 
+    bpy.app.handlers.load_post.append(makeDirPathsRelative)
+    bpy.app.handlers.save_pre.append(makeDirPathsRelative)
+
 
 def unregister():
     bpy.app.handlers.load_post.remove(initializeSequences)
@@ -95,6 +98,9 @@ def unregister():
 
     # make sure you register any classes ImportSequence depends on before registering this
     bpy.utils.unregister_class(ImportSequence)
+
+    bpy.app.handlers.load_post.remove(makeDirPathsRelative)
+    bpy.app.handlers.save_pre.remove(makeDirPathsRelative)
 
 if __name__ == "__main__":
     register()
