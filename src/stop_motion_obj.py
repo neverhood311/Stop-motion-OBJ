@@ -19,6 +19,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
+import math
 import os
 import re
 import glob
@@ -566,37 +567,37 @@ def getMeshIdxFromFrameNumber(_obj, frameNum):
     # adjust for playback speed
     scaledIdxFloat = offsetFromStart * _obj.mesh_sequence_settings.speed
     finalIdx = 0
-    frameMode = int(_obj.mesh_sequence_settings.frameMode)
+    frameMode = _obj.mesh_sequence_settings.frameMode
     # 0: Blank
-    if frameMode == 0:
+    if frameMode == '0':
         finalIdx = int(scaledIdxFloat)
         if(finalIdx < 0 or finalIdx >= numRealMeshes):
             finalIdx = -1
     # 1: Extend (default)
-    elif frameMode == 1:
+    elif frameMode == '1':
         finalIdx = int(scaledIdxFloat)
         if finalIdx < 0:
             finalIdx = 0
         elif finalIdx >= numRealMeshes:
             finalIdx = numRealMeshes - 1
     # 2: Repeat
-    elif frameMode == 2:
+    elif frameMode == '2':
         # shift the index into the positive domain; the math is easier to comprehend
         if scaledIdxFloat < 0:
             scaledIdxFloat += numRealMeshes * 10
 
         finalIdx = int(scaledIdxFloat % numRealMeshes)
     # 3: Bounce
-    elif frameMode == 3:
+    elif frameMode == '3':
         # shift the index into the positive domain; the math is easier to comprehend
         if scaledIdxFloat < 0:
-            scaledIdxFloat += numRealMeshes * 10
+            # this is not technically correct, but it's not really worth the hassle
+            scaledIdxFloat += numRealMeshes * 100
 
+        finalIdx = int(scaledIdxFloat) % numRealMeshes
         numCycles = int(int(scaledIdxFloat) / numRealMeshes)
-        if(numCycles % 2 == 0):
-            finalIdx = finalIdx % numRealMeshes
-        else:
-            finalIdx = (numRealMeshes - 1) - (finalIdx % numRealMeshes)
+        if(numCycles % 2 == 1):
+            finalIdx = (numRealMeshes - 1) - finalIdx
 
     # account for the fact that everything is shifted by 1 because of "emptyMesh" at index 0
     return finalIdx + 1
