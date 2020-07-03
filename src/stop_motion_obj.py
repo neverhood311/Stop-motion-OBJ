@@ -378,7 +378,12 @@ def newMeshSequence():
     mss.version.versionMajor = currentScriptVersion[0]
     mss.version.versionMinor = currentScriptVersion[1]
     mss.version.versionRevision = currentScriptVersion[2]
-    mss.version.versionDevelopment = currentScriptVersion[3]
+    mss.version.versionDevelopment = ""
+
+    # if currentScriptVersion has four elements, set this to the fourth element
+    if len(currentScriptVersion) == 4:
+        mss.version.versionDevelopment = currentScriptVersion[3]
+
     mss.initialized = True
     return theObj
 

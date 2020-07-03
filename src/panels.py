@@ -259,6 +259,8 @@ class SMO_PT_FileImportSettingsPanel(bpy.types.Panel):
     def draw(self, context):
         op = context.space_data.active_operator
         layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
         layout.row().prop(op.sequenceSettings, "fileFormat")
 
         if op.sequenceSettings.fileFormat == 'obj':
