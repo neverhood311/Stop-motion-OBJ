@@ -331,6 +331,28 @@ def initializeSequences(scene):
     freeUnusedMeshes()
 
 
+def deleteLinkedMeshMaterials(mesh, maxMaterialUsers, maxImageUsers):
+    imagesToDelete = []
+    materialsToDelete = []
+    for meshMaterial in mesh.materials:
+        materialsToDelete.append(meshMaterial)
+
+        if hasattr(meshMaterial, "node_tree") and "Image Texture" in meshMaterial.node_tree.nodes:
+            image = meshMaterial.node_tree.nodes['Image Texture'].image
+            if image not in imagesToDelete:
+                imagesToDelete.append(image)
+    
+    for materialToDelete in materialsToDelete:
+        if materialToDelete.users <= maxMaterialUsers and materialToDelete.name in bpy.data.materials:
+            bpy.data.materials.remove(materialToDelete)
+    
+    for imageToDelete in imagesToDelete:
+        if imageToDelete.users <= maxImageUsers and imageToDelete.name in bpy.data.images:
+            bpy.data.images.remove(imageToDelete)
+
+    mesh.materials.clear()
+
+
 def newMeshSequence():
     bpy.ops.object.add(type='MESH')
     # this new object should be the currently-selected object
@@ -379,22 +401,6 @@ def loadStreamingSequenceFromMeshFiles(obj, directory, filePrefix):
         newMeshNameElement = mss.meshNameArray.add()
         newMeshNameElement.basename = os.path.basename(filename)
         newMeshNameElement.inMemory = False
-
-        # TODO: what should we do with this?
-        # if this is the first one, import it
-        '''if numFrames == 0:
-            importFunc(filepath=filename)
-            tmpObject = bpy.context.selected_objects[0]
-            tmpMesh = tmpObject.data
-            tmpMesh.use_fake_user = True
-            tmpMesh.inMeshSequence = True
-            deselectAll()
-            tmpObject.select_set(state=True)
-            bpy.ops.object.delete()
-            newMeshNameElement.key = tmpMesh.name
-            newMeshNameElement.inMemory = True
-            numFramesInMemory += 1'''
-
         numFrames += 1
 
     mss.numMeshes = numFrames + 1
@@ -417,7 +423,6 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
     if countMatchingFiles(full_dirpath, _file, fileExtension) == 0:
         return 0
 
-    #importFunc = importFuncFromType(_obj.mesh_sequence_settings.fileFormat)
     full_filepath = os.path.join(full_dirpath, _file + '*.' + fileExtension)
     numFrames = 0
     unsortedFiles = glob.glob(full_filepath)
@@ -437,6 +442,10 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
         deselectAll()
         tmpObject.select_set(state=True)
         bpy.ops.object.delete()
+
+        # if this is not the first frame, remove any materials and/or images imported with the mesh
+        if numFrames >= 1 and mss.perFrameMaterial is False:
+            deleteLinkedMeshMaterials(tmpMesh, 1, 0)
 
         newMeshNameElement = mss.meshNameArray.add()
         newMeshNameElement.key = tmpMesh.name
@@ -664,8 +673,6 @@ def importStreamedFile(obj, idx):
     tmpMesh.inMeshSequence = True
     deselectAll()
     tmpObject.select_set(state=True)
-    # TODO: I don't think this bpy.ops.object.delete() works in render mode/locked interface mode
-    # bpy.ops.object.delete()
     bpy.data.objects.remove(tmpObject)
     mss.meshNameArray[idx].key = tmpMesh.name
     mss.meshNameArray[idx].inMemory = True
