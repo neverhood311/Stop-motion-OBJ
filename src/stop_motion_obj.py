@@ -114,7 +114,7 @@ def makeDirPathsRelative(scene):
 
 
 # runs every time the start frame of an object is changed
-def updateStartFrame(self, context):
+def handlePlaybackChange(self, context):
     updateFrame(0)
     return None
 
@@ -302,7 +302,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
 
     startFrame: bpy.props.IntProperty(
         name='Start Frame',
-        update=updateStartFrame,
+        update=handlePlaybackChange,
         default=1)
 
     # TODO: deprecate meshNames
@@ -320,7 +320,8 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
                ('2', 'Repeat', 'Repeat the animation'),
                ('3', 'Bounce', 'Play in reverse at the end of the frame range')],
         name='Mode',
-        default='1')    
+        default='1',
+        update=handlePlaybackChange)    
 
     # the number of frames to keep in memory if you're in streaming mode
     cacheSize: bpy.props.IntProperty(
@@ -341,7 +342,8 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         soft_min=0.01,
         step=25,
         precision=2,
-        default=1) 
+        default=1,
+        update=handlePlaybackChange) 
 
 
 @persistent
