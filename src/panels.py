@@ -146,7 +146,7 @@ class SequenceImportSettings(bpy.types.PropertyGroup):
     dirPathIsRelative: bpy.props.BoolProperty(
         name="Relative Paths",
         description="Store relative paths for Streaming sequences and for reloading Cached sequences",
-        default=False)
+        default=True)
 
 
 @orientation_helper(axis_forward='-Z', axis_up='Y')

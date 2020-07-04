@@ -2,5 +2,5 @@
 # (major, minor, revision, development)
 # example dev version: (1, 2, 3, "beta.4")
 # example release version: (2, 3, 4)
-currentScriptVersion = (2, 1, 0, "beta.8")
+currentScriptVersion = (2, 1, 0, "beta.9")
 legacyScriptVersion = (2, 0, 2, "legacy")

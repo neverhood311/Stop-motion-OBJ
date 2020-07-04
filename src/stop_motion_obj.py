@@ -119,6 +119,25 @@ def updateStartFrame(self, context):
     return None
 
 
+# runs every time the cache size changes
+def resizeCache(self, context):
+    obj = context.object
+    mss = obj.mesh_sequence_settings
+
+    # if the cache size was changed to zero, we don't want to resize it
+    if mss.cacheSize == 0:
+        return None
+
+    numMeshesToRemove = mss.numMeshesInMemory - mss.cacheSize
+    for i in range(numMeshesToRemove):
+        currentMeshIdx = getMeshIdxFromFrameNumber(obj, context.scene.frame_current)
+        idxToDelete = nextCachedMeshToDelete(obj, currentMeshIdx)
+        if idxToDelete >= 0:
+            removeMeshFromCache(obj, idxToDelete)
+
+    return None
+
+
 def countMatchingFiles(_directory, _filePrefix, _fileExtension):
     full_filepath = os.path.join(_directory, _filePrefix + '*.' + _fileExtension)
     files = glob.glob(full_filepath)
@@ -307,7 +326,8 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
     cacheSize: bpy.props.IntProperty(
         name='Cache Size',
         min=0,
-        description='The maximum number of meshes to keep in memory. If >1, meshes will be removed from memory as new ones are loaded. If 0, all meshes will be kept.')
+        description='The maximum number of meshes to keep in memory. If >1, meshes will be removed from memory as new ones are loaded. If 0, all meshes will be kept.',
+        update=resizeCache)
 
     # whether to enable/disable loading frames as they're required
     streamDuringPlayback: bpy.props.BoolProperty(
@@ -332,6 +352,7 @@ def initializeSequences(scene):
     freeUnusedMeshes()
 
 
+# TODO: it's weird that we have the 2nd and 3rd parameters. We shouln't have to pass those in
 def deleteLinkedMeshMaterials(mesh, maxMaterialUsers, maxImageUsers):
     imagesToDelete = []
     materialsToDelete = []
@@ -415,7 +436,7 @@ def loadStreamingSequenceFromMeshFiles(obj, directory, filePrefix):
     if numFrames > 0:
         mss.loaded = True
 
-        setFrameObjStreamed(obj, bpy.context.scene.frame_current, True)
+        setFrameObjStreamed(obj, bpy.context.scene.frame_current, True, False)
 
         # TODO: this select_set is not working
         obj.select_set(state=True)
@@ -554,13 +575,14 @@ def getMeshPropFromIndex(obj, idx):
 
 def setFrameNumber(frameNum):
     for obj in bpy.data.objects:
-        if obj.mesh_sequence_settings.initialized is True and obj.mesh_sequence_settings.loaded is True:
-            cacheMode = obj.mesh_sequence_settings.cacheMode
+        mss = obj.mesh_sequence_settings
+        if mss.initialized is True and mss.loaded is True:
+            cacheMode = mss.cacheMode
             if cacheMode == 'cached':
                 setFrameObj(obj, frameNum)
             elif cacheMode == 'streaming':
                 global forceMeshLoad
-                setFrameObjStreamed(obj, frameNum, forceLoad=forceMeshLoad)
+                setFrameObjStreamed(obj, frameNum, forceLoad=forceMeshLoad, deleteMaterials=not mss.perFrameMaterial)
 
 
 def getMeshIdxFromFrameNumber(_obj, frameNum):
@@ -626,7 +648,7 @@ def setFrameObj(_obj, frameNum):
                     _obj.data.materials.append(material)
 
 
-def setFrameObjStreamed(obj, frameNum, forceLoad=False):
+def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
     mss = obj.mesh_sequence_settings
     idx = getMeshIdxFromFrameNumber(obj, frameNum)
     nextMeshProp = getMeshPropFromIndex(obj, idx)
@@ -635,6 +657,9 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False):
     if nextMeshProp.inMemory is False and (mss.streamDuringPlayback is True or forceLoad is True):
         # load the mesh into memory
         importStreamedFile(obj, idx)
+        if deleteMaterials is True:
+            next_mesh = getMeshFromIndex(obj, idx)
+            deleteLinkedMeshMaterials(next_mesh, 1, 0)
 
     # if the mesh is in memory, show it
     if nextMeshProp.inMemory is True:
@@ -653,15 +678,21 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False):
                     for material in prev_mesh.materials:
                         obj.data.materials.append(material)
 
-    # TODO: remove meshes until you're down to the cachSize (e.g. if you have 10 meshes in memory and you changed your cache size to 5)
     if mss.cacheSize > 0 and mss.numMeshesInMemory > mss.cacheSize:
-        # find and delete the one closest to the end of the array
-        idxToDelete = len(mss.meshNameArray) - 1
-        while idxToDelete > 0 and (idxToDelete == idx or mss.meshNameArray[idxToDelete].inMemory is False):
-            idxToDelete -= 1
-
+        idxToDelete = nextCachedMeshToDelete(obj, idx)
         if idxToDelete >= 0:
             removeMeshFromCache(obj, idxToDelete)
+
+
+def nextCachedMeshToDelete(obj, currentMeshIdx):
+    mss = obj.mesh_sequence_settings
+
+    # find and delete the one closest to the end of the array
+    idxToDelete = len(mss.meshNameArray) - 1
+    while idxToDelete > 0 and (idxToDelete == currentMeshIdx or mss.meshNameArray[idxToDelete].inMemory is False):
+        idxToDelete -= 1
+    
+    return idxToDelete
 
 
 # This function will be called from within both the Editor context and the Render context
@@ -680,18 +711,24 @@ def importStreamedFile(obj, idx):
     deselectAll()
     tmpObject.select_set(state=True)
     bpy.data.objects.remove(tmpObject)
+
+    # TODO: if perFrameMaterial is false, delete the materials and textures for this frame if it's not the first frame
     mss.meshNameArray[idx].key = tmpMesh.name
     mss.meshNameArray[idx].inMemory = True
     mss.numMeshesInMemory += 1
     return tmpMesh
 
 
-def removeMeshFromCache(obj, idx):
+def removeMeshFromCache(obj, meshIdx):
     mss = obj.mesh_sequence_settings
-    meshKey = mss.meshNameArray[idx].key
-    bpy.data.meshes.remove(bpy.data.meshes[meshKey])
-    mss.meshNameArray[idx].inMemory = False
-    mss.meshNameArray[idx].key = ''
+    meshToRemove = bpy.data.meshes[mss.meshNameArray[meshIdx].key]
+    if mss.perFrameMaterial is True:
+        # first delete any materials and image textures associated with the mesh
+        deleteLinkedMeshMaterials(meshToRemove, 1, 0)
+
+    bpy.data.meshes.remove(meshToRemove)
+    mss.meshNameArray[meshIdx].inMemory = False
+    mss.meshNameArray[meshIdx].key = ''
     mss.numMeshesInMemory -= 1
 
 
@@ -816,18 +853,19 @@ def deepDeleteSequence(obj):
         # add unique meshes to the list
         if meshName.key not in meshes:
             meshes.append(meshName.key)
-            
-        mesh = bpy.data.meshes[meshName.key]
-        for material in mesh.materials:
-            # add unique materials to the list
-            if material.name not in materials:
-                materials.append(material.name)
-            
-            # we're assuming the default import paradigm was used for creating materials:
-            if hasattr(material, "node_tree") and "Image Texture" in material.node_tree.nodes:
-                imageKey = material.node_tree.nodes['Image Texture'].image.name
-                if imageKey not in images:
-                    images.append(imageKey)
+
+        if meshName.inMemory is True:
+            mesh = bpy.data.meshes[meshName.key]
+            for material in mesh.materials:
+                # add unique materials to the list
+                if material.name not in materials:
+                    materials.append(material.name)
+                
+                # we're assuming the default import paradigm was used for creating materials:
+                if hasattr(material, "node_tree") and "Image Texture" in material.node_tree.nodes:
+                    imageKey = material.node_tree.nodes['Image Texture'].image.name
+                    if imageKey not in images:
+                        images.append(imageKey)
 
     # delete all meshes in the sequence
     for meshKey in meshes:
