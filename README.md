@@ -8,39 +8,16 @@ Once a sequence is imported, you may perform many of the same operations on the 
 Stop Motion OBJ is able to import very complex mesh sequences that cannot fit in memory. Using [Streaming sequences](https://github.com/neverhood311/Stop-motion-OBJ/wiki#streaming), you can specify how many meshes to keep in memory at any given time and Stop Motion OBJ will automatically load and/or remove meshes so you don’t run out of memory.
 
 
+
 # Gallery
 [TODO: link each GIF to the respective listing in the wiki gallery]
-<div style="display: table; border-spacing: 15px;">
-  <div style="display: table-row;">
-    <div style="display: table-cell;">
-      <img src="imgs/lee_perry_smith_256.gif"><br>
-      Lee Perry Smith | <a href="https://ir-ltd.net/">Infinite Realities</a> | <a href="https://aeonx.com/">AEONX</a>
-    </div>
-    <div style="display: table-cell;">
-      <img src="imgs/mike_brondbjerg_256.gif"><br>
-      Mike Brondbjerg | <a href="http://www.kultur.design/">kultur.design</a> | <a href="https://twitter.com/mikebrondbjerg">Twitter</a>
-    </div>
-    <div style="display: table-cell;">
-      <img src="imgs/water_splash_256.gif"><br>
-      XC Engineering | <a href="https://www.xceng.com/en/">XC Engineering</a> | <a href="https://www.flow3d.com/">Flow-3D</a>
-    </div>
-  </div>
-  <br/>
-  <div style="display: table-row;">
-    <div style="display: table-cell;">
-      <img src="imgs/frank_dsouza_256.gif"><br>
-      Franklyn D'souza | <a href="https://twitter.com/franklynd/status/1231625663095934977">Twitter</a>
-    </div>
-    <div style="display: table-cell;">
-      <img src="imgs/day_107_256.gif"><br>
-      Justin Jensen | <a href="https://www.researchgate.net/publication/325426062_Fourveo_Integration_of_4D_Animation_into_Conventional_3D_Animation_Workflows">Fourveo</a> | <a href="https://www.youtube.com/channel/UCHnTdtUrB1L_1Xyid8tyZPg">YouTube</a>
-    </div>
-    <div style="display: table-cell;">
-      <img src="imgs/day_109_256.gif"><br>
-      Justin Jensen | <a href="https://www.researchgate.net/publication/325426062_Fourveo_Integration_of_4D_Animation_into_Conventional_3D_Animation_Workflows">Fourveo</a> | <a href="https://www.youtube.com/channel/UCHnTdtUrB1L_1Xyid8tyZPg">YouTube</a>
-    </div>
-  </div>
-</div>
+| | | |
+|:---:|:---:|:---:|
+|<img src="imgs/lee_perry_smith_256.gif">|<img src="imgs/mike_brondbjerg_256.gif">|<img src="imgs/water_splash_256.gif">|
+|Lee Perry Smith \| [Infinite Realities](https://ir-ltd.net/) \| [AEONX](https://aeonx.com/)|Mike Brondbjerg \| [kultur.design](http://www.kultur.design/) \| [Twitter](https://twitter.com/mikebrondbjerg)|XC Engineering \| [XC Engineering](https://www.xceng.com/en/) \| [Flow-3D](https://www.flow3d.com/)|
+||||
+|<img src="imgs/frank_dsouza_256.gif">|<img src="imgs/day_107_256.gif">|<img src="imgs/day_109_256.gif">|
+|Franklyn D'souza \| [Twitter](https://twitter.com/franklynd/status/1231625663095934977)|Justin Jensen \| [Fourveo](https://www.researchgate.net/publication/325426062_Fourveo_Integration_of_4D_Animation_into_Conventional_3D_Animation_Workflows) \| [YouTube](https://www.youtube.com/channel/UCHnTdtUrB1L_1Xyid8tyZPg)|Justin Jensen \| [Fourveo](https://www.researchgate.net/publication/325426062_Fourveo_Integration_of_4D_Animation_into_Conventional_3D_Animation_Workflows) \| [YouTube](https://www.youtube.com/channel/UCHnTdtUrB1L_1Xyid8tyZPg)|
 
 
 # Download & Install
