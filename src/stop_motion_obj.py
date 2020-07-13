@@ -58,6 +58,11 @@ def createUniqueMeshName(basename):
     return uniqueName
 
 
+def renderLockInterface():
+    for scene in bpy.data.scenes:
+        scene.render.use_lock_interface = True
+
+
 # set the frame number for all mesh sequence objects
 # COMMENT THIS persistent OUT WHEN RUNNING FROM THE TEXT EDITOR
 @persistent
@@ -408,6 +413,10 @@ def newMeshSequence():
         mss.version.versionDevelopment = currentScriptVersion[3]
 
     mss.initialized = True
+
+    # set Render > Lock Interface to true
+    renderLockInterface()
+
     return theObj
 
 
