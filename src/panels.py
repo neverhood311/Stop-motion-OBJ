@@ -162,6 +162,8 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
     # for now, we'll just show any file type that Stop Motion OBJ supports
     filter_glob: bpy.props.StringProperty(default="*.stl;*.obj;*.mtl;*.ply")
 
+    directory: bpy.props.StringProperty(subtype='DIR_PATH')
+
     def execute(self, context):
         if self.sequenceSettings.fileNamePrefix == "":
             self.report({'ERROR_INVALID_INPUT'}, "Please enter a file name prefix")
@@ -180,7 +182,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         mss = seqObj.mesh_sequence_settings
 
         # deep copy self.sequenceSettings data into the new object's mss data, including dirPath
-        mss.dirPath = self.filepath
+        mss.dirPath = self.directory
         mss.fileName = self.sequenceSettings.fileNamePrefix
         mss.perFrameMaterial = self.sequenceSettings.perFrameMaterial
         mss.cacheMode = self.sequenceSettings.cacheMode
