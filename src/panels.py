@@ -164,12 +164,14 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
 
     directory: bpy.props.StringProperty(subtype='DIR_PATH')
 
+    axis_forward: bpy.props.StringProperty(default="-Z")
+    axis_up: bpy.props.StringProperty(default="Y")
+
     def execute(self, context):
         if self.sequenceSettings.fileNamePrefix == "":
             self.report({'ERROR_INVALID_INPUT'}, "Please enter a file name prefix")
             return {'CANCELLED'}
 
-        # TODO: do we actually need to store these? It's encoded in the rotation of seqObj
         self.importSettings.axis_forward = self.axis_forward
         self.importSettings.axis_up = self.axis_up
 
@@ -205,16 +207,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         elif mss.cacheMode == 'streaming':
             meshCount = loadStreamingSequenceFromMeshFiles(seqObj, mss.dirPath, mss.fileName)
 
-        # reset self.sequenceSettings data to defaults
-        # TODO: let's put this in a function
-        self.sequenceSettings.fileNamePrefix = ""
-        self.sequenceSettings.cacheMode = "cached"
-        self.sequenceSettings.fileFormat = "obj"
-        self.sequenceSettings.perFrameMaterial = False
-
-        # TODO: do we need these? I thought they were already set above using axis_conversion
-        self.axis_forward = "-Z"
-        self.axis_up = "Y"
+        self.resetToDefaults()
 
         if meshCount == 0:
             self.report({'ERROR'}, "No matching files found. Make sure the Root Folder, File Name, and File Format are correct.")
@@ -240,6 +233,12 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         dest.stl_global_scale = source.stl_global_scale
         dest.stl_use_scene_unit = source.stl_use_scene_unit
         dest.stl_use_facet_normal = source.stl_use_facet_normal
+    
+    def resetToDefaults(self):
+        self.sequenceSettings.fileNamePrefix = ""
+        self.filepath = ""
+        self.axis_forward = "-Z"
+        self.axis_up = "Y"
 
     # we need this function so it doesn't try to render any UI elements. The ImportSequencePanel will do all the drawing
     def draw(self, context):
