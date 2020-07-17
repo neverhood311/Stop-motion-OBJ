@@ -64,7 +64,6 @@ def renderLockInterface():
 
 
 # set the frame number for all mesh sequence objects
-# COMMENT THIS persistent OUT WHEN RUNNING FROM THE TEXT EDITOR
 @persistent
 def updateFrame(scene):
     scn = bpy.context.scene
@@ -310,7 +309,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         update=handlePlaybackChange,
         default=1)
 
-    # TODO: deprecate meshNames
+    # TODO: deprecate meshNames in version 3.0.0. This will break backwards compatibility with version 2.0.2 and earlier
     meshNames: bpy.props.StringProperty()
     meshNameArray: bpy.props.CollectionProperty(type=MeshNameProp)
     numMeshes: bpy.props.IntProperty()
@@ -359,8 +358,7 @@ def initializeSequences(scene):
     freeUnusedMeshes()
 
 
-# TODO: it's weird that we have the 2nd and 3rd parameters. We shouln't have to pass those in
-def deleteLinkedMeshMaterials(mesh, maxMaterialUsers, maxImageUsers):
+def deleteLinkedMeshMaterials(mesh, maxMaterialUsers=1, maxImageUsers=0):
     imagesToDelete = []
     materialsToDelete = []
     for meshMaterial in mesh.materials:
@@ -446,18 +444,16 @@ def loadStreamingSequenceFromMeshFiles(obj, directory, filePrefix):
 
     if numFrames > 0:
         mss.loaded = True
-
         setFrameObjStreamed(obj, bpy.context.scene.frame_current, True, False)
-
-        # TODO: this select_set is not working
         obj.select_set(state=True)
     return numFrames
 
 
 def loadSequenceFromMeshFiles(_obj, _dir, _file):
-    # error out early if there are no files that match the file prefix
     full_dirpath = bpy.path.abspath(_dir)
     fileExtension = fileExtensionFromType(_obj.mesh_sequence_settings.fileFormat)
+
+    # error out early if there are no files that match the file prefix
     if countMatchingFiles(full_dirpath, _file, fileExtension) == 0:
         return 0
 
@@ -473,6 +469,7 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
         # import the mesh file
         mss.fileImporter.load(mss.fileFormat, file)
         tmpObject = bpy.context.selected_objects[0]
+
         # IMPORTANT: don't copy it; just copy the pointer. This cuts memory usage in half.
         tmpMesh = tmpObject.data
         tmpMesh.use_fake_user = True
@@ -483,7 +480,7 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
 
         # if this is not the first frame, remove any materials and/or images imported with the mesh
         if numFrames >= 1 and mss.perFrameMaterial is False:
-            deleteLinkedMeshMaterials(tmpMesh, 1, 0)
+            deleteLinkedMeshMaterials(tmpMesh)
 
         newMeshNameElement = mss.meshNameArray.add()
         newMeshNameElement.key = tmpMesh.name
@@ -506,6 +503,7 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
 def loadSequenceFromBlendFile(_obj):
     scn = bpy.context.scene
     mss = _obj.mesh_sequence_settings
+
     # if meshNames is not blank, we have an old file that must be converted to the new CollectionProperty format
     if mss.meshNames:
         # split meshNames
@@ -549,6 +547,7 @@ def reloadSequenceFromMeshFiles(_object, _directory, _filePrefix):
         return 0
 
     meshNamesArray = _object.mesh_sequence_settings.meshNameArray
+
     # mark the existing meshes for cleanup (keep the first 'emptyMesh' one)
     for meshNameElement in meshNamesArray[1:]:
         bpy.data.meshes[meshNameElement.key].use_fake_user = False
@@ -666,11 +665,10 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
 
     # if we want to load new meshes as needed and it's not already loaded
     if nextMeshProp.inMemory is False and (mss.streamDuringPlayback is True or forceLoad is True):
-        # load the mesh into memory
         importStreamedFile(obj, idx)
         if deleteMaterials is True:
             next_mesh = getMeshFromIndex(obj, idx)
-            deleteLinkedMeshMaterials(next_mesh, 1, 0)
+            deleteLinkedMeshMaterials(next_mesh)
 
     # if the mesh is in memory, show it
     if nextMeshProp.inMemory is True:
@@ -716,14 +714,13 @@ def importStreamedFile(obj, idx):
     mss.fileImporter.load(mss.fileFormat, filename)
     tmpObject = getSelectedObjects()[0]
     tmpMesh = tmpObject.data
+
     # we don't want to save streamed meshes to the .blend file
     tmpMesh.use_fake_user = False
     tmpMesh.inMeshSequence = True
     deselectAll()
     tmpObject.select_set(state=True)
     bpy.data.objects.remove(tmpObject)
-
-    # TODO: if perFrameMaterial is false, delete the materials and textures for this frame if it's not the first frame
     mss.meshNameArray[idx].key = tmpMesh.name
     mss.meshNameArray[idx].inMemory = True
     mss.numMeshesInMemory += 1
@@ -735,7 +732,7 @@ def removeMeshFromCache(obj, meshIdx):
     meshToRemove = bpy.data.meshes[mss.meshNameArray[meshIdx].key]
     if mss.perFrameMaterial is True:
         # first delete any materials and image textures associated with the mesh
-        deleteLinkedMeshMaterials(meshToRemove, 1, 0)
+        deleteLinkedMeshMaterials(meshToRemove)
 
     bpy.data.meshes.remove(meshToRemove)
     mss.meshNameArray[meshIdx].inMemory = False
