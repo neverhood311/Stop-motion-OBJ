@@ -354,7 +354,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         step=25,
         precision=2,
         default=1,
-        update=handlePlaybackChange) 
+        update=handlePlaybackChange)
 
 
 @persistent
@@ -536,9 +536,13 @@ def loadSequenceFromBlendFile(_obj):
 
         # reset key and inMemory for meshes that were not saved in the .blend file
         for meshName in mss.meshNameArray:
-            if bpy.data.meshes.find(meshName.key) == -1 and not meshName.key.startswith('emptyMesh'):
-                meshName.key = ''
-                meshName.inMemory = False
+            if not meshName.key.startswith('emptyMesh'):
+                # if the mesh is not in memory, let's not pretend that it is
+                if bpy.data.meshes.find(meshName.key) == -1:
+                    meshName.key = ''
+                    meshName.inMemory = False
+                else:
+                    mss.numMeshesInMemory += 1
 
     deselectAll()
 
@@ -559,6 +563,7 @@ def reloadSequenceFromMeshFiles(_object, _directory, _filePrefix):
     for meshNameElement in meshNamesArray[1:]:
         bpy.data.meshes[meshNameElement.key].use_fake_user = False
         bpy.data.meshes[meshNameElement.key].inMeshSequence = False
+        # TODO: remove these meshes and their materials from memory
 
     # re-initialize _object.meshNameArray
     emptyMeshName = meshNamesArray[0].key
@@ -722,8 +727,8 @@ def importStreamedFile(obj, idx):
     tmpObject = getSelectedObjects()[0]
     tmpMesh = tmpObject.data
 
-    # we don't want to save streamed meshes to the .blend file
-    tmpMesh.use_fake_user = False
+    # we want to make sure the cached meshes are saved to the .blend file
+    tmpMesh.use_fake_user = True
     tmpMesh.inMeshSequence = True
     deselectAll()
     tmpObject.select_set(state=True)
@@ -741,6 +746,7 @@ def removeMeshFromCache(obj, meshIdx):
         # first delete any materials and image textures associated with the mesh
         deleteLinkedMeshMaterials(meshToRemove)
 
+    meshToRemove.use_fake_user = False
     bpy.data.meshes.remove(meshToRemove)
     mss.meshNameArray[meshIdx].inMemory = False
     mss.meshNameArray[meshIdx].key = ''
