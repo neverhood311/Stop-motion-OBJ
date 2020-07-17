@@ -134,13 +134,20 @@ def resizeCache(self, context):
 
     numMeshesToRemove = mss.numMeshesInMemory - mss.cacheSize
     for i in range(numMeshesToRemove):
-        currentMeshIdx = getMeshIdxFromFrameNumber(obj, context.scene.frame_current)
+        currentMeshIdx = getMeshIdxFromMeshKey(obj, obj.data.name)
         idxToDelete = nextCachedMeshToDelete(obj, currentMeshIdx)
         if idxToDelete >= 0:
             removeMeshFromCache(obj, idxToDelete)
 
     return None
 
+
+def getMeshIdxFromMeshKey(obj, meshKey):
+    for idx, meshNameItem in enumerate(obj.mesh_sequence_settings.meshNameArray):
+        if meshNameItem.key == meshKey:
+            return idx
+
+    return -1
 
 def countMatchingFiles(_directory, _filePrefix, _fileExtension):
     full_filepath = os.path.join(_directory, _filePrefix + '*.' + _fileExtension)
