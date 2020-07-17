@@ -560,10 +560,11 @@ def reloadSequenceFromMeshFiles(_object, _directory, _filePrefix):
     meshNamesArray = _object.mesh_sequence_settings.meshNameArray
 
     # mark the existing meshes for cleanup (keep the first 'emptyMesh' one)
+    meshesToRemove = []
     for meshNameElement in meshNamesArray[1:]:
         bpy.data.meshes[meshNameElement.key].use_fake_user = False
         bpy.data.meshes[meshNameElement.key].inMeshSequence = False
-        # TODO: remove these meshes and their materials from memory
+        meshesToRemove.append(meshNameElement.key)
 
     # re-initialize _object.meshNameArray
     emptyMeshName = meshNamesArray[0].key
@@ -582,6 +583,10 @@ def reloadSequenceFromMeshFiles(_object, _directory, _filePrefix):
 
     # set the speed back to its previous value
     _object.mesh_sequence_settings.speed = originalSpeed
+
+    # remove the old meshes and materials from the scene
+    for meshToRemove in meshesToRemove:
+        removeMeshFromScene(meshToRemove, True)
 
     return numMeshes
 
@@ -741,16 +746,22 @@ def importStreamedFile(obj, idx):
 
 def removeMeshFromCache(obj, meshIdx):
     mss = obj.mesh_sequence_settings
-    meshToRemove = bpy.data.meshes[mss.meshNameArray[meshIdx].key]
-    if mss.perFrameMaterial is True:
-        # first delete any materials and image textures associated with the mesh
-        deleteLinkedMeshMaterials(meshToRemove)
-
-    meshToRemove.use_fake_user = False
-    bpy.data.meshes.remove(meshToRemove)
+    meshToRemoveKey = mss.meshNameArray[meshIdx].key
+    removeMeshFromScene(meshToRemoveKey, mss.perFrameMaterial)
     mss.meshNameArray[meshIdx].inMemory = False
     mss.meshNameArray[meshIdx].key = ''
     mss.numMeshesInMemory -= 1
+
+
+def removeMeshFromScene(meshKey, removeOwnedMaterials):
+    if meshKey in bpy.data.meshes:
+        meshToRemove = bpy.data.meshes[meshKey]
+        if removeOwnedMaterials is True:
+            # first delete any materials and image textures associated with the mesh
+            deleteLinkedMeshMaterials(meshToRemove)
+        
+        meshToRemove.use_fake_user = False
+        bpy.data.meshes.remove(meshToRemove)
 
 
 def shadeSequence(_obj, smooth):
