@@ -1,76 +1,52 @@
-# Stop-motion-OBJ
-A Blender add-on for importing a sequence of meshes as frames
+# Stop Motion OBJ
+[Tutorial](https://github.com/neverhood311/Stop-motion-OBJ/wiki#quick-start) | [Forum](https://blenderartists.org/t/stop-motion-obj-obj-stl-ply-sequence-importer/670105) | [Documentation](https://github.com/neverhood311/Stop-motion-OBJ/wiki) | [How to Support](#how-to-support)
 
-Stop motion OBJ allows you to import a sequence of OBJ (or STL or PLY) files and render them as individual frames. Have a RealFlow animation but want to render it in Blender? This addon is for you! There are now two versions:
-- [v2.0.2](https://github.com/neverhood311/Stop-motion-OBJ/releases/tag/v2.0.2) for **Blender 2.80+**
-- [r1.1.1](https://github.com/neverhood311/Stop-motion-OBJ/releases/tag/0.2.79.2) for Blender 2.79 (also tested for 2.77 and 2.78). This version is now deprecated and will no longer be supported
+Stop Motion OBJ is a tool that lets you import a sequence of mesh files (.obj, .stl, or .ply), play them back in real time, then render them out to an animation. Each mesh may have a different vertex count, poly count, and even different UVs. This is especially useful for importing fluid simulations, for visualization of scientific data, and for rendering of 4D scan data.
 
-If you find this add-on helpful, please consider donating to support development:
+Once a sequence is imported, you may perform many of the same operations on the sequence that you would on a single mesh. Many of the Object Modifiers work on the entire mesh sequence. Mesh sequences may be rendered in both Cycles and Eevee.
 
-PayPal: https://www.paypal.me/justinj
+Stop Motion OBJ is able to import very complex mesh sequences that cannot fit in memory. Using [Streaming sequences](https://github.com/neverhood311/Stop-motion-OBJ/wiki#streaming), you can specify how many meshes to keep in memory at any given time and Stop Motion OBJ will automatically load and/or remove meshes so you don’t run out of memory.
 
-Bitcoin wallet: 16Bbv5jmKJ2T3dqw2rbaiL6vsoZvyNvaU1
 
-### IMPORTANT
-- You MUST restart Blender after enabling the add-on
 
-### Features
-- Supported formats: OBJ, STL, PLY
-- Allows changing topology 
-  - (the meshes don't need to have the same number of vertices and faces)
-- Supports shapes with UVs and image textures
-- Variable playback speed
-- Multiple playback modes
-- Reload from disk
-  - If you change your mesh sequence, you can reload the sequence into the existing object without deleting it and creating a new one
-- Object can have different materials on each frame
-  - For instance, you can have a different MTL file for each OBJ file
-- Bake sequence
-  - This allows the sequence to be viewed on other computers without installing the addon (in a renderfarm, for example)
+# Gallery
+| | | |
+|:---:|:---:|:---:|
+|[<img src="imgs/lee_perry_smith_256.gif">](https://github.com/neverhood311/Stop-motion-OBJ/wiki#gallery)|[<img src="imgs/mike_brondbjerg_s2g_neural_256.gif">](https://github.com/neverhood311/Stop-motion-OBJ/wiki#gallery)|[<img src="imgs/water_splash_256.gif">](https://github.com/neverhood311/Stop-motion-OBJ/wiki#gallery)|
+|Lee Perry Smith \| [Infinite Realities](https://ir-ltd.net/) \| [AEONX](https://aeonx.com/)|Mike Brondbjerg \| [kultur.design](http://www.kultur.design/) \| [Twitter](https://twitter.com/mikebrondbjerg)|XC Engineering \| [XC Engineering](https://www.xceng.com/en/) \| [FLOW-3D](https://www.flow3d.com/)|
+||||
+|[<img src="imgs/frank_dsouza_256.gif">](https://github.com/neverhood311/Stop-motion-OBJ/wiki#gallery)|[<img src="imgs/day_107_256.gif">](https://github.com/neverhood311/Stop-motion-OBJ/wiki#gallery)|[<img src="imgs/day_109_256.gif">](https://github.com/neverhood311/Stop-motion-OBJ/wiki#gallery)|
+|Franklyn D'souza \| [Twitter](https://twitter.com/franklynd/status/1231625663095934977)|Justin Jensen \| [Fourveo](https://www.researchgate.net/publication/325426062_Fourveo_Integration_of_4D_Animation_into_Conventional_3D_Animation_Workflows) \| [YouTube](https://www.youtube.com/channel/UCHnTdtUrB1L_1Xyid8tyZPg)|Justin Jensen \| [Fourveo](https://www.researchgate.net/publication/325426062_Fourveo_Integration_of_4D_Animation_into_Conventional_3D_Animation_Workflows) \| [YouTube](https://www.youtube.com/channel/UCHnTdtUrB1L_1Xyid8tyZPg)|
 
-### Limitations
-- No motion blur
-- Only single-object files are supported
-- ~~Only absolute filepaths are supported~~
-  - Fixed in [https://github.com/neverhood311/Stop-motion-OBJ/pull/17](https://github.com/neverhood311/Stop-motion-OBJ/pull/17)
-- ~~File numbers must be zero-padded~~
-  - Sorting file with correct order is added in [this PR](https://github.com/neverhood311/Stop-motion-OBJ/pull/15)
-  - Files like file1, file2, file3 will be loaded in correct order, and zero-padded filenames still work, too.
-- ~~Doesn't work with physics~~ 
-  - (It actually works with rigid body physics. In Rigid Body Collisions set Shape to 'Mesh' and Source to 'Base')
-- ~~Sequences can't be duplicated~~
-  - Sequences can now be duplicated, but they share a material. For a duplicate sequence with a different material, you have to re-import the sequence.
 
-## Installing Stop motion OBJ
-- Find the [latest release](https://github.com/neverhood311/Stop-motion-OBJ/releases) and download the release .zip file (NOT the source code .zip file)
-- Open Blender and open the Add-ons preferences (Edit > Preferences... > Add-ons)
-- Click Install..., find the .zip file you downloaded, and click Install Add-on
-- In the search bar, type 'OBJ' and look for the Stop motion OBJ addon in the list
-- Check the box to enable it
-- **RESTART BLENDER BEFORE USING THE ADDON**
+# Download & Install
+For Blender 2.80+, download the latest release [here](https://github.com/neverhood311/Stop-motion-OBJ/releases/latest). Make sure to download the file named Stop-motion-OBJ-v2.x.x.zip (don't download either of the “Source code” files).
 
-## Using Stop motion OBJ
-- (make sure you've installed the addon and restarted Blender before using)
-- In the 3D view, click Add > Mesh > Mesh Sequence
-  - The object will initially be empty. We need to load a mesh sequence into it.
-- Make sure the object is selected.
-- In the properties panel, click on the Object Properties tab (the little orange cube icon). In the settings panel, scroll down to find the Mesh Sequence subpanel and open it.
-- Enter the Root Folder by clicking on the folder button and navigating to the folder where the mesh files are stored. ~~**Make sure to UNCHECK ‘Relative Path’**~~
-- In the File Name box, enter a common prefix of the files.
-  - ex: If you have frame001, frame002, frame003, you could enter ‘frame’, 'fram', or even 'f'
-- If your sequence has a different material for each frame, check the "Material per Frame" checkbox. Otherwise, leave it unchecked.
-- Click ‘Load Mesh Sequence’ to load. 
-  - Depending on the number of frames, this could take a while.
-- Step through a few frames to see the animation.
-- You can adjust which frame the animation starts on as well as its playback speed.
-- You can also decide what happens before and after the mesh sequence:
-  - 'Blank' will simply make the object disappear after the end of the sequence
-  - 'Extend' will freeze the first and last frames before and after the mesh sequence, respectively
-  - 'Repeat' will repeat the animation
-  - 'Bounce' will play the animation in reverse once the sequence has finished
-- Once your sequence is loaded, you can change the shading (smooth or flat) of the entire sequence:
-  - The shading buttons are found in the Mesh Sequence Settings for the object
-  - Note: The normal shading buttons (in the 3D View "Tools" panel) will only affect the current frame, not the entire sequence
-- If you change your mesh sequence and want to reload it without creating a new sequence object, click 'Reload From Disk'
-  - This will use the original Root Folder and File Name that you initially specified
-  - If your updated sequence has more or fewer frames than the original one, the updated sequence object will reflect this change
+To install, just follow the normal procedure for installing Blender addons. Open Blender and click Edit > Preferences... > Add-ons. Then click Install… and find the .zip file you previously downloaded. Once you’ve enabled the add-on, it should be ready to use immediately.
+
+For Blender 2.79 and earlier, download [r1.1.1](https://github.com/neverhood311/Stop-motion-OBJ/releases/tag/0.2.79.2). Note that this version is deprecated and will not be supported.
+
+# Quick Start Tutorial
+<img src="imgs/cached_import_s2g_octree.gif" title="Quick Cached Sequence import">
+
+Importing a mesh sequence is easy:
+1. Click File > Import > Mesh Sequence
+1. Navigate to the folder where your mesh sequence is stored
+1. Select your file type and adjust your import settings
+1. In the File Name box, provide the first few letters of the name of one of your mesh files
+1. Leave the Cache Mode set to Cached
+1. Click Select Folder and wait while your sequence is loaded
+
+Once it’s finished loading, you’re done!
+
+# How to Support
+Stop Motion OBJ wouldn’t be possible without your help. If you find this add-on helpful, please consider donating to support further development. Everything helps.
+
+- [PayPal](https://www.paypal.com/justinj)
+- [Ko-fi](https://ko-fi.com/stopmotionobj) (buy me a coffee)
+- Bitcoin: 16Bbv5jmKJ2T3dqw2rbaiL6vsoZvyNvaU1
+- Please use [#stopmotionobj](https://twitter.com/search?q=%23stopmotionobj&src=typed_query) when posting to social media
+- Report bugs on the [issues](https://github.com/neverhood311/Stop-motion-OBJ/issues) page or on the [BlenderArtists thread](https://blenderartists.org/t/stop-motion-obj-obj-stl-ply-sequence-importer/670105)
+
+# Acknowledgements
+Special thanks to Stephen McAvoy for countless hours of testing, Lee Perry Smith and Mike Brondbjerg for generous donations, and Lee Perry Smith, Mike Brondbjerg, Franklyn D’Souza, and XC Engineering SRL for providing samples to showcase in the gallery. Finally, thanks to everyone who has suggested features, reported bugs, or donated to the project.
