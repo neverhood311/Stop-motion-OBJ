@@ -59,9 +59,18 @@ class SMO_PT_MeshSequencePlaybackPanel(bpy.types.Panel):
             layout.use_property_split = True
             layout.use_property_decorate = False
             col = layout.column(align=False)
-            col.prop(objSettings, "startFrame")
             col.prop(objSettings, "frameMode")
-            col.prop(objSettings, "speed")
+
+            # keyframed playback
+            if objSettings.frameMode == '4':
+                row = col.row()
+                if objSettings.curMeshIdx <= 0 or objSettings.curMeshIdx > objSettings.numMeshes - 1:
+                    row.alert = True
+                row.prop(objSettings, "curMeshIdx")
+            # all other playback modes
+            else:
+                col.prop(objSettings, "startFrame")
+                col.prop(objSettings, "speed")
 
 
 class SMO_PT_MeshSequenceStreamingPanel(bpy.types.Panel):

@@ -33,6 +33,9 @@ def alphanumKey(string):
     """
     return [int(c) if c.isdigit() else c for c in re.split('([0-9]+)', string)]
 
+def clamp(value, minVal, maxVal):
+    return max(minVal, min(value, maxVal))
+
 
 def deselectAll():
     for ob in bpy.context.scene.objects:
@@ -331,6 +334,10 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         name='Start Frame',
         update=handlePlaybackChange,
         default=1)
+    
+    curMeshIdx: bpy.props.IntProperty(
+        name='Active mesh',
+        default=1)
 
     # TODO: deprecate meshNames in version 3.0.0. This will break backwards compatibility with version 2.0.2 and earlier
     meshNames: bpy.props.StringProperty()
@@ -340,15 +347,16 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
     initialized: bpy.props.BoolProperty(default=False)
     loaded: bpy.props.BoolProperty(default=False)
 
-    # out-of-range frame mode
+    # frame progression mode
     frameMode: bpy.props.EnumProperty(
         items=[('0', 'Blank', 'Object disappears when frame is out of range'),
                ('1', 'Extend', 'First and last frames are duplicated'),
                ('2', 'Repeat', 'Repeat the animation'),
-               ('3', 'Bounce', 'Play in reverse at the end of the frame range')],
+               ('3', 'Bounce', 'Play in reverse at the end of the frame range'),
+               ('4', 'Keyframe', 'Use keyframe curves to control sequence playback')],
         name='Mode',
         default='1',
-        update=handlePlaybackChange)    
+        update=handlePlaybackChange)
 
     # the number of frames to keep in memory if you're in streaming mode
     cacheSize: bpy.props.IntProperty(
@@ -629,15 +637,16 @@ def setFrameNumber(frameNum):
 
 
 def getMeshIdxFromFrameNumber(_obj, frameNum):
-    numRealMeshes = _obj.mesh_sequence_settings.numMeshes - 1
+    mss = _obj.mesh_sequence_settings
+    numRealMeshes = mss.numMeshes - 1
 
     # convert the frame number into a zero-based array index
-    offsetFromStart = frameNum - _obj.mesh_sequence_settings.startFrame
+    offsetFromStart = frameNum - mss.startFrame
 
     # adjust for playback speed
-    scaledIdxFloat = offsetFromStart * _obj.mesh_sequence_settings.speed
+    scaledIdxFloat = offsetFromStart * mss.speed
     finalIdx = 0
-    frameMode = _obj.mesh_sequence_settings.frameMode
+    frameMode = mss.frameMode
     # 0: Blank
     if frameMode == '0':
         finalIdx = int(scaledIdxFloat)
@@ -668,6 +677,21 @@ def getMeshIdxFromFrameNumber(_obj, frameNum):
         numCycles = int(int(scaledIdxFloat) / numRealMeshes)
         if(numCycles % 2 == 1):
             finalIdx = (numRealMeshes - 1) - finalIdx
+
+    # 4: Keyframe
+    elif frameMode == '4':
+        finalIdx = 0
+        if _obj.animation_data != None:
+            # we can't just look at mss.curMeshIdx since it hasn't yet been updated
+            # instead we have to evaluate the actual keyframe curve at this new frame number
+            meshIdxCurve = next(curve for curve in _obj.animation_data.action.fcurves if 'curMeshIdx' in curve.data_path)
+            
+            # make sure the 1-based index is in-bounds
+            curveValue = clamp(meshIdxCurve.evaluate(frameNum), 1, numRealMeshes)
+
+            # subtract one since the keyframe curve is 1-based, but we're looking for a 0-based index
+            finalIdx = int(curveValue) - 1
+            
 
     # account for the fact that everything is shifted by 1 because of "emptyMesh" at index 0
     return finalIdx + 1
