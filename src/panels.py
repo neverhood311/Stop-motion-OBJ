@@ -120,6 +120,14 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
             row.operator("ms.deep_delete_sequence")
 
             layout.row().separator()
+
+            # we have to subtract one because numMeshes includes the empty mesh
+            layout.row().label(text="Sequence size: " + str(objSettings.numMeshes - 1) + " meshes")
+
+            if objSettings.cacheMode == 'streaming':
+                layout.row().label(text="Cached meshes: " + str(objSettings.numMeshesInMemory)  + " meshes")
+
+            layout.row().label(text="Mesh directory: " + objSettings.dirPath)
             layout.row().label(text="Sequence version: " + objSettings.version.toString())
 
 
