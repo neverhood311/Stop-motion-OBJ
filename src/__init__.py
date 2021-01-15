@@ -25,7 +25,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 2, 0, "alpha.2"),
+    "version": (2, 2, 0, "alpha.3"),
     "blender": (2, 83, 0),
     "location": "File > Import > Mesh Sequence",
     "warning": "",
@@ -44,6 +44,7 @@ def register():
     bpy.types.Object.mesh_sequence_settings = bpy.props.PointerProperty(type=MeshSequenceSettings)
     bpy.app.handlers.load_post.append(initializeSequences)
     bpy.app.handlers.frame_change_pre.append(updateFrame)
+    bpy.app.handlers.depsgraph_update_post.append(updateFrame)
     bpy.utils.register_class(ReloadMeshSequence)
     bpy.utils.register_class(BatchShadeSmooth)
     bpy.utils.register_class(BatchShadeFlat)
@@ -73,6 +74,7 @@ def register():
 def unregister():
     bpy.app.handlers.load_post.remove(initializeSequences)
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
+    bpy.app.handlers.depsgraph_update_post.remove(updateFrame)
     bpy.app.handlers.render_init.remove(renderInitHandler)
     bpy.app.handlers.render_complete.remove(renderCompleteHandler)
     bpy.app.handlers.render_cancel.remove(renderCancelHandler)
