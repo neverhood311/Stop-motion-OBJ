@@ -116,9 +116,11 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
                 row.operator("ms.batch_shade_smooth")
                 row.operator("ms.batch_shade_flat")
 
-                row = layout.row()
-                row.enabled = context.mode == 'OBJECT'
-                row.operator("ms.reload_mesh_sequence")
+                if objSettings.isImported is True:
+                    # non-imported sequences won't have a fileName or dirPath and cannot be reloaded
+                    row = layout.row()
+                    row.enabled = context.mode == 'OBJECT'
+                    row.operator("ms.reload_mesh_sequence")
 
                 row = layout.row()
                 row.enabled = context.mode == 'OBJECT'
@@ -136,7 +138,9 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
             if objSettings.cacheMode == 'streaming':
                 layout.row().label(text="Cached meshes: " + str(objSettings.numMeshesInMemory)  + " meshes")
 
-            layout.row().label(text="Mesh directory: " + objSettings.dirPath)
+            if objSettings.isImported is True:
+                # non-imported sequences won't have a dirPath to display
+                layout.row().label(text="Mesh directory: " + objSettings.dirPath)
             layout.row().label(text="Sequence version: " + objSettings.version.toString())
 
 
@@ -233,6 +237,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         # get the name of the first mesh, remove trailing numbers and _ and .
         firstMeshName = os.path.splitext(mss.meshNameArray[1].basename)[0].rstrip('._0123456789')
         seqObj.name = firstMeshName + '_sequence'
+        seqObj.isImported = True
 
         return {'FINISHED'}
 
@@ -348,3 +353,22 @@ class SMO_PT_SequenceImportSettingsPanel(bpy.types.Panel):
 
 def menu_func_import_sequence(self, context):
     self.layout.operator(ImportSequence.bl_idname, text="Mesh Sequence")
+
+#Add empty mesh sequence operator
+class AddMeshSequence(bpy.types.Operator):
+    """Add Empty Mesh Sequence"""
+    bl_idname = "ms.add_mesh_sequence"
+    #what shows up in the menu
+    bl_label = "Empty Mesh Sequence"
+    bl_options = {'UNDO'}
+
+    def execute(self, context):
+        # TODO: this function is old
+        global MSC
+        obj = MSC.newMeshSequence()
+        
+        return {'FINISHED'}
+
+#the function for adding "Mesh Sequence" to the Add > Mesh menu
+def menu_func_new_sequence(self, context):
+    self.layout.operator(AddMeshSequence.bl_idname, icon="PLUGIN")

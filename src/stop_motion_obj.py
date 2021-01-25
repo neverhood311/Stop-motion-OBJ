@@ -277,6 +277,10 @@ class MeshNameProp(bpy.types.PropertyGroup):
 
 
 class MeshSequenceSettings(bpy.types.PropertyGroup):
+    isImported: bpy.props.BoolProperty(
+        name="Sequence Is Imported",
+        description="Whether the sequence was loaded from files on disk (True), or created in Blender (False)",
+        default=True)
     version: bpy.props.PointerProperty(type=SequenceVersion)
     fileImporter: bpy.props.PointerProperty(type=MeshImporter)
 
