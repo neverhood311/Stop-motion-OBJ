@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2020  Justin Jensen
+#   Copyright (C) 2016-2021  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -414,6 +414,9 @@ def newMeshSequence():
     emptyMeshNameElement = mss.meshNameArray.add()
     emptyMeshNameElement.key = theMesh.name
     emptyMeshNameElement.inMemory = True
+
+    mss.numMeshes = 1
+    mss.numMeshesInMemory = 1
 
     deselectAll()
     theObj.select_set(state=True)
@@ -1046,4 +1049,30 @@ class DeepDeleteSequence(bpy.types.Operator):
         obj = context.object
         deepDeleteSequence(obj)
         return {'FINISHED'}
+
+
+# 'mesh' is a Blender mesh
+# TODO: write another version that accepts a list of vertices and triangles
+#       and creates a new Blender mesh
+def addMeshToSequence(obj, mesh, idx=-1):
+    mesh.inMeshSequence = True
+
+    mss = obj.mesh_sequence_settings
+
+    # add the new mesh to meshNameArray
+    newMeshNameElement = mss.meshNameArray.add()
+    newMeshNameElement.key = mesh.name_full
+    newMeshNameElement.inMemory = True
+
+    # increment numMeshes
+    mss.numMeshes = mss.numMeshes + 1
+
+    # increment numMeshesInMemory
+    mss.numMeshesInMemory = mss.numMeshesInMemory + 1
+
+    # set initialized to True
+    mss.initialized = True
+
+    # set loaded to True
+    mss.loaded = True
 

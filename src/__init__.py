@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2020  Justin Jensen
+#   Copyright (C) 2016-2021  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -52,6 +52,8 @@ def register():
     bpy.utils.register_class(BatchShadeFlat)
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(DeepDeleteSequence)
+    bpy.utils.register_class(SeedMeshSequence)
+    bpy.utils.register_class(DuplicateMesh)
     bpy.utils.register_class(SMO_PT_MeshSequencePanel)
     bpy.utils.register_class(SMO_PT_MeshSequencePlaybackPanel)
     bpy.utils.register_class(SMO_PT_MeshSequenceStreamingPanel)
@@ -61,6 +63,7 @@ def register():
     bpy.app.handlers.render_cancel.append(renderCancelHandler)
 
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import_sequence)
+    bpy.types.VIEW3D_MT_object.append(menu_func_seed_sequence)
 
     # the order here is important since it is the order in which these sections will be drawn
     bpy.utils.register_class(SMO_PT_FileImportSettingsPanel)
@@ -85,6 +88,8 @@ def unregister():
     bpy.utils.unregister_class(BatchShadeFlat)
     bpy.utils.unregister_class(BakeMeshSequence)
     bpy.utils.unregister_class(DeepDeleteSequence)
+    bpy.utils.unregister_class(SeedMeshSequence)
+    bpy.utils.unregister_class(DuplicateMesh)
     bpy.utils.unregister_class(SMO_PT_MeshSequencePanel)
     bpy.utils.unregister_class(SMO_PT_MeshSequencePlaybackPanel)
     bpy.utils.unregister_class(SMO_PT_MeshSequenceStreamingPanel)
@@ -93,6 +98,7 @@ def unregister():
     bpy.utils.unregister_class(MeshNameProp)
 
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_sequence)
+    bpy.types.VIEW3D_MT_object.remove(menu_func_seed_sequence)
     bpy.utils.unregister_class(SMO_PT_FileImportSettingsPanel)
     bpy.utils.unregister_class(SMO_PT_TransformSettingsPanel)
     bpy.utils.unregister_class(SMO_PT_SequenceImportSettingsPanel)

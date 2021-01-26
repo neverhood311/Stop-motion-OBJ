@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2020  Justin Jensen
+#   Copyright (C) 2016-2021  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -109,6 +109,10 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
         layout = self.layout
         objSettings = context.object.mesh_sequence_settings
         if objSettings.loaded is True:
+            if objSettings.isImported is False:
+                row = layout.row(align=True)
+                row.enabled = context.mode == 'OBJECT'
+                row.operator("ms.duplicate_current_mesh")
             if objSettings.cacheMode == 'cached':
                 row = layout.row(align=True)
                 row.enabled = context.mode == 'OBJECT'
@@ -237,7 +241,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         # get the name of the first mesh, remove trailing numbers and _ and .
         firstMeshName = os.path.splitext(mss.meshNameArray[1].basename)[0].rstrip('._0123456789')
         seqObj.name = firstMeshName + '_sequence'
-        seqObj.isImported = True
+        seqObj.mesh_sequence_settings.isImported = True
 
         return {'FINISHED'}
 
@@ -354,21 +358,49 @@ class SMO_PT_SequenceImportSettingsPanel(bpy.types.Panel):
 def menu_func_import_sequence(self, context):
     self.layout.operator(ImportSequence.bl_idname, text="Mesh Sequence")
 
-#Add empty mesh sequence operator
-class AddMeshSequence(bpy.types.Operator):
-    """Add Empty Mesh Sequence"""
-    bl_idname = "ms.add_mesh_sequence"
-    #what shows up in the menu
-    bl_label = "Empty Mesh Sequence"
+
+class SeedMeshSequence(bpy.types.Operator):
+    """Seed Mesh Sequence"""
+    bl_idname = "ms.seed_mesh_sequence"
+    bl_label = "Seed Mesh Sequence"
     bl_options = {'UNDO'}
 
     def execute(self, context):
-        # TODO: this function is old
-        global MSC
-        obj = MSC.newMeshSequence()
-        
+        obj = context.object
+
+        # hijack the mesh from the selected object and add it to a new mesh sequence
+        msObj = newMeshSequence()
+        msObj.mesh_sequence_settings.isImported = False
+        addMeshToSequence(msObj, obj.data)
+
+        # TODO: delete the old object but not its mesh
+
         return {'FINISHED'}
 
-#the function for adding "Mesh Sequence" to the Add > Mesh menu
-def menu_func_new_sequence(self, context):
-    self.layout.operator(AddMeshSequence.bl_idname, icon="PLUGIN")
+def menu_func_seed_sequence(self, context):
+    self.layout.operator(SeedMeshSequence.bl_idname, icon="PLUGIN")
+
+
+class DuplicateMesh(bpy.types.Operator):
+    """Duplicate Current Mesh"""
+    bl_idname = "ms.duplicate_current_mesh"
+    bl_label = "Duplicate Current Mesh"
+    bl_options = {'UNDO'}
+
+    def execute(self, context):
+        obj = context.object
+
+        # TODO:
+        # TODO: if there's already a mesh at this keyframe, just add it to the end? or find the next open keyframe?
+        # make a copy of the current mesh
+        newMesh = obj.data.copy()
+
+        # get its full name
+        newMeshName = newMesh.name_full
+
+        # add it to the current sequence
+        addMeshToSequence(obj, newMesh)
+
+        # TODO: if in keyframe mode, add a new keyframe at this frame number for the new mesh
+        return {'FINISHED'}
+
