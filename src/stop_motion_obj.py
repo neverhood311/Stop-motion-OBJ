@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2020  Justin Jensen
+#   Copyright (C) 2016-2021  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -801,6 +801,38 @@ def shadeSequence(_obj, smooth):
             bpy.ops.object.shade_flat()
     # reset the sequence's mesh to the right one based on the current frame
     _obj.data = origMesh
+
+
+def bakeSequenceShapeKeys(obj):
+    scn = bpy.context.scene
+
+    #meshNameElements = _obj.mesh_sequence_settings.meshNameArray
+    # for each mesh in the sequence
+        # create an object for it, copy in the mesh data
+        # link it into the active scene
+        # create a vertex group on the object, including the frame number in the name
+        # add all of the vertices into this group, set the weight to 1.0, and set the mode to "REPLACE"
+    # deselect everything
+    # select all sequence objects
+    # set the first mesh as the active one (bpy.context.view_layer.objects.active = theObject)
+    # join all the meshes (bpy.ops.object.join())
+
+    # add a Basis shape key
+    # for each mesh:
+        # add a shape key, rename it to the mesh index
+    
+    # make sure we're in object mode
+    # for each shape key:
+        # switch to edit mode (bpy.ops.object.editmode_toggle())
+        # deselect all vertices
+        # select the vertices in the next vertex group
+        # switch back to object mode (bpy.ops.object.editmode_toggle())
+    
+    # for each frame:
+        # get the index for the visible mesh
+        # set a keyframe for this frame on its shape key: set the value to 1
+        # set a keyframe for the next frame on its shape key: set the value to 0
+        # make sure that it's using CONSTANT interpolation
 
 
 def bakeSequence(_obj):
