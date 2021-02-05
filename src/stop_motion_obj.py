@@ -803,36 +803,155 @@ def shadeSequence(_obj, smooth):
     _obj.data = origMesh
 
 
+def selectAllVertices(obj):
+    bpy.ops.object.mode_set(mode = 'OBJECT')
+    obj = bpy.context.active_object
+    bpy.ops.object.mode_set(mode = 'EDIT') 
+    bpy.ops.mesh.select_mode(type='VERT')
+    bpy.ops.mesh.select_all(action = 'SELECT')
+    bpy.ops.object.mode_set(mode = 'OBJECT')
+    
+    # if we wanted to select a specific vertex, we would do the following:
+    # bpy.ops.mesh.select_all(action = 'DESELECT')  # do this instead of the 'SELECT' above
+    # bpy.ops.object.mode_set(mode = 'OBJECT')
+    # obj.data.vertices[0].select = True
+    # bpy.ops.object.mode_set(mode = 'EDIT')
+
+
 def bakeSequenceShapeKeys(obj):
     scn = bpy.context.scene
+    activeCollection = bpy.context.collection
+    bpy.ops.object.empty_add(type='PLAIN_AXES')
+    containerObj = bpy.context.active_object
+    containerObj.name = "C_" + obj.name
 
-    #meshNameElements = _obj.mesh_sequence_settings.meshNameArray
+    # copy the object's transformation data into the container
+    containerObj.location = obj.location
+    containerObj.scale = obj.scale
+    containerObj.rotation_euler = obj.rotation_euler
+    containerObj.rotation_quaternion = obj.rotation_quaternion
+
+    # TODO: copy the object's animation data
+
+    meshVertIdxRanges = []
+    nVertsTotal = 0
+    objNames = []
+    meshNameElements = obj.mesh_sequence_settings.meshNameArray
     # for each mesh in the sequence
+    for idx, meshNameItem in enumerate(meshNameElements):
         # create an object for it, copy in the mesh data
+        currentMesh = bpy.data.meshes[meshNameItem.key]
+        currentMesh.inMeshSequence = False
+        tmpObj = bpy.data.objects.new('o_' + currentMesh.name, currentMesh)
+        
+        objNames.append(tmpObj.name_full)
+        
         # link it into the active scene
+        activeCollection.objects.link(tmpObj)
+        currentMesh.use_fake_user = False
+        tmpObj.parent = containerObj
+
+        # TODO: this is the way to do it from the UI. Let's see if we can do a more direct way by directly editing vertex data
         # create a vertex group on the object, including the frame number in the name
+        #group = tmpObj.vertex_groups.new(name='frame_' + str(idx))
+
         # add all of the vertices into this group, set the weight to 1.0, and set the mode to "REPLACE"
+        # TODO: make sure we're not in Edit mode
+        #vertIdxList = list(range(len(currentMesh.vertices)))
+        #group.add(vertIdxList, 1.0, 'REPLACE')
+
+        # get the number of vertices in the mesh, add an entry in the meshVertIdxRanges list
+        nVertsMesh = len(currentMesh.vertices)
+
+        # tuple: (first index, number of vertices)
+        meshVertIdxRanges.append((nVertsTotal, nVertsMesh))
+
+        # increment the total vertex count
+        nVertsTotal += nVertsMesh
+
     # deselect everything
+    deselectAll()
+
     # select all sequence objects
+    for objName in objNames:
+        bpy.data.objects[objName].select_set(state=True)
+
     # set the first mesh as the active one (bpy.context.view_layer.objects.active = theObject)
+    bpy.context.view_layer.objects.active = bpy.data.objects[objNames[0]]
+
     # join all the meshes (bpy.ops.object.join())
+    bpy.ops.object.join()
+
+    # get the first object
+    shapeKeyObj = bpy.data.objects[objNames[0]]
+
+    # store the bounding box of the combined
+    boundsMin = shapeKeyObj.bound_box[0]
 
     # add a Basis shape key
-    # for each mesh:
+    shapeKeyObj.shape_key_add(name='Basis')
+
+    # Create the shape keys
+    shapeKeys = []
+    meshNameToShapeKeyName = {}
+    for idx, meshNameItem in enumerate(meshNameElements):
         # add a shape key, rename it to the mesh index
+        shKeyName = 'key_' + str(idx)
+        shapeKeys.append(shapeKeyObj.shape_key_add(name=shKeyName))
+
+        meshNameToShapeKeyName[meshNameItem.key] = shKeyName
+
+    # Alter the shape keys
+    for idx, shKey in enumerate(shapeKeys):
+        # get the meshVertexIdxRange
+        vertIdxRange = meshVertIdxRanges[idx]
+        minVertIdx = vertIdxRange[0]
+        maxVertIdx = minVertIdx + vertIdxRange[1] - 1
+        # for each vertex:
+        for vIdx, vert in enumerate(shKey.data):
+            # if its index is not in the range, set its position the bounding box origin
+            if vIdx < minVertIdx or vIdx > maxVertIdx:
+                vert.co.x = boundsMin[0]
+                vert.co.y = boundsMin[1]
+                vert.co.z = boundsMin[2]
     
-    # make sure we're in object mode
-    # for each shape key:
-        # switch to edit mode (bpy.ops.object.editmode_toggle())
-        # deselect all vertices
-        # select the vertices in the next vertex group
-        # switch back to object mode (bpy.ops.object.editmode_toggle())
-    
-    # for each frame:
+    # get the ShapeKey object, which holds all the shape key blocks for the whole object
+    objShapeKeys = shapeKeyObj.data.shape_keys
+
+    # set value 0 keyframes for all shape key blocks at frame 1
+    for idx, shKeyBlock in enumerate(objShapeKeys.key_blocks):
+        if idx > 0:
+            shKeyBlock.value = 0
+            shKeyBlock.keyframe_insert('value', frame=scn.frame_start)
+
+    for frameNum in range(scn.frame_start, scn.frame_end + 1):
         # get the index for the visible mesh
+        meshIdx = getMeshIdxFromFrameNumber(obj, frameNum)
+        frameMesh = getMeshFromIndex(obj, meshIdx)
+        frameMeshName = frameMesh.name_full
+
+        shKeyName = meshNameToShapeKeyName[frameMeshName]
+        shKeyBlock = objShapeKeys.key_blocks[shKeyName]
+
         # set a keyframe for this frame on its shape key: set the value to 1
+        # keyBlock.value = 1, keyBlock.keyframe_insert('value', frame=the frame number)
+        shKeyBlock.value = 1
+        shKeyBlock.keyframe_insert('value', frame=frameNum)
         # set a keyframe for the next frame on its shape key: set the value to 0
-        # make sure that it's using CONSTANT interpolation
+        # keyBlock.value = 0, keyBlock.keyframe_insert('value', frame=the frame number + 1)
+        shKeyBlock.value = 0
+        shKeyBlock.keyframe_insert('value', frame=frameNum + 1)
+
+    # for each shapeKey:
+    for curve in objShapeKeys.animation_data.action.fcurves:
+        # make sure that it's using CONSTANT interpolation for all keyframes
+        for kf in curve.keyframe_points:
+            kf.interpolation = 'CONSTANT'
+    
+    # delete the sequence object
+    deselectAll()
+    obj.select_set(state=True)
+    bpy.ops.object.delete() # TODO: shouldn't we be doing a hard delete on this?
 
 
 def bakeSequence(_obj):
@@ -1063,6 +1182,23 @@ class BakeMeshSequence(bpy.types.Operator):
         bpy.context.scene.frame_current = bpy.context.scene.frame_current
         return {'FINISHED'}
 
+
+class BakeMeshSequenceShapeKeys(bpy.types.Operator):
+    """Bake Sequence Shape Keys"""
+    bl_idname = "ms.bake_sequence_shape_keys"
+    bl_label = "Bake Sequence Shape Keys"
+    bl_options = {'UNDO'}
+
+    def execute(self, context):
+        if context.mode != 'OBJECT':
+            self.report({'ERROR'}, "You may bake a sequence only while in Object mode")
+            return {'CANCELLED'}
+
+        obj = context.object
+        bakeSequenceShapeKeys(obj)
+        # update the frame so the right shape is visible
+        bpy.context.scene.frame_current = bpy.context.scene.frame_current
+        return {'FINISHED'}
 
 class DeepDeleteSequence(bpy.types.Operator):
     """Deep Delete Sequence"""
