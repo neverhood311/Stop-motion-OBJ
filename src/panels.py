@@ -128,6 +128,10 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
                 row.enabled = context.mode == 'OBJECT'
                 row.operator("ms.bake_sequence_shape_keys")
 
+                row = layout.row()
+                row.enabled = context.mode == 'OBJECT'
+                row.operator("ms.bake_sequence_shape_keys_compressed")
+
             row = layout.row()
             row.enabled = context.mode == 'OBJECT'
             row.operator("ms.deep_delete_sequence")

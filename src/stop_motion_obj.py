@@ -23,6 +23,7 @@ import math
 import os
 import re
 import glob
+import copy
 from bpy.app.handlers import persistent
 from .version import *
 
@@ -817,6 +818,159 @@ def selectAllVertices(obj):
     # obj.data.vertices[0].select = True
     # bpy.ops.object.mode_set(mode = 'EDIT')
 
+def bakeSequenceShapeKeysCompressed(obj):
+    scn = bpy.context.scene
+    activeCollection = bpy.context.collection
+    # create an empty list of material usages
+    meshMatUsageList = {}
+
+    meshNameElements = obj.mesh_sequence_settings.meshNameArray
+    # for each mesh
+    for idx, meshNameItem in enumerate(meshNameElements):
+        meshObj = bpy.data.meshes[meshNameItem.key]
+
+        # create an empty list of materials
+        matUsage = {}
+
+        # for each triangle
+        for tri in meshObj.polygons:
+            # get its material name
+            matIdx = tri.material_index
+            matName = meshObj.materials[matIdx].name
+
+            # if that material isn't in the material list
+            if matName not in matUsage:
+                # add it and set the count to 1
+                matUsage[matName] = 1
+            else:
+                # increment its count
+                matUsage[matName] += 1
+
+        # keep track of the max number of triangles for each material
+        for matName in matUsage:
+            if matName not in meshMatUsageList:
+                meshMatUsageList[matName] = matUsage[matName]
+            else:
+                if matUsage[matName] > meshMatUsageList[matName]:
+                    meshMatUsageList[matName] = matUsage[matName]
+    
+    # calculate
+    # create a new object and mesh
+    newMesh = bpy.data.meshes.new('compressed_sequence')
+    newObj = bpy.data.objects.new(newMesh.name, newMesh)
+    activeCollection.objects.link(newObj)
+
+    totalTriangles = 0
+    # add the materials to the mesh
+    for matName in meshMatUsageList:
+        mat = bpy.data.materials[matName]
+        newMesh.materials.append(mat)
+        totalTriangles += meshMatUsageList[matName]
+
+    # create a number of triangles equal to the max triangles for that material
+    # verts = [(0,0,0), (1,0,0), (0,1,0)] * totalTriangles    # showing a non-generate triangle just for debugging
+    verts = [(0,0,0), (0,0,0), (0,0,0)] * totalTriangles
+    edges = []
+    faces = []
+    for idx in range(totalTriangles):
+        triangle = [(idx * 3) + 0, (idx * 3) + 1, (idx * 3) + 2]
+        faces.append(triangle)
+    newMesh.from_pydata(verts, edges, faces)
+
+    matStartIdx = {}
+    # for each material
+    nextTriIdx = 0
+    for matIdx, matName in enumerate(meshMatUsageList):
+        matStartIdx[matName] = nextTriIdx
+        for idx in range(meshMatUsageList[matName]):
+            # assign the material to those triangles
+            newMesh.polygons[nextTriIdx].material_index = matIdx
+            nextTriIdx += 1
+
+    # create a basis shape key for the object (maybe in the shape of a cube or something?)
+    newObj.shape_key_add(name='Basis')
+
+    shapeKeys = []
+    meshNameToShapeKeyName = {}
+
+    # for each mesh in the sequence
+    for idx, meshNameItem in enumerate(meshNameElements):
+        # create a shape key for the mesh
+        shKeyName = 'key_' + str(idx)
+        shKey = newObj.shape_key_add(name=shKeyName)
+        shapeKeys.append(shKey)
+        meshNameToShapeKeyName[meshNameItem.key] = shKeyName
+
+        matNextIdx = copy.deepcopy(matStartIdx)
+
+        # for each triangle in the uncompressed mesh
+        mesh = bpy.data.meshes[meshNameItem.key]
+        for tri in mesh.polygons:
+            # get the triangle's material index
+            matIdx = tri.material_index
+            matName = mesh.materials[matIdx].name
+            
+            # get the uncompressed triangle's vertex locations
+            v0pos = mesh.vertices[tri.vertices[0]].co
+            v1pos = mesh.vertices[tri.vertices[1]].co
+            v2pos = mesh.vertices[tri.vertices[2]].co
+
+            # find the next triangle in the compressed object with that material
+            nextTriIdx = matNextIdx[matName]
+
+            # copy vertex positions from the mesh triangle to the compressed triangle
+            shKeyTri = newMesh.polygons[nextTriIdx]
+            shKey.data[shKeyTri.vertices[0]].co.x = v0pos.x
+            shKey.data[shKeyTri.vertices[0]].co.y = v0pos.y
+            shKey.data[shKeyTri.vertices[0]].co.z = v0pos.z
+            shKey.data[shKeyTri.vertices[1]].co.x = v1pos.x
+            shKey.data[shKeyTri.vertices[1]].co.y = v1pos.y
+            shKey.data[shKeyTri.vertices[1]].co.z = v1pos.z
+            shKey.data[shKeyTri.vertices[2]].co.x = v2pos.x
+            shKey.data[shKeyTri.vertices[2]].co.y = v2pos.y
+            shKey.data[shKeyTri.vertices[2]].co.z = v2pos.z
+
+            # increment the next triangle index marker
+            matNextIdx[matName] += 1
+
+    # get the ShapeKey object, which holds all the shape key blocks for the whole object
+    objShapeKeys = newObj.data.shape_keys
+
+    # set value 0 keyframes for all shape key blocks at frame 1
+    for idx, shKeyBlock in enumerate(objShapeKeys.key_blocks):
+        if idx > 0:
+            shKeyBlock.value = 0
+            shKeyBlock.keyframe_insert('value', frame=scn.frame_start)
+
+    for frameNum in range(scn.frame_start, scn.frame_end + 1):
+        # get the index for the visible mesh
+        meshIdx = getMeshIdxFromFrameNumber(obj, frameNum)
+        frameMesh = getMeshFromIndex(obj, meshIdx)
+        frameMeshName = frameMesh.name_full
+
+        shKeyName = meshNameToShapeKeyName[frameMeshName]
+        shKeyBlock = objShapeKeys.key_blocks[shKeyName]
+
+        # set a keyframe for this frame on its shape key: set the value to 1
+        # keyBlock.value = 1, keyBlock.keyframe_insert('value', frame=the frame number)
+        shKeyBlock.value = 1
+        shKeyBlock.keyframe_insert('value', frame=frameNum)
+        # set a keyframe for the next frame on its shape key: set the value to 0
+        # keyBlock.value = 0, keyBlock.keyframe_insert('value', frame=the frame number + 1)
+        shKeyBlock.value = 0
+        shKeyBlock.keyframe_insert('value', frame=frameNum + 1)
+
+    # for each shapeKey:
+    for curve in objShapeKeys.animation_data.action.fcurves:
+        # make sure that it's using CONSTANT interpolation for all keyframes
+        for kf in curve.keyframe_points:
+            kf.interpolation = 'CONSTANT'
+    
+    # delete the sequence object
+    deselectAll()
+    obj.select_set(state=True)
+    bpy.ops.object.delete() # TODO: shouldn't we be doing a hard delete on this?
+
 
 def bakeSequenceShapeKeys(obj):
     scn = bpy.context.scene
@@ -1196,6 +1350,24 @@ class BakeMeshSequenceShapeKeys(bpy.types.Operator):
 
         obj = context.object
         bakeSequenceShapeKeys(obj)
+        # update the frame so the right shape is visible
+        bpy.context.scene.frame_current = bpy.context.scene.frame_current
+        return {'FINISHED'}
+
+
+class BakeMeshSequenceShapeKeysCompressed(bpy.types.Operator):
+    """Bake Sequence Shape Keys Compressed"""
+    bl_idname = "ms.bake_sequence_shape_keys_compressed"
+    bl_label = "Bake Sequence Shape Keys Compressed"
+    bl_options = {'UNDO'}
+
+    def execute(self, context):
+        if context.mode != 'OBJECT':
+            self.report({'ERROR'}, "You may bake a sequence only while in Object mode")
+            return {'CANCELLED'}
+
+        obj = context.object
+        bakeSequenceShapeKeysCompressed(obj)
         # update the frame so the right shape is visible
         bpy.context.scene.frame_current = bpy.context.scene.frame_current
         return {'FINISHED'}
