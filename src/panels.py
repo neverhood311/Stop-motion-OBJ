@@ -229,7 +229,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         dest.obj_use_groups_as_vgroups = source.obj_use_groups_as_vgroups
         dest.obj_use_image_search = source.obj_use_image_search
         dest.obj_split_mode = "OFF"
-        dest.obj_global_clight_size = source.obj_global_clight_size
+        dest.obj_global_clamp_size = source.obj_global_clamp_size
         dest.stl_global_scale = source.stl_global_scale
         dest.stl_use_scene_unit = source.stl_use_scene_unit
         dest.stl_use_facet_normal = source.stl_use_facet_normal
@@ -268,7 +268,7 @@ class SMO_PT_FileImportSettingsPanel(bpy.types.Panel):
             layout.prop(op.importSettings, 'obj_use_image_search')
             layout.prop(op.importSettings, 'obj_use_smooth_groups')
             layout.prop(op.importSettings, 'obj_use_edges')
-            layout.prop(op.importSettings, 'obj_global_clight_size')
+            layout.prop(op.importSettings, 'obj_global_clamp_size')
 
             col = layout.column()
             col.prop(op.importSettings, "obj_use_groups_as_vgroups")
