@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2020  Justin Jensen
+#   Copyright (C) 2016-2021  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -195,7 +195,7 @@ class MeshImporter(bpy.types.PropertyGroup):
     #            ('OFF', "Keep Vert Order", "Keep vertex order from file")))
     obj_use_groups_as_vgroups: bpy.props.BoolProperty(name="Poly Groups", description="Import OBJ groups as vertex groups", default=False)
     obj_use_image_search: bpy.props.BoolProperty(name="Image Search", description="Search subdirs for any associated images (Warning: may be slow)", default=True)
-    obj_global_clight_size: bpy.props.FloatProperty(
+    obj_global_clamp_size: bpy.props.FloatProperty(
         name="Clamp Size",
         description="Clamp bounds under this value (zero to disable)",
         min=0.0,
@@ -239,18 +239,34 @@ class MeshImporter(bpy.types.PropertyGroup):
 
     def loadOBJ(self, filePath):
         # call the obj load function with all the correct parameters
-        bpy.ops.import_scene.obj(
-            filepath=filePath,
-            use_edges=self.obj_use_edges,
-            use_smooth_groups=self.obj_use_smooth_groups,
-            use_split_objects=False,
-            use_split_groups=False,
-            use_groups_as_vgroups=self.obj_use_groups_as_vgroups,
-            use_image_search=self.obj_use_image_search,
-            split_mode="OFF",
-            global_clight_size=self.obj_global_clight_size,
-            axis_forward=self.axis_forward,
-            axis_up=self.axis_up)
+        if bpy.app.version >= (2, 92, 0):
+            bpy.ops.import_scene.obj(
+                filepath=filePath,
+                use_edges=self.obj_use_edges,
+                use_smooth_groups=self.obj_use_smooth_groups,
+                use_split_objects=False,
+                use_split_groups=False,
+                use_groups_as_vgroups=self.obj_use_groups_as_vgroups,
+                use_image_search=self.obj_use_image_search,
+                split_mode="OFF",
+                global_clamp_size=self.obj_global_clamp_size,
+                axis_forward=self.axis_forward,
+                axis_up=self.axis_up)
+        else:
+            # Note the parameter called "global_clight_size", which is probably a typo
+            #   It was corrected to "global_clamp_size" in Blender 2.92
+            bpy.ops.import_scene.obj(
+                filepath=filePath,
+                use_edges=self.obj_use_edges,
+                use_smooth_groups=self.obj_use_smooth_groups,
+                use_split_objects=False,
+                use_split_groups=False,
+                use_groups_as_vgroups=self.obj_use_groups_as_vgroups,
+                use_image_search=self.obj_use_image_search,
+                split_mode="OFF",
+                global_clight_size=self.obj_global_clamp_size,
+                axis_forward=self.axis_forward,
+                axis_up=self.axis_up)
 
     def loadSTL(self, filePath):
         # call the stl load function with all the correct parameters
