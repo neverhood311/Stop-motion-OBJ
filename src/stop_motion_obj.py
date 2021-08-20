@@ -293,6 +293,10 @@ class MeshNameProp(bpy.types.PropertyGroup):
 
 
 class MeshSequenceSettings(bpy.types.PropertyGroup):
+    isImported: bpy.props.BoolProperty(
+        name="Sequence Is Imported",
+        description="Whether the sequence was loaded from files on disk (True), or created in Blender (False)",
+        default=True)
     version: bpy.props.PointerProperty(type=SequenceVersion)
     fileImporter: bpy.props.PointerProperty(type=MeshImporter)
 
@@ -426,6 +430,9 @@ def newMeshSequence():
     emptyMeshNameElement = mss.meshNameArray.add()
     emptyMeshNameElement.key = theMesh.name
     emptyMeshNameElement.inMemory = True
+
+    mss.numMeshes = 1
+    mss.numMeshesInMemory = 1
 
     deselectAll()
     theObj.select_set(state=True)
@@ -1058,4 +1065,32 @@ class DeepDeleteSequence(bpy.types.Operator):
         obj = context.object
         deepDeleteSequence(obj)
         return {'FINISHED'}
+
+
+# 'mesh' is a Blender mesh
+# TODO: write another version that accepts a list of vertices and triangles
+#       and creates a new Blender mesh
+def addMeshToSequence(seqObj, mesh):
+    mesh.inMeshSequence = True
+
+    mss = seqObj.mesh_sequence_settings
+
+    # add the new mesh to meshNameArray
+    newMeshNameElement = mss.meshNameArray.add()
+    newMeshNameElement.key = mesh.name_full
+    newMeshNameElement.inMemory = True
+
+    # increment numMeshes
+    mss.numMeshes = mss.numMeshes + 1
+
+    # increment numMeshesInMemory
+    mss.numMeshesInMemory = mss.numMeshesInMemory + 1
+
+    # set initialized to True
+    mss.initialized = True
+
+    # set loaded to True
+    mss.loaded = True
+
+    return mss.numMeshes - 1
 

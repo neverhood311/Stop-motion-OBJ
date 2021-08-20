@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2020  Justin Jensen
+#   Copyright (C) 2016-2021  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -108,24 +108,33 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         objSettings = context.object.mesh_sequence_settings
+        inObjectMode = context.mode == 'OBJECT'
+        inSculptMode = context.mode == 'SCULPT'
         if objSettings.loaded is True:
+            # only allow mesh duplication for non-imported sequences in Keyframe playback mode
+            if objSettings.isImported is False and objSettings.frameMode == '4':
+                row = layout.row(align=True)
+                row.enabled = inObjectMode or inSculptMode
+                row.operator("ms.duplicate_mesh_frame")
             if objSettings.cacheMode == 'cached':
                 row = layout.row(align=True)
-                row.enabled = context.mode == 'OBJECT'
+                row.enabled = inObjectMode
                 row.label(text="Shading:")
                 row.operator("ms.batch_shade_smooth")
                 row.operator("ms.batch_shade_flat")
 
-                row = layout.row()
-                row.enabled = context.mode == 'OBJECT'
-                row.operator("ms.reload_mesh_sequence")
+                if objSettings.isImported is True:
+                    # non-imported sequences won't have a fileName or dirPath and cannot be reloaded
+                    row = layout.row()
+                    row.enabled = inObjectMode
+                    row.operator("ms.reload_mesh_sequence")
 
                 row = layout.row()
-                row.enabled = context.mode == 'OBJECT'
+                row.enabled = inObjectMode
                 row.operator("ms.bake_sequence")
 
             row = layout.row()
-            row.enabled = context.mode == 'OBJECT'
+            row.enabled = inObjectMode
             row.operator("ms.deep_delete_sequence")
 
             layout.row().separator()
@@ -136,7 +145,9 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
             if objSettings.cacheMode == 'streaming':
                 layout.row().label(text="Cached meshes: " + str(objSettings.numMeshesInMemory)  + " meshes")
 
-            layout.row().label(text="Mesh directory: " + objSettings.dirPath)
+            if objSettings.isImported is True:
+                # non-imported sequences won't have a dirPath to display
+                layout.row().label(text="Mesh directory: " + objSettings.dirPath)
             layout.row().label(text="Sequence version: " + objSettings.version.toString())
 
 
@@ -233,6 +244,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         # get the name of the first mesh, remove trailing numbers and _ and .
         firstMeshName = os.path.splitext(mss.meshNameArray[1].basename)[0].rstrip('._0123456789')
         seqObj.name = firstMeshName + '_sequence'
+        seqObj.mesh_sequence_settings.isImported = True
 
         return {'FINISHED'}
 
@@ -348,3 +360,98 @@ class SMO_PT_SequenceImportSettingsPanel(bpy.types.Panel):
 
 def menu_func_import_sequence(self, context):
     self.layout.operator(ImportSequence.bl_idname, text="Mesh Sequence")
+
+
+class ConvertToMeshSequence(bpy.types.Operator):
+    """Convert to Mesh Sequence"""
+    bl_idname = "ms.convert_to_mesh_sequence"
+    bl_label = "Convert to Mesh Sequence"
+    bl_options = {'UNDO'}
+
+    def execute(self, context):
+        obj = context.object
+
+        # if this object is alread a mesh sequence object, return Failure
+        if obj.mesh_sequence_settings.initialized is True:
+            self.report({'ERROR'}, "The selected object is already a mesh sequence")
+            return {'CANCELLED'}
+
+        # hijack the mesh from the selected object and add it to a new mesh sequence
+        msObj = newMeshSequence()
+        msObj.mesh_sequence_settings.isImported = False
+        addMeshToSequence(msObj, obj.data)
+
+        objName = obj.name
+        msObj.name = objName + '_sequence'
+
+        # delete the old object but not its mesh
+        bpy.data.objects.remove(obj)
+
+        # set the mesh sequence playback mode to Keyframe
+        msObj.mesh_sequence_settings.frameMode = '4'
+
+        # create a keyframe for this mesh at the current frame
+        msObj.mesh_sequence_settings.curMeshIdx = 1
+        msObj.keyframe_insert(data_path='mesh_sequence_settings.curMeshIdx', frame=context.scene.frame_current)
+        
+        # make the interpolation constant for the first keyframe
+        meshIdxCurve = next((curve for curve in msObj.animation_data.action.fcurves if 'curMeshIdx' in curve.data_path), None)
+        keyAtFrame = next((keyframe for keyframe in meshIdxCurve.keyframe_points if keyframe.co.x == context.scene.frame_current), None)
+        keyAtFrame.interpolation = 'CONSTANT'
+
+        return {'FINISHED'}
+
+def menu_func_convert_to_sequence(self, context):
+    if context.object is not None:
+        if context.object.type == 'MESH' and context.object.mesh_sequence_settings.initialized is False:
+            self.layout.separator()
+            self.layout.operator(ConvertToMeshSequence.bl_idname, icon="ONIONSKIN_ON")
+
+
+class DuplicateMeshFrame(bpy.types.Operator):
+    """Make a copy of the current mesh and create a keyframe for it at the current frame"""
+    bl_idname = "ms.duplicate_mesh_frame"
+    bl_label = "Duplicate Mesh Frame"
+    bl_options = {'UNDO'}
+
+    def execute(self, context):
+        obj = context.object
+
+        if obj is None:
+            return {'CANCELLED'}
+
+        # if this object is not a mesh sequence object, return Failure
+        if obj.mesh_sequence_settings.initialized is False:
+            self.report({'ERROR'}, "The selected object is not a mesh sequence")
+            return {'CANCELLED'}
+
+        # if the object doesn't have a 'curMeshIdx' fcurve, we can't add a mesh to it
+        meshIdxCurve = next((curve for curve in obj.animation_data.action.fcurves if 'curMeshIdx' in curve.data_path), None)
+        if meshIdxCurve is None:
+            self.report({'ERROR'}, "The selected mesh sequence has no keyframe curve")
+            return {'CANCELLED'}
+
+        # if the keyframe curve already has a keyframe at this frame number, we can't create another one here
+        keyAtFrame = next((keyframe for keyframe in meshIdxCurve.keyframe_points if keyframe.co.x == context.scene.frame_current), None)
+        if keyAtFrame is not None:
+            self.report({'ERROR'}, "There is already a keyframe at the current frame")
+            return {'CANCELLED'}
+
+        # make a copy of the current mesh
+        newMesh = obj.data.copy()
+        newMesh.use_fake_user = True
+        newMesh.inMeshSequence = True
+
+        # add the mesh to the end of the sequence
+        meshIdx = addMeshToSequence(obj, newMesh)
+
+        # add a new keyframe at this frame number for the new mesh
+        obj.mesh_sequence_settings.curMeshIdx = meshIdx
+        obj.keyframe_insert(data_path='mesh_sequence_settings.curMeshIdx', frame=context.scene.frame_current)
+        
+        # make the interpolation constant for this keyframe
+        newKeyAtFrame = next((keyframe for keyframe in meshIdxCurve.keyframe_points if keyframe.co.x == context.scene.frame_current), None)
+        newKeyAtFrame.interpolation = 'CONSTANT'
+
+        return {'FINISHED'}
+
