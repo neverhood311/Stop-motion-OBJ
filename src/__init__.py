@@ -34,6 +34,7 @@ bl_info = {
     "tracker_url": "https://github.com/neverhood311/Stop-motion-OBJ/issues"
 }
 
+SMOKeymaps = []
 
 def register():
     bpy.types.Mesh.inMeshSequence = bpy.props.BoolProperty()
@@ -52,8 +53,8 @@ def register():
     bpy.utils.register_class(BatchShadeFlat)
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(DeepDeleteSequence)
-    bpy.utils.register_class(SeedMeshSequence)
-    bpy.utils.register_class(DuplicateMesh)
+    bpy.utils.register_class(ConvertToMeshSequence)
+    bpy.utils.register_class(DuplicateMeshFrame)
     bpy.utils.register_class(SMO_PT_MeshSequencePanel)
     bpy.utils.register_class(SMO_PT_MeshSequencePlaybackPanel)
     bpy.utils.register_class(SMO_PT_MeshSequenceStreamingPanel)
@@ -63,7 +64,7 @@ def register():
     bpy.app.handlers.render_cancel.append(renderCancelHandler)
 
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import_sequence)
-    bpy.types.VIEW3D_MT_object.append(menu_func_seed_sequence)
+    bpy.types.VIEW3D_MT_object.append(menu_func_convert_to_sequence)
 
     # the order here is important since it is the order in which these sections will be drawn
     bpy.utils.register_class(SMO_PT_FileImportSettingsPanel)
@@ -75,6 +76,13 @@ def register():
     bpy.app.handlers.load_post.append(makeDirPathsRelative)
     bpy.app.handlers.save_pre.append(makeDirPathsRelative)
 
+    keyConfig = bpy.context.window_manager.keyconfigs.addon
+    if keyConfig:
+        spaceTypes = [('3D View', 'VIEW_3D'), ('Dopesheet', 'DOPESHEET_EDITOR'), ('Graph Editor', 'GRAPH_EDITOR')]
+        for spaceType in spaceTypes:
+            keyMap = keyConfig.keymaps.new(name=spaceType[0], space_type=spaceType[1])
+            keyMapItem = keyMap.keymap_items.new('ms.duplicate_mesh_frame', type='D', value='PRESS', shift=True, ctrl=True)
+            SMOKeymaps.append((keyMap, keyMapItem))
 
 def unregister():
     bpy.app.handlers.load_post.remove(initializeSequences)
@@ -88,8 +96,8 @@ def unregister():
     bpy.utils.unregister_class(BatchShadeFlat)
     bpy.utils.unregister_class(BakeMeshSequence)
     bpy.utils.unregister_class(DeepDeleteSequence)
-    bpy.utils.unregister_class(SeedMeshSequence)
-    bpy.utils.unregister_class(DuplicateMesh)
+    bpy.utils.unregister_class(ConvertToMeshSequence)
+    bpy.utils.unregister_class(DuplicateMeshFrame)
     bpy.utils.unregister_class(SMO_PT_MeshSequencePanel)
     bpy.utils.unregister_class(SMO_PT_MeshSequencePlaybackPanel)
     bpy.utils.unregister_class(SMO_PT_MeshSequenceStreamingPanel)
@@ -98,7 +106,7 @@ def unregister():
     bpy.utils.unregister_class(MeshNameProp)
 
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_sequence)
-    bpy.types.VIEW3D_MT_object.remove(menu_func_seed_sequence)
+    bpy.types.VIEW3D_MT_object.remove(menu_func_convert_to_sequence)
     bpy.utils.unregister_class(SMO_PT_FileImportSettingsPanel)
     bpy.utils.unregister_class(SMO_PT_TransformSettingsPanel)
     bpy.utils.unregister_class(SMO_PT_SequenceImportSettingsPanel)
@@ -111,6 +119,10 @@ def unregister():
 
     bpy.app.handlers.load_post.remove(makeDirPathsRelative)
     bpy.app.handlers.save_pre.remove(makeDirPathsRelative)
+
+    for km, kmi in SMOKeymaps:
+        km.keymap_items.remove(kmi)
+    SMOKeymaps.clear()
 
 if __name__ == "__main__":
     register()

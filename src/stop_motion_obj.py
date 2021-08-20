@@ -1054,10 +1054,10 @@ class DeepDeleteSequence(bpy.types.Operator):
 # 'mesh' is a Blender mesh
 # TODO: write another version that accepts a list of vertices and triangles
 #       and creates a new Blender mesh
-def addMeshToSequence(obj, mesh, idx=-1):
+def addMeshToSequence(seqObj, mesh):
     mesh.inMeshSequence = True
 
-    mss = obj.mesh_sequence_settings
+    mss = seqObj.mesh_sequence_settings
 
     # add the new mesh to meshNameArray
     newMeshNameElement = mss.meshNameArray.add()
@@ -1075,4 +1075,6 @@ def addMeshToSequence(obj, mesh, idx=-1):
 
     # set loaded to True
     mss.loaded = True
+
+    return mss.numMeshes - 1
 
