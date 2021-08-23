@@ -26,6 +26,10 @@ import glob
 from bpy.app.handlers import persistent
 from .version import *
 
+# global variables
+storedUseLockInterface = False
+forceMeshLoad = False
+loadingSequenceLock = False
 
 def alphanumKey(string):
     """ Turn a string into a list of string and number chunks.
@@ -65,17 +69,17 @@ def renderLockInterface():
     for scene in bpy.data.scenes:
         scene.render.use_lock_interface = True
 
+def lockLoadingSequence(lock):
+    global loadingSequenceLock
+    loadingSequenceLock = lock
 
 # set the frame number for all mesh sequence objects
 @persistent
 def updateFrame(scene):
-    scn = bpy.context.scene
-    setFrameNumber(scn.frame_current)
-
-
-# global variables
-storedUseLockInterface = False
-forceMeshLoad = False
+    global loadingSequenceLock
+    if loadingSequenceLock is False:
+        scn = bpy.context.scene
+        setFrameNumber(scn.frame_current)
 
 
 @persistent
@@ -775,7 +779,11 @@ def importStreamedFile(obj, idx):
     absDirectory = bpy.path.abspath(mss.dirPath)
     filename = os.path.join(absDirectory, mss.meshNameArray[idx].basename)
     deselectAll()
+    
+    lockLoadingSequence(True)
     mss.fileImporter.load(mss.fileFormat, filename)
+    lockLoadingSequence(False)
+
     tmpObject = getSelectedObjects()[0]
     tmpMesh = tmpObject.data
 
