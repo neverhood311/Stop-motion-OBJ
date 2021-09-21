@@ -171,51 +171,59 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         if self.sequenceSettings.fileNamePrefix == "":
             self.report({'ERROR_INVALID_INPUT'}, "Please enter a file name prefix")
             return {'CANCELLED'}
+        
+        # If ';' is present in the file name, split to get all the file names
+        fileNames = self.sequenceSettings.fileNamePrefix.split(';')
 
         self.importSettings.axis_forward = self.axis_forward
         self.importSettings.axis_up = self.axis_up
 
-        # the input parameters should be stored on 'self'
-        # create a new mesh sequence
-        seqObj = newMeshSequence()
-        global_matrix = axis_conversion(from_forward=self.axis_forward,from_up=self.axis_up).to_4x4()
-        seqObj.matrix_world = global_matrix
+        # backup axis to prevent multiple rotations over the import loop
+        axis_forward = self.axis_forward
+        axis_up = self.axis_up
 
-        mss = seqObj.mesh_sequence_settings
+        for fileName in fileNames:
+            # the input parameters should be stored on 'self'
+            # create a new mesh sequence
+            seqObj = newMeshSequence()
+            global_matrix = axis_conversion(from_forward=self.axis_forward,from_up=self.axis_up).to_4x4()
+            seqObj.matrix_world = global_matrix
 
-        # deep copy self.sequenceSettings data into the new object's mss data, including dirPath
-        mss.dirPath = self.directory
-        mss.fileName = self.sequenceSettings.fileNamePrefix
-        mss.perFrameMaterial = self.sequenceSettings.perFrameMaterial
-        mss.cacheMode = self.sequenceSettings.cacheMode
-        mss.fileFormat = self.sequenceSettings.fileFormat
-        mss.dirPathIsRelative = self.sequenceSettings.dirPathIsRelative
+            mss = seqObj.mesh_sequence_settings
 
-        # this needs to be set to True if dirPath is supposed to be relative
-        # once the path is made relative, it will be set to False
-        mss.dirPathNeedsRelativizing = mss.dirPathIsRelative
-        
-        self.copyImportSettings(self.importSettings, mss.fileImporter)
+            # deep copy self.sequenceSettings data into the new object's mss data, including dirPath
+            mss.dirPath = self.directory
+            mss.fileName = fileName
+            mss.perFrameMaterial = self.sequenceSettings.perFrameMaterial
+            mss.cacheMode = self.sequenceSettings.cacheMode
+            mss.fileFormat = self.sequenceSettings.fileFormat
+            mss.dirPathIsRelative = self.sequenceSettings.dirPathIsRelative
 
-        meshCount = 0
+            # this needs to be set to True if dirPath is supposed to be relative
+            # once the path is made relative, it will be set to False
+            mss.dirPathNeedsRelativizing = mss.dirPathIsRelative
+            
+            self.copyImportSettings(self.importSettings, mss.fileImporter)
 
-        # cached
-        if mss.cacheMode == 'cached':
-            meshCount = loadSequenceFromMeshFiles(seqObj, mss.dirPath, mss.fileName)
+            meshCount = 0
 
-        # streaming
-        elif mss.cacheMode == 'streaming':
-            meshCount = loadStreamingSequenceFromMeshFiles(seqObj, mss.dirPath, mss.fileName)
+            # cached
+            if mss.cacheMode == 'cached':
+                meshCount = loadSequenceFromMeshFiles(seqObj, mss.dirPath, mss.fileName)
 
-        self.resetToDefaults()
+            # streaming
+            elif mss.cacheMode == 'streaming':
+                meshCount = loadStreamingSequenceFromMeshFiles(seqObj, mss.dirPath, mss.fileName)
 
-        if meshCount == 0:
-            self.report({'ERROR'}, "No matching files found. Make sure the Root Folder, File Name, and File Format are correct.")
-            return {'CANCELLED'}
-        
-        # get the name of the first mesh, remove trailing numbers and _ and .
-        firstMeshName = os.path.splitext(mss.meshNameArray[1].basename)[0].rstrip('._0123456789')
-        seqObj.name = firstMeshName + '_sequence'
+            self.resetToDefaults()
+
+            if meshCount == 0:
+                self.report({'ERROR'}, "No matching files found. Make sure the Root Folder, File Name, and File Format are correct.")
+                return {'CANCELLED'}
+            
+            # get the name of the first mesh, remove trailing numbers and _ and .
+            firstMeshName = os.path.splitext(mss.meshNameArray[1].basename)[0].rstrip('._0123456789')
+            seqObj.name = firstMeshName + '_sequence'
 
         return {'FINISHED'}
 
