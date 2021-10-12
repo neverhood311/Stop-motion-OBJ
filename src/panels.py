@@ -207,9 +207,11 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         b_axis_up = self.axis_up
 
         fileNames = self.sequenceSettings.fileNamePrefix.split(';')
-        fileNames.remove('')
 
-        for fileName in fileNames:
+        for fileNameRaw in filter(lambda f: f.strip() != '', fileNames):    # filter out any empty/whitespace strings
+            # remove leading and trailing whitespace
+            fileName = fileNameRaw.strip()
+
             # the input parameters should be stored on 'self'
             # create a new mesh sequence
             seqObj = newMeshSequence()
