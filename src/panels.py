@@ -220,9 +220,15 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
 
             mss = seqObj.mesh_sequence_settings
 
+            # construct the full absolute path
+            absWildcardPath = os.path.join(self.directory, fileName + '*.' + self.sequenceSettings.fileFormat)
+
+            # separate the directory from the file name
+            basenamePrefix = os.path.basename(absWildcardPath).split('*')[0]
+            
             # deep copy self.sequenceSettings data into the new object's mss data, including dirPath
-            mss.dirPath = self.directory
-            mss.fileName = fileName
+            mss.dirPath = os.path.dirname(absWildcardPath)
+            mss.fileName = basenamePrefix
             mss.perFrameMaterial = self.sequenceSettings.perFrameMaterial
             mss.cacheMode = self.sequenceSettings.cacheMode
             mss.fileFormat = self.sequenceSettings.fileFormat
