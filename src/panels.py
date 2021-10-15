@@ -123,6 +123,10 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
                 row.operator("ms.batch_shade_smooth")
                 row.operator("ms.batch_shade_flat")
 
+                row = layout.row(align=True)
+                row.enabled = inObjectMode
+                row.operator("ms.merge_duplicate_materials")
+
                 if objSettings.isImported is True:
                     # non-imported sequences won't have a fileName or dirPath and cannot be reloaded
                     row = layout.row()

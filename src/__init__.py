@@ -25,7 +25,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 2, 0, "alpha.8"),
+    "version": (2, 2, 0, "alpha.9"),
     "blender": (2, 83, 0),
     "location": "File > Import > Mesh Sequence",
     "warning": "",
@@ -53,6 +53,7 @@ def register():
     bpy.utils.register_class(BatchShadeFlat)
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(DeepDeleteSequence)
+    bpy.utils.register_class(MergeDuplicateMaterials)
     bpy.utils.register_class(ConvertToMeshSequence)
     bpy.utils.register_class(DuplicateMeshFrame)
     bpy.utils.register_class(SMO_PT_MeshSequencePanel)
@@ -96,6 +97,7 @@ def unregister():
     bpy.utils.unregister_class(BatchShadeFlat)
     bpy.utils.unregister_class(BakeMeshSequence)
     bpy.utils.unregister_class(DeepDeleteSequence)
+    bpy.utils.unregister_class(MergeDuplicateMaterials)
     bpy.utils.unregister_class(ConvertToMeshSequence)
     bpy.utils.unregister_class(DuplicateMeshFrame)
     bpy.utils.unregister_class(SMO_PT_MeshSequencePanel)
