@@ -820,18 +820,12 @@ def removeMeshFromScene(meshKey, removeOwnedMaterials):
 
 
 def shadeSequence(_obj, smooth):
-    deselectAll()
-    _obj.select_set(state=True)
-    # grab the current mesh so we can put it back later
-    origMesh = _obj.data
     for idx in range(1, _obj.mesh_sequence_settings.numMeshes):
-        _obj.data = getMeshFromIndex(_obj, idx)
-        if(smooth):
-            bpy.ops.object.shade_smooth()
-        else:
-            bpy.ops.object.shade_flat()
-    # reset the sequence's mesh to the right one based on the current frame
-    _obj.data = origMesh
+        mesh = getMeshFromIndex(_obj, idx)
+        mesh.polygons.foreach_set('use_smooth', [smooth] * len(mesh.polygons))
+        
+        # update the mesh to force a UI update
+        mesh.update()
 
 
 def bakeSequence(_obj):
