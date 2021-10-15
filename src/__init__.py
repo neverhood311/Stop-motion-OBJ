@@ -25,7 +25,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY) files and display them each as a single frame of animation. This add-on also supports the .STL and .PLY file formats.",
     "author": "Justin Jensen",
-    "version": (2, 2, 0, "alpha.9"),
+    "version": (2, 2, 0, "alpha.10"),
     "blender": (2, 83, 0),
     "location": "File > Import > Mesh Sequence",
     "warning": "",
