@@ -970,6 +970,42 @@ def deepDeleteSequence(obj):
             bpy.data.images.remove(bpy.data.images[imageKey])
 
 
+def mergeDuplicateMaterials(obj):
+    matBaseNames = {}
+    materialRemapList = []
+
+    mss = obj.mesh_sequence_settings
+
+    # for each mesh in the sequence:
+    for mesh in mss.meshNameArray:
+        meshName = mesh.key
+
+        # get the materials
+        mats = bpy.data.meshes[meshName].materials
+
+        for idx, mat in enumerate(mats):
+            matName = mat.name_full
+
+            # strip off the ".00x" at the end of its name
+            dotIdx = matName.rfind('.')
+            matBaseName = matName if dotIdx == -1 else matName[0:dotIdx]
+
+            # if this name prefix is not already in dictionary
+            if matBaseName not in matBaseNames:
+                # add it to the dictionary as a set (namePrefix, name_full)
+                matBaseNames[matBaseName] = matName
+            else:
+                # add an entry to the material remap list: (mesh name, material index, new material name_full)
+                materialRemapList.append((meshName, idx, matBaseNames[matBaseName]))
+        
+    # for each entry in the material remap list:
+    for item in materialRemapList:
+        newMat = bpy.data.materials[item[2]]
+
+        # assign the new material to the correct material slot on the given mesh
+        bpy.data.meshes[item[0]].materials[item[1]] = newMat
+
+
 def freeUnusedMeshes():
     numFreed = 0
     for t_mesh in bpy.data.meshes:
@@ -1074,6 +1110,22 @@ class DeepDeleteSequence(bpy.types.Operator):
         deepDeleteSequence(obj)
         return {'FINISHED'}
 
+
+class MergeDuplicateMaterials(bpy.types.Operator):
+    """Merge Duplicate Materials"""
+    bl_idname = "ms.merge_duplicate_materials"
+    bl_label = "Merge Duplicate Materials"
+    bl_options = {'UNDO'}
+
+    def execute(self, context):
+        obj = context.object
+        mss = obj.mesh_sequence_settings
+        if mss.initialized is False or mss.loaded is False:
+            self.report({'ERROR'}, "Mesh sequence is not loaded")
+            return {'CANCELLED'}
+
+        mergeDuplicateMaterials(obj)
+        return {'FINISHED'}
 
 # 'mesh' is a Blender mesh
 # TODO: write another version that accepts a list of vertices and triangles
