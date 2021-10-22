@@ -522,15 +522,25 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
     for file in sortedFiles:
         # import the mesh file
         mss.fileImporter.load(mss.fileFormat, file)
-        tmpObject = bpy.context.selected_objects[0]
+
+        # get the first object of type MESH
+        # TODO: eventually, let's pull out all MESH objects and put them into their own individual sequences
+        tmpObject = next(filter(lambda meshObj: meshObj.type == 'MESH', bpy.context.selected_objects), None)
 
         # IMPORTANT: don't copy it; just copy the pointer. This cuts memory usage in half.
         tmpMesh = tmpObject.data
         tmpMesh.use_fake_user = True
         tmpMesh.inMeshSequence = True
+
+        # make a list of the objects we're going to delete
+        objsToDelete = bpy.context.selected_objects.copy()
+
+        # now, delete all selected objects. Yes, even our precious mesh object. We already saved its mesh data
+        for obj in objsToDelete:
+            bpy.data.objects.remove(obj, do_unlink=True)
+
+        # deselect everything just to be safe
         deselectAll()
-        tmpObject.select_set(state=True)
-        bpy.ops.object.delete()
 
         # if this is not the first frame, remove any materials and/or images imported with the mesh
         if numFrames >= 1 and mss.perFrameMaterial is False:
