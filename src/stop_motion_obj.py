@@ -806,15 +806,20 @@ def importStreamedFile(obj, idx):
     mss.fileImporter.load(mss.fileFormat, filename)
     lockLoadingSequence(False)
 
-    tmpObject = getSelectedObjects()[0]
+    selectedObjects = getSelectedObjects()
+    tmpObject = next(filter(lambda meshObj: meshObj.type == 'MESH', selectedObjects), None)
     tmpMesh = tmpObject.data
+
+    # make a list of the objects we're going to delete
+    objsToDelete = selectedObjects.copy()
+
+    # now delete all selected objects
+    for obj in objsToDelete:
+        bpy.data.objects.remove(obj, do_unlink=True)
 
     # we want to make sure the cached meshes are saved to the .blend file
     tmpMesh.use_fake_user = True
     tmpMesh.inMeshSequence = True
-    deselectAll()
-    tmpObject.select_set(state=True)
-    bpy.data.objects.remove(tmpObject)
     mss.meshNameArray[idx].key = tmpMesh.name
     mss.meshNameArray[idx].inMemory = True
     mss.numMeshesInMemory += 1
