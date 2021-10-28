@@ -263,7 +263,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
             
             # get the name of the first mesh, remove trailing numbers and _ and .
             firstMeshName = os.path.splitext(mss.meshNameArray[1].basename)[0].rstrip('._0123456789')
-            seqObj.name = firstMeshName + '_sequence'
+            seqObj.name = createUniqueName(firstMeshName + '_sequence', bpy.data.objects)
             seqObj.mesh_sequence_settings.isImported = True
 
         return {'FINISHED'}

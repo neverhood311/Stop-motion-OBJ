@@ -55,15 +55,14 @@ def getSelectedObjects():
     return selected_objects
 
 
-def createUniqueMeshName(basename):
+def createUniqueName(basename, collection):
     attempts = 1
     uniqueName = basename
-    while attempts < 1000 and uniqueName in bpy.data.meshes:
+    while attempts < 1000 and uniqueName in collection:
         uniqueName = "%s.%03d" % (basename, attempts)
         attempts += 1
     
     return uniqueName
-
 
 def renderLockInterface():
     for scene in bpy.data.scenes:
@@ -437,7 +436,7 @@ def newMeshSequence():
     theObj = bpy.context.object
     theObj.name = 'sequence'
     theMesh = theObj.data
-    theMesh.name = createUniqueMeshName('emptyMesh')
+    theMesh.name = createUniqueName('emptyMesh', bpy.data.meshes)
     theMesh.use_fake_user = True
     theMesh.inMeshSequence = True
     
