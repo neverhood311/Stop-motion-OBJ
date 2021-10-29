@@ -29,7 +29,7 @@ from .stop_motion_obj import *
 # The properties panel added to the Object Properties Panel list
 class SMO_PT_MeshSequencePanel(bpy.types.Panel):
     bl_idname = 'OBJ_SEQUENCE_PT_properties'
-    bl_label = 'Mesh Sequence'
+    bl_label = 'Stop Motion OBJ'
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = 'object'
