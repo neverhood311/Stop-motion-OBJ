@@ -47,6 +47,9 @@ def register():
     bpy.app.handlers.frame_change_pre.append(updateFrame)
     
     # note: Blender tends to crash in Rendered viewport mode if we set the depsgraph_update_post instead of depsgraph_update_pre
+
+    # Alembic exporter crashes blender when the depsgraph_update_pre function is registered. depsgraph_update_post doesn't crash it
+    # Is it needed?
     bpy.app.handlers.depsgraph_update_pre.append(updateFrame)
     bpy.utils.register_class(ReloadMeshSequence)
     bpy.utils.register_class(BatchShadeSmooth)

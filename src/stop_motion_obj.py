@@ -23,6 +23,7 @@ import math
 import os
 import re
 import glob
+import bmesh
 from bpy.app.handlers import persistent
 from .version import *
 
@@ -334,6 +335,13 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         name='Material per Frame',
         default=False)
 
+    #With this option enabled, all frames will always be shown in the same mesh container.
+    #Also adds an array modifier, as the alembic export won't correctly work otherwise
+    showAsSingleMesh: bpy.props.BoolProperty(
+        name='Show as single Mesh',
+        description='All frames will be shown in the same mesh. Recommended when exporting the frames as Alembic',
+        default=False)
+
     # Whether to load the entire sequence into memory or to load meshes on-demand
     cacheMode: bpy.props.EnumProperty(
         items=[('cached', 'Cached', 'The full sequence is loaded into memory and saved in the .blend file'),
@@ -430,13 +438,13 @@ def deleteLinkedMeshMaterials(mesh, maxMaterialUsers=1, maxImageUsers=0):
     mesh.materials.clear()
 
 
-def newMeshSequence():
+def newMeshSequence(meshName):
     bpy.ops.object.add(type='MESH')
     # this new object should be the currently-selected object
     theObj = bpy.context.object
     theObj.name = 'sequence'
     theMesh = theObj.data
-    theMesh.name = createUniqueName('emptyMesh', bpy.data.meshes)
+    theMesh.name = createUniqueName(meshName, bpy.data.meshes)
     theMesh.use_fake_user = True
     theMesh.inMeshSequence = True
     
@@ -730,22 +738,38 @@ def getMeshIdxFromFrameNumber(_obj, frameNum):
 
 
 def setFrameObj(_obj, frameNum):
-    # store the current mesh for grabbing the material later
-    prev_mesh = _obj.data
+
+    # store the current materials for grabbing them later
+    prev_mesh_materials = []
+    for material in _obj.data.materials:
+        prev_mesh_materials.append(material.copy())
+
     idx = getMeshIdxFromFrameNumber(_obj, frameNum)
     next_mesh = getMeshFromIndex(_obj, idx)
 
-    if (next_mesh != prev_mesh):
-        # swap the meshes
-        _obj.data = next_mesh
+    if (next_mesh != _obj.data):
+        
+        # replace all the mesh data inside the original object instead of creating a new one. Better alembic export support
+        if _obj.mesh_sequence_settings.showAsSingleMesh is True:
+            bmNew = bmesh.new()
+            bmNew.from_mesh(next_mesh)     
+            bmNew.to_mesh(_obj.data)
+            bmNew.free()
+
+            #copy materials too
+            _obj.data.materials.clear()
+            for material in next_mesh.materials:
+               _obj.data.materials.append(material)
+                    
+        else:
+            _obj.data = next_mesh
 
         if _obj.mesh_sequence_settings.perFrameMaterial is False:
             # if the previous mesh had a material, copy it to the new one
-            if(len(prev_mesh.materials) > 0):
+            if(len(prev_mesh_materials) > 0):
                 _obj.data.materials.clear()
-                for material in prev_mesh.materials:
+                for material in prev_mesh_materials:
                     _obj.data.materials.append(material)
-
 
 def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
     mss = obj.mesh_sequence_settings
@@ -763,17 +787,32 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
     if nextMeshProp.inMemory is True:
         next_mesh = getMeshFromIndex(obj, idx)
 
-        # store the current mesh for grabbing the material later
-        prev_mesh = obj.data
-        if next_mesh != prev_mesh:
-            # swap the old one with the new one
-            obj.data = next_mesh
+        # store the current materials for grabbing them later
+        prev_mesh_materials = []
+        for material in obj.data.materials:
+            prev_mesh_materials.append(material.copy())
+
+        if next_mesh != obj.data:
+            # replace all the mesh data inside the original object instead of creating a new one. Better alembic export support
+            if mss.showAsSingleMesh is True:
+               bmNew = bmesh.new()
+               bmNew.from_mesh(next_mesh)     
+               bmNew.to_mesh(obj.data)
+               bmNew.free()
+               
+               obj.data.materials.clear()
+               for material in next_mesh.materials:
+                   obj.data.materials.append(material)
+
+            # swap the meshes
+            else:
+             obj.data = next_mesh
 
             # if we need to, copy the materials from the old one onto the new one
             if obj.mesh_sequence_settings.perFrameMaterial is False:
-                if len(prev_mesh.materials) > 0:
+                if(len(prev_mesh_materials) > 0):
                     obj.data.materials.clear()
-                    for material in prev_mesh.materials:
+                    for material in prev_mesh_materials:
                         obj.data.materials.append(material)
 
     if mss.cacheSize > 0 and mss.numMeshesInMemory > mss.cacheSize:
