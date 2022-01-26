@@ -45,12 +45,15 @@ def register():
     bpy.types.Object.mesh_sequence_settings = bpy.props.PointerProperty(type=MeshSequenceSettings)
     bpy.app.handlers.load_post.append(initializeSequences)
     bpy.app.handlers.frame_change_pre.append(updateFrame)
+    bpy.app.handlers.frame_change_pre.append(updateFrameSingleMesh)
     
     # note: Blender tends to crash in Rendered viewport mode if we set the depsgraph_update_post instead of depsgraph_update_pre
 
     # Alembic exporter crashes blender when the depsgraph_update_pre function is registered. depsgraph_update_post doesn't crash it
     # Is it needed?
     bpy.app.handlers.depsgraph_update_pre.append(updateFrame)
+    #Workaround, updating Single mesh in Depsgraph_Update_Pre crashes Blender during alembic support
+    bpy.app.handlers.depsgraph_update_post.append(updateFrameSingleMesh) 
     bpy.utils.register_class(ReloadMeshSequence)
     bpy.utils.register_class(BatchShadeSmooth)
     bpy.utils.register_class(BatchShadeFlat)
@@ -91,7 +94,9 @@ def register():
 def unregister():
     bpy.app.handlers.load_post.remove(initializeSequences)
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
+    bpy.app.handlers.frame_change_pre.remove(updateFrameSingleMesh)
     bpy.app.handlers.depsgraph_update_pre.remove(updateFrame)
+    bpy.app.handlers.depsgraph_update_post.remove(updateFrameSingleMesh)
     bpy.app.handlers.render_init.remove(renderInitHandler)
     bpy.app.handlers.render_complete.remove(renderCompleteHandler)
     bpy.app.handlers.render_cancel.remove(renderCancelHandler)

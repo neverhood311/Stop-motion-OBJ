@@ -79,7 +79,16 @@ def updateFrame(scene):
     global loadingSequenceLock
     if loadingSequenceLock is False:
         scn = bpy.context.scene
-        setFrameNumber(scn.frame_current)
+        setFrameNumber(scn.frame_current, False)
+
+#Workaround for a bug where Blender crashes when Depsgraph_Update_Pre calls updateFrame and a Single Mesh is used.
+#Don't call this function in Depsgraph_Update_Pre. See PR #154 for more infos
+@persistent
+def updateFrameSingleMesh(scene):
+    global loadingSequenceLock
+    if loadingSequenceLock is False:
+        scn = bpy.context.scene
+        setFrameNumber(scn.frame_current, True)
 
 
 @persistent
@@ -505,7 +514,7 @@ def loadStreamingSequenceFromMeshFiles(obj, directory, filePrefix):
 
     if numFrames > 0:
         mss.loaded = True
-        setFrameObjStreamed(obj, bpy.context.scene.frame_current, True, False)
+        setFrameObjStreamed(obj, bpy.context.scene.frame_current, True, True, False)
         obj.select_set(state=True)
     return numFrames
 
@@ -562,7 +571,7 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
     mss.numMeshes = numFrames + 1
     mss.numMeshesInMemory = numFrames
     if(numFrames > 0):
-        setFrameObj(_obj, bpy.context.scene.frame_current)
+        setFrameObj(_obj, bpy.context.scene.frame_current, True)
 
         _obj.select_set(state=True)
         mss.loaded = True
@@ -611,7 +620,7 @@ def loadSequenceFromBlendFile(_obj):
     deselectAll()
 
     _obj.select_set(state=True)
-    setFrameObj(_obj, scn.frame_current)
+    setFrameObj(_obj, scn.frame_current, True)
     mss.loaded = True
 
 
@@ -664,16 +673,16 @@ def getMeshPropFromIndex(obj, idx):
     return obj.mesh_sequence_settings.meshNameArray[idx]
 
 
-def setFrameNumber(frameNum):
+def setFrameNumber(frameNum, updateSingleMesh):
     for obj in bpy.data.objects:
         mss = obj.mesh_sequence_settings
         if mss.initialized is True and mss.loaded is True:
             cacheMode = mss.cacheMode
             if cacheMode == 'cached':
-                setFrameObj(obj, frameNum)
+                setFrameObj(obj, frameNum, updateSingleMesh)
             elif cacheMode == 'streaming':
                 global forceMeshLoad
-                setFrameObjStreamed(obj, frameNum, forceLoad=forceMeshLoad, deleteMaterials=not mss.perFrameMaterial)
+                setFrameObjStreamed(obj, frameNum, updateSingleMesh, forceLoad=forceMeshLoad, deleteMaterials=not mss.perFrameMaterial)
 
 
 def getMeshIdxFromFrameNumber(_obj, frameNum):
@@ -737,89 +746,83 @@ def getMeshIdxFromFrameNumber(_obj, frameNum):
     return finalIdx + 1
 
 
-def setFrameObj(_obj, frameNum):
+def setFrameObj(_obj, frameNum, updateSingleMesh):
+    
+    mss = _obj.mesh_sequence_settings
 
-    # store the current materials for grabbing them later
-    prev_mesh_materials = []
-    for material in _obj.data.materials:
-        prev_mesh_materials.append(material.copy())
+    #Update single mesh frames only when we explicitly want to
+    if(not(updateSingleMesh is False and mss.showAsSingleMesh is True)):
+        # store the current materials for grabbing them later
+        prev_mesh_materials = []
+        for material in _obj.data.materials:
+            prev_mesh_materials.append(material)
 
-    idx = getMeshIdxFromFrameNumber(_obj, frameNum)
-    next_mesh = getMeshFromIndex(_obj, idx)
+        mss = _obj.mesh_sequence_settings
+        idx = getMeshIdxFromFrameNumber(_obj, frameNum)
+        next_mesh = getMeshFromIndex(_obj, idx)
 
-    if (next_mesh != _obj.data):
-        
-        # replace all the mesh data inside the original object instead of creating a new one. Better alembic export support
-        if _obj.mesh_sequence_settings.showAsSingleMesh is True:
-            bmNew = bmesh.new()
-            bmNew.from_mesh(next_mesh)     
-            bmNew.to_mesh(_obj.data)
-            bmNew.free()
+        swapMeshAndMaterials(_obj, next_mesh, prev_mesh_materials, mss.showAsSingleMesh)
 
-            #copy materials too
-            _obj.data.materials.clear()
-            for material in next_mesh.materials:
-               _obj.data.materials.append(material)
-                    
-        else:
-            _obj.data = next_mesh
 
-        if _obj.mesh_sequence_settings.perFrameMaterial is False:
-            # if the previous mesh had a material, copy it to the new one
-            if(len(prev_mesh_materials) > 0):
-                _obj.data.materials.clear()
-                for material in prev_mesh_materials:
-                    _obj.data.materials.append(material)
-
-def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
+def setFrameObjStreamed(obj, frameNum, updateSingleMesh, forceLoad=False, deleteMaterials=False):
+    
     mss = obj.mesh_sequence_settings
-    idx = getMeshIdxFromFrameNumber(obj, frameNum)
-    nextMeshProp = getMeshPropFromIndex(obj, idx)
 
-    # if we want to load new meshes as needed and it's not already loaded
-    if nextMeshProp.inMemory is False and (mss.streamDuringPlayback is True or forceLoad is True):
-        importStreamedFile(obj, idx)
-        if deleteMaterials is True:
+    if(not(updateSingleMesh is False and mss.showAsSingleMesh is True)):        
+        idx = getMeshIdxFromFrameNumber(obj, frameNum)
+        nextMeshProp = getMeshPropFromIndex(obj, idx)
+
+        # if we want to load new meshes as needed and it's not already loaded
+        if nextMeshProp.inMemory is False and (mss.streamDuringPlayback is True or forceLoad is True):
+            importStreamedFile(obj, idx)
+            if deleteMaterials is True:
+                next_mesh = getMeshFromIndex(obj, idx)
+                deleteLinkedMeshMaterials(next_mesh)
+
+        # if the mesh is in memory, show it
+        if nextMeshProp.inMemory is True:
             next_mesh = getMeshFromIndex(obj, idx)
-            deleteLinkedMeshMaterials(next_mesh)
-
-    # if the mesh is in memory, show it
-    if nextMeshProp.inMemory is True:
-        next_mesh = getMeshFromIndex(obj, idx)
 
         # store the current materials for grabbing them later
         prev_mesh_materials = []
         for material in obj.data.materials:
             prev_mesh_materials.append(material.copy())
 
-        if next_mesh != obj.data:
-            # replace all the mesh data inside the original object instead of creating a new one. Better alembic export support
-            if mss.showAsSingleMesh is True:
-               bmNew = bmesh.new()
-               bmNew.from_mesh(next_mesh)     
-               bmNew.to_mesh(obj.data)
-               bmNew.free()
-               
-               obj.data.materials.clear()
-               for material in next_mesh.materials:
-                   obj.data.materials.append(material)
+        #Set meshes and materials
+        swapMeshAndMaterials(obj, next_mesh, prev_mesh_materials, mss.showAsSingleMesh)
 
-            # swap the meshes
-            else:
-             obj.data = next_mesh
+        if mss.cacheSize > 0 and mss.numMeshesInMemory > mss.cacheSize:
+            idxToDelete = nextCachedMeshToDelete(obj, idx)
+            if idxToDelete >= 0:
+                removeMeshFromCache(obj, idxToDelete)
 
-            # if we need to, copy the materials from the old one onto the new one
-            if obj.mesh_sequence_settings.perFrameMaterial is False:
-                if(len(prev_mesh_materials) > 0):
-                    obj.data.materials.clear()
-                    for material in prev_mesh_materials:
-                        obj.data.materials.append(material)
+def swapMeshAndMaterials(old_Object, new_Mesh, old_mesh_materials, forSingleMesh):
 
-    if mss.cacheSize > 0 and mss.numMeshesInMemory > mss.cacheSize:
-        idxToDelete = nextCachedMeshToDelete(obj, idx)
-        if idxToDelete >= 0:
-            removeMeshFromCache(obj, idxToDelete)
-
+    if (new_Mesh != old_Object.data):                
+        
+        #For normal sequences we simply swap the mesh container
+        if(forSingleMesh is False):
+            old_Object.data = new_Mesh
+        
+        #For single mesh sequences, we need to copy the mesh data via a bmesh, so that the container stays the same
+        else:
+            bmNew = bmesh.new()
+            bmNew.from_mesh(new_Mesh)     
+            bmNew.to_mesh(old_Object.data)
+            bmNew.free()
+            
+            #Also copy the materials from the previous mesh container
+            if(len(new_Mesh.materials) > 0):
+                old_Object.data.materials.clear()
+                for material in new_Mesh.materials:
+                    old_Object.data.materials.append(material)
+        
+        if old_Object.mesh_sequence_settings.perFrameMaterial is False:
+            # if the previous mesh had a material, copy it to the new one
+            if(len(old_mesh_materials) > 0):
+                old_Object.data.materials.clear()
+                for material in old_mesh_materials:
+                    old_Object.data.materials.append(material)
 
 def nextCachedMeshToDelete(obj, currentMeshIdx):
     mss = obj.mesh_sequence_settings
