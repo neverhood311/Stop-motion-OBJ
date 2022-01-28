@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2021  Justin Jensen
+#   Copyright (C) 2016-2022  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -448,12 +448,16 @@ def deleteLinkedMeshMaterials(mesh, maxMaterialUsers=1, maxImageUsers=0):
 
 
 def newMeshSequence(meshName):
-    bpy.ops.object.add(type='MESH')
+    #bpy.ops.object.add(type='MESH')
+    theMesh = bpy.data.meshes.new(createUniqueName(meshName, bpy.data.meshes))
+    theObj = bpy.data.objects.new(createUniqueName('sequence', bpy.data.objects), theMesh)
+    bpy.context.collection.objects.link(theObj)
+    
     # this new object should be the currently-selected object
-    theObj = bpy.context.object
-    theObj.name = 'sequence'
-    theMesh = theObj.data
-    theMesh.name = createUniqueName(meshName, bpy.data.meshes)
+    #theObj = bpy.context.object
+    #theObj.name = 'sequence'
+    #theMesh = theObj.data
+    #theMesh.name = createUniqueName('emptyMesh', bpy.data.meshes)
     theMesh.use_fake_user = True
     theMesh.inMeshSequence = True
     
