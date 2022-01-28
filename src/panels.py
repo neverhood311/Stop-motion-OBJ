@@ -181,7 +181,7 @@ class SequenceImportSettings(bpy.types.PropertyGroup):
         description="Store relative paths for Streaming sequences and for reloading Cached sequences",
         default=True)
     showAsSingleMesh: bpy.props.BoolProperty(
-        name='Show as single Mesh',
+        name='Show as Single Mesh',
         description='All frames will be shown in the same mesh. Useful when exporting the frames as alembic.',
         default=False)
 
@@ -286,7 +286,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
                 # If we import the sequence as a single mesh, the user most likey
                 # wants to export it as an alembic. Without a modifier attached,
                 # blender won't export the alembic correctly, so we add a harmless one
-                if(mss.showAsSingleMesh):
+                if mss.showAsSingleMesh:
                     arrayModifier = seqObj.modifiers.new(name='Array', type='ARRAY')
                     arrayModifier.count = 1
 
