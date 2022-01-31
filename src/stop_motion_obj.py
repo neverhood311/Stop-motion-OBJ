@@ -347,7 +347,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
     # With this option enabled, all frames will always be shown in the same mesh container.
     # Also adds an array modifier, as the alembic export won't correctly work otherwise
     showAsSingleMesh: bpy.props.BoolProperty(
-        name='Show as Single Mesh',
+        name='Enable Alembic Export',
         description='All frames will be shown in the same mesh. Recommended when exporting the frames as Alembic',
         default=False)
 
