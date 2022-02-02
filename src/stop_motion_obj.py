@@ -448,16 +448,11 @@ def deleteLinkedMeshMaterials(mesh, maxMaterialUsers=1, maxImageUsers=0):
 
 
 def newMeshSequence(meshName):
-    #bpy.ops.object.add(type='MESH')
     theMesh = bpy.data.meshes.new(createUniqueName(meshName, bpy.data.meshes))
     theObj = bpy.data.objects.new(createUniqueName('sequence', bpy.data.objects), theMesh)
     bpy.context.collection.objects.link(theObj)
     
     # this new object should be the currently-selected object
-    #theObj = bpy.context.object
-    #theObj.name = 'sequence'
-    #theMesh = theObj.data
-    #theMesh.name = createUniqueName('emptyMesh', bpy.data.meshes)
     theMesh.use_fake_user = True
     theMesh.inMeshSequence = True
     

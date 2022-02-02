@@ -37,12 +37,10 @@ class SMO_PT_MeshSequencePanel(bpy.types.Panel):
     @classmethod
     def poll(cls, context):
         return context.object.type == 'MESH'
-        #return context.object.mesh_sequence_settings.initialized == True
 
     def draw(self, context):
         if context.object.type == 'MESH' and context.object.mesh_sequence_settings.initialized == False:
             # show button to convert the object into a mesh sequence
-            #self.layout.separator()
             self.layout.operator(ConvertToMeshSequence.bl_idname, icon="ONIONSKIN_ON")
 
 
@@ -242,7 +240,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
                 if self.sequenceSettings.showAsSingleMesh:
                     seqObj = newMeshSequence('SingleMesh')
                 else:
-                    seqObj = newMeshSequence('EmptyMesh')
+                    seqObj = newMeshSequence('emptyMesh')
 
                 global_matrix = axis_conversion(from_forward=b_axis_forward,from_up=b_axis_up).to_4x4()
                 seqObj.matrix_world = global_matrix
@@ -437,7 +435,7 @@ class ConvertToMeshSequence(bpy.types.Operator):
             return {'CANCELLED'}
 
         # hijack the mesh from the selected object and add it to a new mesh sequence
-        msObj = newMeshSequence()
+        msObj = newMeshSequence('emptyMesh')
         msObj.mesh_sequence_settings.isImported = False
         addMeshToSequence(msObj, obj.data)
 
