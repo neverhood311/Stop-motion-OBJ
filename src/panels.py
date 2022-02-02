@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2021  Justin Jensen
+#   Copyright (C) 2016-2022  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -36,10 +36,13 @@ class SMO_PT_MeshSequencePanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.object.mesh_sequence_settings.initialized == True
+        return context.object.type == 'MESH'
 
     def draw(self, context):
-        pass
+        if context.object.type == 'MESH' and context.object.mesh_sequence_settings.initialized == False:
+            # show button to convert the object into a mesh sequence
+            self.layout.operator(ConvertToMeshSequence.bl_idname, icon="ONIONSKIN_ON")
+
 
 
 class SMO_PT_MeshSequencePlaybackPanel(bpy.types.Panel):
@@ -237,7 +240,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
                 if self.sequenceSettings.showAsSingleMesh:
                     seqObj = newMeshSequence('SingleMesh')
                 else:
-                    seqObj = newMeshSequence('EmptyMesh')
+                    seqObj = newMeshSequence('emptyMesh')
 
                 global_matrix = axis_conversion(from_forward=b_axis_forward,from_up=b_axis_up).to_4x4()
                 seqObj.matrix_world = global_matrix
@@ -432,9 +435,15 @@ class ConvertToMeshSequence(bpy.types.Operator):
             return {'CANCELLED'}
 
         # hijack the mesh from the selected object and add it to a new mesh sequence
-        msObj = newMeshSequence()
+        msObj = newMeshSequence('emptyMesh')
         msObj.mesh_sequence_settings.isImported = False
         addMeshToSequence(msObj, obj.data)
+
+        # make sure the new mesh sequence has the same transform (especially the location) as context.object
+        msObj.location = obj.location
+        msObj.scale = obj.scale
+        msObj.rotation_euler = obj.rotation_euler
+        msObj.rotation_quaternion = obj.rotation_quaternion
 
         objName = obj.name
         msObj.name = objName + '_sequence'
