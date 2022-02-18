@@ -118,31 +118,31 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
             if objSettings.isImported is False and objSettings.frameMode == '4':
                 row = layout.row(align=True)
                 row.enabled = inObjectMode or inSculptMode
-                row.operator("ms.duplicate_mesh_frame")
+                row.operator("smo.duplicate_mesh_frame")
             if objSettings.cacheMode == 'cached':
                 row = layout.row(align=True)
                 row.enabled = inObjectMode
                 row.label(text="Shading:")
-                row.operator("ms.batch_shade_smooth")
-                row.operator("ms.batch_shade_flat")
+                row.operator("smo.batch_shade_smooth")
+                row.operator("smo.batch_shade_flat")
 
                 row = layout.row(align=True)
                 row.enabled = inObjectMode
-                row.operator("ms.merge_duplicate_materials")
+                row.operator("smo.merge_duplicate_materials")
 
                 if objSettings.isImported is True:
                     # non-imported sequences won't have a fileName or dirPath and cannot be reloaded
                     row = layout.row()
                     row.enabled = inObjectMode
-                    row.operator("ms.reload_mesh_sequence")
+                    row.operator("smo.reload_mesh_sequence")
 
                 row = layout.row()
                 row.enabled = inObjectMode
-                row.operator("ms.bake_sequence")
+                row.operator("smo.bake_sequence")
 
             row = layout.row()
             row.enabled = inObjectMode
-            row.operator("ms.deep_delete_sequence")
+            row.operator("smo.deep_delete_sequence")
 
             layout.row().separator()
 
@@ -184,7 +184,7 @@ class SequenceImportSettings(bpy.types.PropertyGroup):
         description="Store relative paths for Streaming sequences and for reloading Cached sequences",
         default=True)
     showAsSingleMesh: bpy.props.BoolProperty(
-        name='Show as Single Mesh',
+        name='Enable Alembic Export',
         description='All frames will be shown in the same mesh. Useful when exporting the frames as alembic.',
         default=False)
 
@@ -192,7 +192,7 @@ class SequenceImportSettings(bpy.types.PropertyGroup):
 @orientation_helper(axis_forward='-Z', axis_up='Y')
 class ImportSequence(bpy.types.Operator, ImportHelper):
     """Load a mesh sequence"""
-    bl_idname = "ms.import_sequence"
+    bl_idname = "smo.import_sequence"
     bl_label = "Select Folder"
     bl_options = {'UNDO'}
 
@@ -338,7 +338,7 @@ class SMO_PT_FileImportSettingsPanel(bpy.types.Panel):
     def poll(cls, context):
         sfile = context.space_data
         operator = sfile.active_operator
-        return operator.bl_idname == "MS_OT_import_sequence"
+        return operator.bl_idname == "SMO_OT_import_sequence"
 
     def draw(self, context):
         op = context.space_data.active_operator
@@ -374,7 +374,7 @@ class SMO_PT_TransformSettingsPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "MS_OT_import_sequence"
+        return context.space_data.active_operator.bl_idname == "SMO_OT_import_sequence"
     
     def draw(self, context):
         layout = self.layout
@@ -396,7 +396,7 @@ class SMO_PT_SequenceImportSettingsPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.active_operator.bl_idname == "MS_OT_import_sequence"
+        return context.space_data.active_operator.bl_idname == "SMO_OT_import_sequence"
     
     def draw(self, context):
         op = context.space_data.active_operator
@@ -422,7 +422,7 @@ def menu_func_import_sequence(self, context):
 
 class ConvertToMeshSequence(bpy.types.Operator):
     """Convert to Mesh Sequence"""
-    bl_idname = "ms.convert_to_mesh_sequence"
+    bl_idname = "smo.convert_to_mesh_sequence"
     bl_label = "Convert to Mesh Sequence"
     bl_options = {'UNDO'}
 
@@ -474,7 +474,7 @@ def menu_func_convert_to_sequence(self, context):
 
 class DuplicateMeshFrame(bpy.types.Operator):
     """Make a copy of the current mesh and create a keyframe for it at the current frame"""
-    bl_idname = "ms.duplicate_mesh_frame"
+    bl_idname = "smo.duplicate_mesh_frame"
     bl_label = "Duplicate Mesh Frame"
     bl_options = {'UNDO'}
 

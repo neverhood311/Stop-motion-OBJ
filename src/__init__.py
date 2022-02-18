@@ -25,7 +25,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY or X3D) files and display them each as a single frame of animation. This add-on also supports the .STL, .PLY, and .X3D file formats.",
     "author": "Justin Jensen",
-    "version": (2, 2, 0, "alpha.18"),
+    "version": (2, 2, 0, "alpha.19"),
     "blender": (2, 83, 0),
     "location": "File > Import > Mesh Sequence",
     "warning": "",
@@ -88,7 +88,7 @@ def register():
         spaceTypes = [('3D View', 'VIEW_3D'), ('Dopesheet', 'DOPESHEET_EDITOR'), ('Graph Editor', 'GRAPH_EDITOR')]
         for spaceType in spaceTypes:
             keyMap = keyConfig.keymaps.new(name=spaceType[0], space_type=spaceType[1])
-            keyMapItem = keyMap.keymap_items.new('ms.duplicate_mesh_frame', type='D', value='PRESS', shift=True, ctrl=True)
+            keyMapItem = keyMap.keymap_items.new('smo.duplicate_mesh_frame', type='D', value='PRESS', shift=True, ctrl=True)
             SMOKeymaps.append((keyMap, keyMapItem))
 
 def unregister():

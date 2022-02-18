@@ -1085,7 +1085,7 @@ def freeUnusedMeshes():
 
 class ReloadMeshSequence(bpy.types.Operator):
     """Reload From Disk"""
-    bl_idname = "ms.reload_mesh_sequence"
+    bl_idname = "smo.reload_mesh_sequence"
     bl_label = "Reload From Disk"
     bl_options = {'UNDO'}
 
@@ -1108,7 +1108,7 @@ class ReloadMeshSequence(bpy.types.Operator):
 
 class BatchShadeSmooth(bpy.types.Operator):
     """Smooth Shade Sequence"""
-    bl_idname = "ms.batch_shade_smooth"
+    bl_idname = "smo.batch_shade_smooth"
     bl_label = "Smooth"
     bl_options = {'UNDO'}
 
@@ -1125,7 +1125,7 @@ class BatchShadeSmooth(bpy.types.Operator):
 
 class BatchShadeFlat(bpy.types.Operator):
     """Flat Shade Sequence"""
-    bl_idname = "ms.batch_shade_flat"
+    bl_idname = "smo.batch_shade_flat"
     bl_label = "Flat"
     bl_options = {'UNDO'}
 
@@ -1142,7 +1142,7 @@ class BatchShadeFlat(bpy.types.Operator):
 
 class BakeMeshSequence(bpy.types.Operator):
     """Bake Sequence"""
-    bl_idname = "ms.bake_sequence"
+    bl_idname = "smo.bake_sequence"
     bl_label = "Bake Sequence"
     bl_options = {'UNDO'}
 
@@ -1160,7 +1160,7 @@ class BakeMeshSequence(bpy.types.Operator):
 
 class DeepDeleteSequence(bpy.types.Operator):
     """Deep Delete Sequence"""
-    bl_idname = "ms.deep_delete_sequence"
+    bl_idname = "smo.deep_delete_sequence"
     bl_label = "Delete Sequence"
     bl_options = {'UNDO'}
 
@@ -1172,7 +1172,7 @@ class DeepDeleteSequence(bpy.types.Operator):
 
 class MergeDuplicateMaterials(bpy.types.Operator):
     """Merge Duplicate Materials"""
-    bl_idname = "ms.merge_duplicate_materials"
+    bl_idname = "smo.merge_duplicate_materials"
     bl_label = "Merge Duplicate Materials"
     bl_options = {'UNDO'}
 
