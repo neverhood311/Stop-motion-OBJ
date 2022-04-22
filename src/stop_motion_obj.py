@@ -25,6 +25,7 @@ import re
 import glob
 import bmesh
 from bpy.app.handlers import persistent
+import time
 from .version import *
 
 # global variables
@@ -45,6 +46,76 @@ def clamp(value, minVal, maxVal):
 def deselectAll():
     for ob in bpy.context.scene.objects:
         ob.select_set(state=False)
+
+@persistent
+def checkMeshChangesFrameChangePre(scene):
+    timestamp = time.time()
+    print("frame change pre " + str(timestamp))
+
+    # TODO:
+    # if we're not in Sculpt mode, return
+    # if the selected object is not a loaded and initialized mesh sequence, return
+    # if the selected object is not in auto-export mode, return
+    # generate the mesh hash for the current mesh (just before the frame switches)
+    # if the generated mesh hash does not match the mesh's stored hash
+    #   export this updated mesh
+
+@persistent
+def checkMeshChangesFrameChangePost(scene):
+    timestamp = time.time()
+    print("frame change post " + str(timestamp))
+
+    # TODO
+    # if we're not in Sculpt mode, return
+    # if the selected object is not a loaded and initialized mesh sequence, return
+    # if the selected object is not in auto-export mode, return
+    # generate the mesh hash for the current mesh and store that value on the mesh
+
+def getMeshSignature(mesh):
+    # Build a string composed of the following elements:
+    # the number of vertices
+    # the number of faces
+    nVerts = len(mesh.vertices)
+    nFaces = len(mesh.polygons)
+
+    groupCount = 16
+    vtxLoc = []
+    polyLoc = []
+    polyVtxs = []
+    for idx in range(groupCount):
+        vtxLoc.append([0.0, 0.0, 0.0])
+        polyLoc.append([0.0, 0.0, 0.0])
+        polyVtxs.append([0.0, 0.0, 0.0])
+
+    # the average vertex location for 16 equally-sized groups of vertices (interlaced)
+    for idx, vtx in enumerate(mesh.vertices):
+        groupIdx = idx % groupCount
+        vtxLoc[groupIdx][0] += vtx.x
+        vtxLoc[groupIdx][1] += vtx.y
+        vtxLoc[groupIdx][1] += vtx.z
+
+    # convert the 16 vtxLoc groups into strings
+    vtxLocList = list(map(lambda x: f'{x[0]},{x[1]},{x[2]}', vtxLoc))
+    vtxLocStr = " ".join(vtxLocList)
+
+    # the average center location for 16 equally-sized groups of polygons (interlaced)
+    # the 3 average vertex indices for 16 equally-sized groups of polygons (interlaced)
+    for pIdx, poly in enumerate(mesh.polygons):
+        groupIdx = pIdx % groupCount
+        polyLoc[groupIdx][0] += poly.center.x
+        polyLoc[groupIdx][1] += poly.center.y
+        polyLoc[groupIdx][2] += poly.center.z
+
+        for ptIdx, vIdx in enumerate(poly.vertices):
+            polyVtxs[groupIdx][ptIdx % 3] += vIdx
+
+
+    return f'{nVerts} {nFaces}'
+
+
+def getMeshHash(mesh):
+    # get the mesh signature and hash it
+    return hash(getMeshSignature(mesh))
 
 
 # We have to use this function instead of bpy.context.selected_objects because there's no "selected_objects" within the render context

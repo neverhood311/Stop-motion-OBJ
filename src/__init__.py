@@ -37,6 +37,9 @@ bl_info = {
 SMOKeymaps = []
 
 def register():
+    bpy.app.handlers.frame_change_pre.append(TODO_REMOVE_frame_change_pre)
+    bpy.app.handlers.frame_change_post.append(TODO_REMOVE_frame_change_post)
+
     bpy.types.Mesh.inMeshSequence = bpy.props.BoolProperty()
     bpy.utils.register_class(SequenceVersion)
     bpy.utils.register_class(MeshImporter)
@@ -92,6 +95,9 @@ def register():
             SMOKeymaps.append((keyMap, keyMapItem))
 
 def unregister():
+    bpy.app.handlers.frame_change_pre.remove(TODO_REMOVE_frame_change_pre)
+    bpy.app.handlers.frame_change_post.remove(TODO_REMOVE_frame_change_post)
+
     bpy.app.handlers.load_post.remove(initializeSequences)
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
     bpy.app.handlers.frame_change_pre.remove(updateFrameSingleMesh)
