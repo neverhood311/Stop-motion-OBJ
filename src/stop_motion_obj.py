@@ -49,27 +49,50 @@ def deselectAll():
 
 @persistent
 def checkMeshChangesFrameChangePre(scene):
-    timestamp = time.time()
-    print("frame change pre " + str(timestamp))
-
-    # TODO:
     # if we're not in Sculpt mode, return
+    if bpy.context.mode != 'SCULPT':
+        return
+
     # if the selected object is not a loaded and initialized mesh sequence, return
+    mss = bpy.context.object.mesh_sequence_settings
+    if mss.initialized is False or mss.loaded is False:
+        return
+
     # if the selected object is not in auto-export mode, return
+    if mss.autoExportChanges is False:
+        return
+
     # generate the mesh hash for the current mesh (just before the frame switches)
+    meshHashStr = getMeshHashStr(bpy.context.object.data)
+    print("frame change pre hash: " + meshHashStr)
+
     # if the generated mesh hash does not match the mesh's stored hash
-    #   export this updated mesh
+    if meshHashStr != bpy.context.object.data.meshHash:
+        # update the mesh hash
+        bpy.context.object.data.meshHash = meshHashStr
+        # TODO
+        #   export this updated mesh
+        print("TODO: export this mesh")
 
 @persistent
 def checkMeshChangesFrameChangePost(scene):
-    timestamp = time.time()
-    print("frame change post " + str(timestamp))
-
-    # TODO
     # if we're not in Sculpt mode, return
+    if bpy.context.mode != 'SCULPT':
+        return
+
     # if the selected object is not a loaded and initialized mesh sequence, return
+    mss = bpy.context.object.mesh_sequence_settings
+    if mss.initialized is False or mss.loaded is False:
+        return
+
     # if the selected object is not in auto-export mode, return
+    if mss.autoExportChanges is False:
+        return
+
     # generate the mesh hash for the current mesh and store that value on the mesh
+    meshHashStr = getMeshHashStr(bpy.context.object.data)
+    bpy.context.object.data.meshHash = meshHashStr
+    print("frame change post hash: " + meshHashStr)
 
 def getMeshSignature(mesh):
     # Build a string composed of the following elements:
@@ -90,12 +113,12 @@ def getMeshSignature(mesh):
     # the average vertex location for 16 equally-sized groups of vertices (interlaced)
     for idx, vtx in enumerate(mesh.vertices):
         groupIdx = idx % groupCount
-        vtxLoc[groupIdx][0] += vtx.x
-        vtxLoc[groupIdx][1] += vtx.y
-        vtxLoc[groupIdx][1] += vtx.z
+        vtxLoc[groupIdx][0] += vtx.co.x
+        vtxLoc[groupIdx][1] += vtx.co.y
+        vtxLoc[groupIdx][2] += vtx.co.z
 
     # convert the 16 vtxLoc groups into strings
-    vtxLocList = list(map(lambda x: f'{x[0]},{x[1]},{x[2]}', vtxLoc))
+    vtxLocList = list(map(lambda x: f'{x[0]:.5f},{x[1]:.5f},{x[2]:.5f}', vtxLoc))
     vtxLocStr = " ".join(vtxLocList)
 
     # the average center location for 16 equally-sized groups of polygons (interlaced)
@@ -108,14 +131,21 @@ def getMeshSignature(mesh):
 
         for ptIdx, vIdx in enumerate(poly.vertices):
             polyVtxs[groupIdx][ptIdx % 3] += vIdx
+    
+    # convert the 16 polyLoc groups into strings
+    polyLocList = list(map(lambda x: f'{x[0]:.5f},{x[1]:.5f},{x[2]:.5f}', polyLoc))
+    polyLocStr = " ".join(polyLocList)
+
+    # convert the 16 polyVtx groups into strings
+    polyVtxList = list(map(lambda x: f'{x[0]:.0f},{x[1]:.0f},{x[2]:.0f}', polyVtxs))
+    polyVtxStr = " ".join(polyVtxList)
+
+    return f'{nVerts} {nFaces} {vtxLocStr} {polyLocStr} {polyVtxStr}'
 
 
-    return f'{nVerts} {nFaces}'
-
-
-def getMeshHash(mesh):
+def getMeshHashStr(mesh):
     # get the mesh signature and hash it
-    return hash(getMeshSignature(mesh))
+    return str(hash(getMeshSignature(mesh)))
 
 
 # We have to use this function instead of bpy.context.selected_objects because there's no "selected_objects" within the render context
@@ -208,6 +238,18 @@ def makeDirPathsRelative(scene):
 def handlePlaybackChange(self, context):
     updateFrame(0)
     return None
+
+
+# runs every time the "Auto-export Changes" checkbox is changed
+def handleAutoExportChange(self, context):
+    obj = context.object
+    # if the selected object's mesh is part of a mesh sequence
+    if obj.data.inMeshSequence is True:
+        # if the user just set it to True
+        if obj.mesh_sequence_settings.autoExportChanges is True:
+            # calculate the mesh hash for the current mesh and store it on the mesh
+            meshHashStr = getMeshHashStr(obj.data)
+            obj.data.meshHash = meshHashStr
 
 
 # runs every time the cache size changes
@@ -445,6 +487,17 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
     curMeshIdx: bpy.props.IntProperty(
         name='Active mesh',
         default=1)
+    
+    autoExportChanges: bpy.props.BoolProperty(
+        name='Auto-export changes',
+        description='Automatically export meshes that have been modified while in Sculpt Mode',
+        update=handleAutoExportChange,
+        default=False)
+    
+    exportDir: bpy.props.StringProperty(
+        name='Export Folder',
+        description='The path to the folder where exported files will be stored. If none is specified, a temp folder will be created',
+        subtype='DIR_PATH')
 
     # TODO: deprecate meshNames in version 3.0.0. This will break backwards compatibility with version 2.0.2 and earlier
     meshNames: bpy.props.StringProperty()

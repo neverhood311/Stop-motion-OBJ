@@ -139,6 +139,16 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
                 row = layout.row()
                 row.enabled = inObjectMode
                 row.operator("ms.bake_sequence")
+            
+            if objSettings.isImported is True:
+                # non-imported sequences won't have a fileName or dirPath and cannot be exported (for now)
+                row = layout.row()
+                row.enabled = inObjectMode or inSculptMode
+                row.prop(objSettings, "autoExportChanges")
+                
+                row = layout.row()
+                row.enabled = inObjectMode or inSculptMode
+                row.prop(objSettings, "exportDir")
 
             row = layout.row()
             row.enabled = inObjectMode
