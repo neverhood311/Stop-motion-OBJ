@@ -370,6 +370,16 @@ class MeshImporter(bpy.types.PropertyGroup):
             self.loadPLY(filePath)
         elif fileType == 'x3d':
             self.loadX3D(filePath)
+    
+    def export(self, fileType, filePath):
+        # get the context mode and store it
+        contextMode = bpy.context.mode
+
+        # export the object
+        # TODO
+
+        # set the context mode back to the one it was in before
+        bpy.ops.object.mode_set(mode=contextMode)
 
     def loadOBJ(self, filePath):
         # call the obj load function with all the correct parameters
@@ -421,6 +431,13 @@ class MeshImporter(bpy.types.PropertyGroup):
             filepath=filePath,
             axis_forward=self.axis_forward,
             axis_up=self.axis_up)
+    
+    def exportOBJ(self, filePath):
+        bpy.ops.export_scene.obj(
+            filepath=filePath,
+            check_existing=False,
+            use_edges=self.obj_use_edges
+        )
 
 
 class MeshNameProp(bpy.types.PropertyGroup):
@@ -546,6 +563,12 @@ def initializeSequences(scene):
     for obj in bpy.data.objects:
         if obj.mesh_sequence_settings.initialized is True:
             loadSequenceFromBlendFile(obj)
+
+            # If auto-export is enabled, we'll need to recalculate the mesh hash for the current mesh.
+            # This is because Python's hash function produces different values for each run of Python
+            #   (i.e. every time you start Blender)
+            if obj.mesh_sequence_settings.autoExportChanges is True:
+                obj.data.meshHash = getMeshHashStr(obj.data)
     freeUnusedMeshes()
 
 
