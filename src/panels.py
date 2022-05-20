@@ -126,6 +126,8 @@ class SMO_PT_MeshSequenceExportPanel(bpy.types.Panel):
 
             row = layout.row()
             row.enabled = (inObjectMode or inSculptMode) and objSettings.overwriteSrcDir is False
+            row.alert = objSettings.exportDir == '' and objSettings.overwriteSrcDir is False
+
             row.prop(objSettings, "exportDir")
 
 class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):

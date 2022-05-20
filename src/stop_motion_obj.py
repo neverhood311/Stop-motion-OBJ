@@ -32,6 +32,7 @@ from .version import *
 storedUseLockInterface = False
 forceMeshLoad = False
 loadingSequenceLock = False
+inRenderMode = False
 
 def alphanumKey(string):
     """ Turn a string into a list of string and number chunks.
@@ -49,7 +50,9 @@ def deselectAll():
 
 @persistent
 def checkMeshChangesFrameChangePre(scene):
-    # TODO: if we're in rendering mode, return
+    global inRenderMode
+    if inRenderMode == True:
+        return
 
     # if the selected object is not a loaded and initialized mesh sequence, return
     mss = bpy.context.object.mesh_sequence_settings
@@ -67,16 +70,12 @@ def checkMeshChangesFrameChangePre(scene):
     
     # generate the mesh hash for the current mesh (just before the frame switches)
     meshHashStr = getMeshHashStr(bpy.context.object.data)
-    print("frame change pre hash: " + meshHashStr)
-    print("frameChangePre object: " + bpy.context.object.data.name)
-
 
     # if the generated mesh hash does not match the mesh's stored hash
     # for some reason we also have to check whether the meshHash has not been calculated yet
     if bpy.context.object.data.meshHash != '' and meshHashStr != bpy.context.object.data.meshHash:
         # update the mesh hash
         bpy.context.object.data.meshHash = meshHashStr
-        print("TODO: export this mesh")
 
         #   export this updated mesh
         absDir = ''
@@ -93,6 +92,10 @@ def checkMeshChangesFrameChangePre(scene):
 
         filename = os.path.join(absDir, mss.meshNameArray[mss.curVisibleMeshIdx].basename)
         mss.fileImporter.export(mss.fileFormat, filename)
+
+        # show an unobtrusive message that the mesh has been exported
+        msg = "Mesh exported: " + filename
+        bpy.context.workspace.status_text_set(text=msg)
 
 
 def showError(message=""):
@@ -118,7 +121,6 @@ def checkMeshChangesFrameChangePost(scene):
     # generate the mesh hash for the current mesh and store that value on the mesh
     meshHashStr = getMeshHashStr(bpy.context.object.data)
     bpy.context.object.data.meshHash = meshHashStr
-    print("frame change post hash: " + meshHashStr)
 
 def getMeshSignature(mesh):
     # Build a string composed of the following elements:
@@ -225,6 +227,8 @@ def renderInitHandler(scene):
     bpy.data.scenes["Scene"].render.use_lock_interface = True
     global forceMeshLoad
     forceMeshLoad = True
+    global inRenderMode
+    inRenderMode = True
 
 
 @persistent
@@ -242,6 +246,8 @@ def renderStopped():
     bpy.data.scenes["Scene"].render.use_lock_interface = storedUseLockInterface
     global forceMeshLoad
     forceMeshLoad = False
+    global inRenderMode
+    inRenderMode = False
 
 
 @persistent
@@ -401,14 +407,18 @@ class MeshImporter(bpy.types.PropertyGroup):
         # get the context mode and store it
         contextMode = bpy.context.mode
 
-        # TODO: remove
-        print("exporting: " + filePath)
-
         # export the object
-        # TODO: other file types
-        self.exportOBJ(filePath)
+        if fileType == 'obj':
+            self.exportOBJ(filePath)
+        elif fileType == 'stl':
+            self.exportSTL(filePath)
+        elif fileType == 'ply':
+            self.exportPLY(filePath)
+        elif fileType == 'x3d':
+            self.exportX3D(filePath)
 
         # set the context mode back to the one it was in before
+        #   (the OBJ exporter likes to switch to Object mode during the export)
         bpy.ops.object.mode_set(mode=contextMode)
 
     def loadOBJ(self, filePath):
@@ -470,9 +480,34 @@ class MeshImporter(bpy.types.PropertyGroup):
             use_animation=False,
             use_edges=self.obj_use_edges,
             use_smooth_groups=self.obj_use_smooth_groups,
+            use_materials=False,
+            keep_vertex_order=True,
             axis_forward=self.axis_forward,
-            axis_up=self.axis_up
-        )
+            axis_up=self.axis_up)
+    
+    def exportSTL(self, filePath):
+        bpy.ops.export_mesh.stl(
+            filepath=filePath,
+            check_existing=False,
+            use_selection=True,
+            axis_forward=self.axis_forward,
+            axis_up=self.axis_up)
+    
+    def exportPLY(self, filePath):
+        bpy.ops.export_mesh.ply(
+            filepath=filePath,
+            check_existing=False,
+            use_selection=True,
+            axis_forward=self.axis_forward,
+            axis_up=self.axis_up)
+    
+    def exportX3D(self, filePath):
+        bpy.ops.export_scene.x3d(
+            filepath=filePath,
+            check_existing=False,
+            use_selection=True,
+            axis_forward=self.axis_forward,
+            axis_up=self.axis_up)
 
 
 class MeshNameProp(bpy.types.PropertyGroup):
