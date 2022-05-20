@@ -67,9 +67,9 @@ class SMO_PT_MeshSequencePlaybackPanel(bpy.types.Panel):
             # keyframed playback
             if objSettings.frameMode == '4':
                 row = col.row()
-                if objSettings.curMeshIdx <= 0 or objSettings.curMeshIdx > objSettings.numMeshes - 1:
+                if objSettings.curKeyframeMeshIdx <= 0 or objSettings.curKeyframeMeshIdx > objSettings.numMeshes - 1:
                     row.alert = True
-                row.prop(objSettings, "curMeshIdx")
+                row.prop(objSettings, "curKeyframeMeshIdx")
             # all other playback modes
             else:
                 col.prop(objSettings, "startFrame")
@@ -96,6 +96,37 @@ class SMO_PT_MeshSequenceStreamingPanel(bpy.types.Panel):
         col.prop(objSettings, "cacheSize")
         col.prop(objSettings, "streamDuringPlayback")
 
+
+class SMO_PT_MeshSequenceExportPanel(bpy.types.Panel):
+    bl_label = 'Export'
+    bl_parent_id = "OBJ_SEQUENCE_PT_properties"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_options = {'DEFAULT_CLOSED'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.object.mesh_sequence_settings.initialized == True
+    
+    def draw(self, context):
+        layout = self.layout
+        objSettings = context.object.mesh_sequence_settings
+        inObjectMode = context.mode == 'OBJECT'
+        inSculptMode = context.mode == 'SCULPT'
+
+        if objSettings.isImported is True:
+            # non-imported sequences won't have a fileName or dirPath and cannot be exported (for now)
+            row = layout.row()
+            row.enabled = inObjectMode or inSculptMode
+            row.prop(objSettings, "autoExportChanges")
+            
+            row = layout.row()
+            row.enabled = inObjectMode or inSculptMode
+            row.prop(objSettings, "overwriteSrcDir")
+
+            row = layout.row()
+            row.enabled = (inObjectMode or inSculptMode) and objSettings.overwriteSrcDir is False
+            row.prop(objSettings, "exportDir")
 
 class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
     bl_label = 'Advanced'
@@ -140,15 +171,7 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
                 row.enabled = inObjectMode
                 row.operator("ms.bake_sequence")
             
-            if objSettings.isImported is True:
-                # non-imported sequences won't have a fileName or dirPath and cannot be exported (for now)
-                row = layout.row()
-                row.enabled = inObjectMode or inSculptMode
-                row.prop(objSettings, "autoExportChanges")
-                
-                row = layout.row()
-                row.enabled = inObjectMode or inSculptMode
-                row.prop(objSettings, "exportDir")
+            
 
             row = layout.row()
             row.enabled = inObjectMode
@@ -465,11 +488,11 @@ class ConvertToMeshSequence(bpy.types.Operator):
         msObj.mesh_sequence_settings.frameMode = '4'
 
         # create a keyframe for this mesh at the current frame
-        msObj.mesh_sequence_settings.curMeshIdx = 1
-        msObj.keyframe_insert(data_path='mesh_sequence_settings.curMeshIdx', frame=context.scene.frame_current)
+        msObj.mesh_sequence_settings.curKeyframeMeshIdx = 1
+        msObj.keyframe_insert(data_path='mesh_sequence_settings.curKeyframeMeshIdx', frame=context.scene.frame_current)
         
         # make the interpolation constant for the first keyframe
-        meshIdxCurve = next((curve for curve in msObj.animation_data.action.fcurves if 'curMeshIdx' in curve.data_path), None)
+        meshIdxCurve = next((curve for curve in msObj.animation_data.action.fcurves if 'curKeyframeMeshIdx' in curve.data_path), None)
         keyAtFrame = next((keyframe for keyframe in meshIdxCurve.keyframe_points if keyframe.co.x == context.scene.frame_current), None)
         keyAtFrame.interpolation = 'CONSTANT'
 
@@ -499,8 +522,8 @@ class DuplicateMeshFrame(bpy.types.Operator):
             self.report({'ERROR'}, "The selected object is not a mesh sequence")
             return {'CANCELLED'}
 
-        # if the object doesn't have a 'curMeshIdx' fcurve, we can't add a mesh to it
-        meshIdxCurve = next((curve for curve in obj.animation_data.action.fcurves if 'curMeshIdx' in curve.data_path), None)
+        # if the object doesn't have a 'curKeyframeMeshIdx' fcurve, we can't add a mesh to it
+        meshIdxCurve = next((curve for curve in obj.animation_data.action.fcurves if 'curKeyframeMeshIdx' in curve.data_path), None)
         if meshIdxCurve is None:
             self.report({'ERROR'}, "The selected mesh sequence has no keyframe curve")
             return {'CANCELLED'}
@@ -520,8 +543,8 @@ class DuplicateMeshFrame(bpy.types.Operator):
         meshIdx = addMeshToSequence(obj, newMesh)
 
         # add a new keyframe at this frame number for the new mesh
-        obj.mesh_sequence_settings.curMeshIdx = meshIdx
-        obj.keyframe_insert(data_path='mesh_sequence_settings.curMeshIdx', frame=context.scene.frame_current)
+        obj.mesh_sequence_settings.curKeyframeMeshIdx = meshIdx
+        obj.keyframe_insert(data_path='mesh_sequence_settings.curKeyframeMeshIdx', frame=context.scene.frame_current)
         
         # make the interpolation constant for this keyframe
         newKeyAtFrame = next((keyframe for keyframe in meshIdxCurve.keyframe_points if keyframe.co.x == context.scene.frame_current), None)

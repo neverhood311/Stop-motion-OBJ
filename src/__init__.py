@@ -25,7 +25,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY or X3D) files and display them each as a single frame of animation. This add-on also supports the .STL, .PLY, and .X3D file formats.",
     "author": "Justin Jensen",
-    "version": (2, 2, 0, "alpha.18"),
+    "version": (2, 2, 0, "alpha.19"),
     "blender": (2, 83, 0),
     "location": "File > Import > Mesh Sequence",
     "warning": "",
@@ -67,8 +67,10 @@ def register():
     bpy.utils.register_class(ConvertToMeshSequence)
     bpy.utils.register_class(DuplicateMeshFrame)
     bpy.utils.register_class(SMO_PT_MeshSequencePanel)
+    # note: the order of the next few panels is the order they appear in the UI
     bpy.utils.register_class(SMO_PT_MeshSequencePlaybackPanel)
     bpy.utils.register_class(SMO_PT_MeshSequenceStreamingPanel)
+    bpy.utils.register_class(SMO_PT_MeshSequenceExportPanel)
     bpy.utils.register_class(SMO_PT_MeshSequenceAdvancedPanel)
     bpy.app.handlers.render_init.append(renderInitHandler)
     bpy.app.handlers.render_complete.append(renderCompleteHandler)
@@ -118,6 +120,7 @@ def unregister():
     bpy.utils.unregister_class(SMO_PT_MeshSequencePanel)
     bpy.utils.unregister_class(SMO_PT_MeshSequencePlaybackPanel)
     bpy.utils.unregister_class(SMO_PT_MeshSequenceStreamingPanel)
+    bpy.utils.unregister_class(SMO_PT_MeshSequenceExportPanel)
     bpy.utils.unregister_class(SMO_PT_MeshSequenceAdvancedPanel)
     bpy.utils.unregister_class(MeshSequenceSettings)
     bpy.utils.unregister_class(MeshNameProp)

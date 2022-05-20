@@ -49,9 +49,7 @@ def deselectAll():
 
 @persistent
 def checkMeshChangesFrameChangePre(scene):
-    # if we're not in Sculpt mode, return
-    if bpy.context.mode != 'SCULPT':
-        return
+    # TODO: if we're in rendering mode, return
 
     # if the selected object is not a loaded and initialized mesh sequence, return
     mss = bpy.context.object.mesh_sequence_settings
@@ -61,18 +59,46 @@ def checkMeshChangesFrameChangePre(scene):
     # if the selected object is not in auto-export mode, return
     if mss.autoExportChanges is False:
         return
-
+    
+    # if we're not in Sculpt or Object mode, return
+    cMode = bpy.context.mode
+    if cMode != 'SCULPT' and cMode != 'OBJECT':
+        return
+    
     # generate the mesh hash for the current mesh (just before the frame switches)
     meshHashStr = getMeshHashStr(bpy.context.object.data)
     print("frame change pre hash: " + meshHashStr)
+    print("frameChangePre object: " + bpy.context.object.data.name)
+
 
     # if the generated mesh hash does not match the mesh's stored hash
-    if meshHashStr != bpy.context.object.data.meshHash:
+    # for some reason we also have to check whether the meshHash has not been calculated yet
+    if bpy.context.object.data.meshHash != '' and meshHashStr != bpy.context.object.data.meshHash:
         # update the mesh hash
         bpy.context.object.data.meshHash = meshHashStr
-        # TODO
-        #   export this updated mesh
         print("TODO: export this mesh")
+
+        #   export this updated mesh
+        absDir = ''
+        if mss.overwriteSrcDir is True:
+            # writing over the original meshes
+            absDir = bpy.path.abspath(mss.dirPath)
+        else:
+            # use the user-provided export directory
+            absDir = bpy.path.abspath(mss.exportDir)
+            if mss.exportDir == '' or os.path.isdir(absDir) is False:
+                # if the dirpath is invalid or empty, alert the user
+                showError("Invalid export directory")
+                return
+
+        filename = os.path.join(absDir, mss.meshNameArray[mss.curVisibleMeshIdx].basename)
+        mss.fileImporter.export(mss.fileFormat, filename)
+
+
+def showError(message=""):
+    def draw(self, context):
+        self.layout.label(text=message)
+    bpy.context.window_manager.popup_menu(draw, title='Stop Motion OBJ Error', icon='ERROR')
 
 @persistent
 def checkMeshChangesFrameChangePost(scene):
@@ -375,8 +401,12 @@ class MeshImporter(bpy.types.PropertyGroup):
         # get the context mode and store it
         contextMode = bpy.context.mode
 
+        # TODO: remove
+        print("exporting: " + filePath)
+
         # export the object
-        # TODO
+        # TODO: other file types
+        self.exportOBJ(filePath)
 
         # set the context mode back to the one it was in before
         bpy.ops.object.mode_set(mode=contextMode)
@@ -436,7 +466,12 @@ class MeshImporter(bpy.types.PropertyGroup):
         bpy.ops.export_scene.obj(
             filepath=filePath,
             check_existing=False,
-            use_edges=self.obj_use_edges
+            use_selection=True,
+            use_animation=False,
+            use_edges=self.obj_use_edges,
+            use_smooth_groups=self.obj_use_smooth_groups,
+            axis_forward=self.axis_forward,
+            axis_up=self.axis_up
         )
 
 
@@ -501,14 +536,26 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         update=handlePlaybackChange,
         default=1)
     
-    curMeshIdx: bpy.props.IntProperty(
+    # this is the property that is keyframed by the artist when the sequence is in Keyframe playback mode
+    curKeyframeMeshIdx: bpy.props.IntProperty(
         name='Active mesh',
         default=1)
+    
+    # this is the index of the currently-visible mesh
+    curVisibleMeshIdx: bpy.props.IntProperty(
+        name='Visible mesh',
+        default=1
+    )
     
     autoExportChanges: bpy.props.BoolProperty(
         name='Auto-export changes',
         description='Automatically export meshes that have been modified while in Sculpt Mode',
         update=handleAutoExportChange,
+        default=False)
+    
+    overwriteSrcDir: bpy.props.BoolProperty(
+        name='Overwrite Source',
+        description='Save updated meshes over the original mesh files',
         default=False)
     
     exportDir: bpy.props.StringProperty(
@@ -877,9 +924,9 @@ def getMeshIdxFromFrameNumber(_obj, frameNum):
     elif frameMode == '4':
         finalIdx = 0
         if _obj.animation_data != None:
-            # we can't just look at mss.curMeshIdx since it hasn't yet been updated
+            # we can't just look at mss.curKeyframeMeshIdx since it hasn't yet been updated
             # instead we have to evaluate the actual keyframe curve at this new frame number
-            meshIdxCurve = next(curve for curve in _obj.animation_data.action.fcurves if 'curMeshIdx' in curve.data_path)
+            meshIdxCurve = next(curve for curve in _obj.animation_data.action.fcurves if 'curKeyframeMeshIdx' in curve.data_path)
             
             # make sure the 1-based index is in-bounds
             curveValue = clamp(meshIdxCurve.evaluate(frameNum), 1, numRealMeshes)
@@ -906,6 +953,7 @@ def setFrameObj(_obj, frameNum, updateSingleMesh):
         mss = _obj.mesh_sequence_settings
         idx = getMeshIdxFromFrameNumber(_obj, frameNum)
         next_mesh = getMeshFromIndex(_obj, idx)
+        mss.curVisibleMeshIdx = idx
 
         swapMeshAndMaterials(_obj, next_mesh, prev_mesh_materials, mss.showAsSingleMesh)
 
@@ -917,6 +965,7 @@ def setFrameObjStreamed(obj, frameNum, updateSingleMesh, forceLoad=False, delete
     if not (updateSingleMesh is False and mss.showAsSingleMesh is True):        
         idx = getMeshIdxFromFrameNumber(obj, frameNum)
         nextMeshProp = getMeshPropFromIndex(obj, idx)
+        mss.curVisibleMeshIdx = idx
 
         # if we want to load new meshes as needed and it's not already loaded
         if nextMeshProp.inMemory is False and (mss.streamDuringPlayback is True or forceLoad is True):
