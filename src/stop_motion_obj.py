@@ -25,12 +25,14 @@ import re
 import glob
 import bmesh
 from bpy.app.handlers import persistent
+import time
 from .version import *
 
 # global variables
 storedUseLockInterface = False
 forceMeshLoad = False
 loadingSequenceLock = False
+inRenderMode = False
 
 def alphanumKey(string):
     """ Turn a string into a list of string and number chunks.
@@ -45,6 +47,133 @@ def clamp(value, minVal, maxVal):
 def deselectAll():
     for ob in bpy.context.scene.objects:
         ob.select_set(state=False)
+
+@persistent
+def checkMeshChangesFrameChangePre(scene):
+    global inRenderMode
+    if inRenderMode == True:
+        return
+
+    # if the selected object is not a loaded and initialized mesh sequence, return
+    mss = bpy.context.object.mesh_sequence_settings
+    if mss.initialized is False or mss.loaded is False:
+        return
+
+    # if the selected object is not in auto-export mode, return
+    if mss.autoExportChanges is False:
+        return
+    
+    # if we're not in Sculpt or Object mode, return
+    cMode = bpy.context.mode
+    if cMode != 'SCULPT' and cMode != 'OBJECT':
+        return
+    
+    # generate the mesh hash for the current mesh (just before the frame switches)
+    meshHashStr = getMeshHashStr(bpy.context.object.data)
+
+    # if the generated mesh hash does not match the mesh's stored hash
+    # for some reason we also have to check whether the meshHash has not been calculated yet
+    if bpy.context.object.data.meshHash != '' and meshHashStr != bpy.context.object.data.meshHash:
+        # update the mesh hash
+        bpy.context.object.data.meshHash = meshHashStr
+
+        #   export this updated mesh
+        absDir = ''
+        if mss.overwriteSrcDir is True:
+            # writing over the original meshes
+            absDir = bpy.path.abspath(mss.dirPath)
+        else:
+            # use the user-provided export directory
+            absDir = bpy.path.abspath(mss.exportDir)
+            if mss.exportDir == '' or os.path.isdir(absDir) is False:
+                # if the dirpath is invalid or empty, alert the user
+                showError("Invalid export directory")
+                return
+
+        filename = os.path.join(absDir, mss.meshNameArray[mss.curVisibleMeshIdx].basename)
+        mss.fileImporter.export(mss.fileFormat, filename)
+
+        # show an unobtrusive message that the mesh has been exported
+        msg = "Mesh exported: " + filename
+        bpy.context.workspace.status_text_set(text=msg)
+
+
+def showError(message=""):
+    def draw(self, context):
+        self.layout.label(text=message)
+    bpy.context.window_manager.popup_menu(draw, title='Stop Motion OBJ Error', icon='ERROR')
+
+@persistent
+def checkMeshChangesFrameChangePost(scene):
+    # if we're not in Sculpt mode, return
+    if bpy.context.mode != 'SCULPT':
+        return
+
+    # if the selected object is not a loaded and initialized mesh sequence, return
+    mss = bpy.context.object.mesh_sequence_settings
+    if mss.initialized is False or mss.loaded is False:
+        return
+
+    # if the selected object is not in auto-export mode, return
+    if mss.autoExportChanges is False:
+        return
+
+    # generate the mesh hash for the current mesh and store that value on the mesh
+    meshHashStr = getMeshHashStr(bpy.context.object.data)
+    bpy.context.object.data.meshHash = meshHashStr
+
+def getMeshSignature(mesh):
+    # Build a string composed of the following elements:
+    # the number of vertices
+    # the number of faces
+    nVerts = len(mesh.vertices)
+    nFaces = len(mesh.polygons)
+
+    groupCount = 16
+    vtxLoc = []
+    polyLoc = []
+    polyVtxs = []
+    for idx in range(groupCount):
+        vtxLoc.append([0.0, 0.0, 0.0])
+        polyLoc.append([0.0, 0.0, 0.0])
+        polyVtxs.append([0.0, 0.0, 0.0])
+
+    # the average vertex location for 16 equally-sized groups of vertices (interlaced)
+    for idx, vtx in enumerate(mesh.vertices):
+        groupIdx = idx % groupCount
+        vtxLoc[groupIdx][0] += vtx.co.x
+        vtxLoc[groupIdx][1] += vtx.co.y
+        vtxLoc[groupIdx][2] += vtx.co.z
+
+    # convert the 16 vtxLoc groups into strings
+    vtxLocList = list(map(lambda x: f'{x[0]:.5f},{x[1]:.5f},{x[2]:.5f}', vtxLoc))
+    vtxLocStr = " ".join(vtxLocList)
+
+    # the average center location for 16 equally-sized groups of polygons (interlaced)
+    # the 3 average vertex indices for 16 equally-sized groups of polygons (interlaced)
+    for pIdx, poly in enumerate(mesh.polygons):
+        groupIdx = pIdx % groupCount
+        polyLoc[groupIdx][0] += poly.center.x
+        polyLoc[groupIdx][1] += poly.center.y
+        polyLoc[groupIdx][2] += poly.center.z
+
+        for ptIdx, vIdx in enumerate(poly.vertices):
+            polyVtxs[groupIdx][ptIdx % 3] += vIdx
+    
+    # convert the 16 polyLoc groups into strings
+    polyLocList = list(map(lambda x: f'{x[0]:.5f},{x[1]:.5f},{x[2]:.5f}', polyLoc))
+    polyLocStr = " ".join(polyLocList)
+
+    # convert the 16 polyVtx groups into strings
+    polyVtxList = list(map(lambda x: f'{x[0]:.0f},{x[1]:.0f},{x[2]:.0f}', polyVtxs))
+    polyVtxStr = " ".join(polyVtxList)
+
+    return f'{nVerts} {nFaces} {vtxLocStr} {polyLocStr} {polyVtxStr}'
+
+
+def getMeshHashStr(mesh):
+    # get the mesh signature and hash it
+    return str(hash(getMeshSignature(mesh)))
 
 
 # We have to use this function instead of bpy.context.selected_objects because there's no "selected_objects" within the render context
@@ -98,6 +227,8 @@ def renderInitHandler(scene):
     bpy.data.scenes["Scene"].render.use_lock_interface = True
     global forceMeshLoad
     forceMeshLoad = True
+    global inRenderMode
+    inRenderMode = True
 
 
 @persistent
@@ -115,6 +246,8 @@ def renderStopped():
     bpy.data.scenes["Scene"].render.use_lock_interface = storedUseLockInterface
     global forceMeshLoad
     forceMeshLoad = False
+    global inRenderMode
+    inRenderMode = False
 
 
 @persistent
@@ -137,6 +270,18 @@ def makeDirPathsRelative(scene):
 def handlePlaybackChange(self, context):
     updateFrame(0)
     return None
+
+
+# runs every time the "Auto-export Changes" checkbox is changed
+def handleAutoExportChange(self, context):
+    obj = context.object
+    # if the selected object's mesh is part of a mesh sequence
+    if obj.data.inMeshSequence is True:
+        # if the user just set it to True
+        if obj.mesh_sequence_settings.autoExportChanges is True:
+            # calculate the mesh hash for the current mesh and store it on the mesh
+            meshHashStr = getMeshHashStr(obj.data)
+            obj.data.meshHash = meshHashStr
 
 
 # runs every time the cache size changes
@@ -257,6 +402,24 @@ class MeshImporter(bpy.types.PropertyGroup):
             self.loadPLY(filePath)
         elif fileType == 'x3d':
             self.loadX3D(filePath)
+    
+    def export(self, fileType, filePath):
+        # get the context mode and store it
+        contextMode = bpy.context.mode
+
+        # export the object
+        if fileType == 'obj':
+            self.exportOBJ(filePath)
+        elif fileType == 'stl':
+            self.exportSTL(filePath)
+        elif fileType == 'ply':
+            self.exportPLY(filePath)
+        elif fileType == 'x3d':
+            self.exportX3D(filePath)
+
+        # set the context mode back to the one it was in before
+        #   (the OBJ exporter likes to switch to Object mode during the export)
+        bpy.ops.object.mode_set(mode=contextMode)
 
     def loadOBJ(self, filePath):
         # call the obj load function with all the correct parameters
@@ -306,6 +469,43 @@ class MeshImporter(bpy.types.PropertyGroup):
     def loadX3D(self, filePath):
         bpy.ops.import_scene.x3d(
             filepath=filePath,
+            axis_forward=self.axis_forward,
+            axis_up=self.axis_up)
+    
+    def exportOBJ(self, filePath):
+        bpy.ops.export_scene.obj(
+            filepath=filePath,
+            check_existing=False,
+            use_selection=True,
+            use_animation=False,
+            use_edges=self.obj_use_edges,
+            use_smooth_groups=self.obj_use_smooth_groups,
+            use_materials=False,
+            keep_vertex_order=True,
+            axis_forward=self.axis_forward,
+            axis_up=self.axis_up)
+    
+    def exportSTL(self, filePath):
+        bpy.ops.export_mesh.stl(
+            filepath=filePath,
+            check_existing=False,
+            use_selection=True,
+            axis_forward=self.axis_forward,
+            axis_up=self.axis_up)
+    
+    def exportPLY(self, filePath):
+        bpy.ops.export_mesh.ply(
+            filepath=filePath,
+            check_existing=False,
+            use_selection=True,
+            axis_forward=self.axis_forward,
+            axis_up=self.axis_up)
+    
+    def exportX3D(self, filePath):
+        bpy.ops.export_scene.x3d(
+            filepath=filePath,
+            check_existing=False,
+            use_selection=True,
             axis_forward=self.axis_forward,
             axis_up=self.axis_up)
 
@@ -371,9 +571,32 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         update=handlePlaybackChange,
         default=1)
     
-    curMeshIdx: bpy.props.IntProperty(
+    # this is the property that is keyframed by the artist when the sequence is in Keyframe playback mode
+    curKeyframeMeshIdx: bpy.props.IntProperty(
         name='Active mesh',
         default=1)
+    
+    # this is the index of the currently-visible mesh
+    curVisibleMeshIdx: bpy.props.IntProperty(
+        name='Visible mesh',
+        default=1
+    )
+    
+    autoExportChanges: bpy.props.BoolProperty(
+        name='Auto-export changes',
+        description='Automatically export meshes that have been modified while in Sculpt Mode',
+        update=handleAutoExportChange,
+        default=False)
+    
+    overwriteSrcDir: bpy.props.BoolProperty(
+        name='Overwrite Source',
+        description='Save updated meshes over the original mesh files',
+        default=False)
+    
+    exportDir: bpy.props.StringProperty(
+        name='Export Folder',
+        description='The path to the folder where exported files will be stored. If none is specified, a temp folder will be created',
+        subtype='DIR_PATH')
 
     # TODO: deprecate meshNames in version 3.0.0. This will break backwards compatibility with version 2.0.2 and earlier
     meshNames: bpy.props.StringProperty()
@@ -422,6 +645,12 @@ def initializeSequences(scene):
     for obj in bpy.data.objects:
         if obj.mesh_sequence_settings.initialized is True:
             loadSequenceFromBlendFile(obj)
+
+            # If auto-export is enabled, we'll need to recalculate the mesh hash for the current mesh.
+            # This is because Python's hash function produces different values for each run of Python
+            #   (i.e. every time you start Blender)
+            if obj.mesh_sequence_settings.autoExportChanges is True:
+                obj.data.meshHash = getMeshHashStr(obj.data)
     freeUnusedMeshes()
 
 
@@ -730,9 +959,9 @@ def getMeshIdxFromFrameNumber(_obj, frameNum):
     elif frameMode == '4':
         finalIdx = 0
         if _obj.animation_data != None:
-            # we can't just look at mss.curMeshIdx since it hasn't yet been updated
+            # we can't just look at mss.curKeyframeMeshIdx since it hasn't yet been updated
             # instead we have to evaluate the actual keyframe curve at this new frame number
-            meshIdxCurve = next(curve for curve in _obj.animation_data.action.fcurves if 'curMeshIdx' in curve.data_path)
+            meshIdxCurve = next(curve for curve in _obj.animation_data.action.fcurves if 'curKeyframeMeshIdx' in curve.data_path)
             
             # make sure the 1-based index is in-bounds
             curveValue = clamp(meshIdxCurve.evaluate(frameNum), 1, numRealMeshes)
@@ -759,6 +988,7 @@ def setFrameObj(_obj, frameNum, updateSingleMesh):
         mss = _obj.mesh_sequence_settings
         idx = getMeshIdxFromFrameNumber(_obj, frameNum)
         next_mesh = getMeshFromIndex(_obj, idx)
+        mss.curVisibleMeshIdx = idx
 
         swapMeshAndMaterials(_obj, next_mesh, prev_mesh_materials, mss.showAsSingleMesh)
 
@@ -770,6 +1000,7 @@ def setFrameObjStreamed(obj, frameNum, updateSingleMesh, forceLoad=False, delete
     if not (updateSingleMesh is False and mss.showAsSingleMesh is True):        
         idx = getMeshIdxFromFrameNumber(obj, frameNum)
         nextMeshProp = getMeshPropFromIndex(obj, idx)
+        mss.curVisibleMeshIdx = idx
 
         # if we want to load new meshes as needed and it's not already loaded
         if nextMeshProp.inMemory is False and (mss.streamDuringPlayback is True or forceLoad is True):

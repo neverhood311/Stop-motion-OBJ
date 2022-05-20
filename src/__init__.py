@@ -25,7 +25,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY or X3D) files and display them each as a single frame of animation. This add-on also supports the .STL, .PLY, and .X3D file formats.",
     "author": "Justin Jensen",
-    "version": (2, 2, 0, "alpha.18"),
+    "version": (2, 2, 0, "alpha.19"),
     "blender": (2, 83, 0),
     "location": "File > Import > Mesh Sequence",
     "warning": "",
@@ -37,7 +37,11 @@ bl_info = {
 SMOKeymaps = []
 
 def register():
+    bpy.app.handlers.frame_change_pre.append(checkMeshChangesFrameChangePre)
+    bpy.app.handlers.frame_change_post.append(checkMeshChangesFrameChangePost)
+
     bpy.types.Mesh.inMeshSequence = bpy.props.BoolProperty()
+    bpy.types.Mesh.meshHash = bpy.props.StringProperty()
     bpy.utils.register_class(SequenceVersion)
     bpy.utils.register_class(MeshImporter)
     bpy.utils.register_class(MeshNameProp)
@@ -63,8 +67,10 @@ def register():
     bpy.utils.register_class(ConvertToMeshSequence)
     bpy.utils.register_class(DuplicateMeshFrame)
     bpy.utils.register_class(SMO_PT_MeshSequencePanel)
+    # note: the order of the next few panels is the order they appear in the UI
     bpy.utils.register_class(SMO_PT_MeshSequencePlaybackPanel)
     bpy.utils.register_class(SMO_PT_MeshSequenceStreamingPanel)
+    bpy.utils.register_class(SMO_PT_MeshSequenceExportPanel)
     bpy.utils.register_class(SMO_PT_MeshSequenceAdvancedPanel)
     bpy.app.handlers.render_init.append(renderInitHandler)
     bpy.app.handlers.render_complete.append(renderCompleteHandler)
@@ -92,6 +98,9 @@ def register():
             SMOKeymaps.append((keyMap, keyMapItem))
 
 def unregister():
+    bpy.app.handlers.frame_change_pre.remove(checkMeshChangesFrameChangePre)
+    bpy.app.handlers.frame_change_post.remove(checkMeshChangesFrameChangePost)
+
     bpy.app.handlers.load_post.remove(initializeSequences)
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
     bpy.app.handlers.frame_change_pre.remove(updateFrameSingleMesh)
@@ -111,6 +120,7 @@ def unregister():
     bpy.utils.unregister_class(SMO_PT_MeshSequencePanel)
     bpy.utils.unregister_class(SMO_PT_MeshSequencePlaybackPanel)
     bpy.utils.unregister_class(SMO_PT_MeshSequenceStreamingPanel)
+    bpy.utils.unregister_class(SMO_PT_MeshSequenceExportPanel)
     bpy.utils.unregister_class(SMO_PT_MeshSequenceAdvancedPanel)
     bpy.utils.unregister_class(MeshSequenceSettings)
     bpy.utils.unregister_class(MeshNameProp)
