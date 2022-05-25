@@ -218,10 +218,6 @@ class SequenceImportSettings(bpy.types.PropertyGroup):
         name="Relative Paths",
         description="Store relative paths for Streaming sequences and for reloading Cached sequences",
         default=True)
-    showAsSingleMesh: bpy.props.BoolProperty(
-        name='Show as Single Mesh',
-        description='All frames will be shown in the same mesh. Useful when exporting the frames as alembic.',
-        default=False)
 
 
 @orientation_helper(axis_forward='-Z', axis_up='Y')
@@ -272,11 +268,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
             if countMatchingFiles(dirPath, basenamePrefix, fileExtensionFromType(self.sequenceSettings.fileFormat)) > 0:
                 # the input parameters should be stored on 'self'
                 # create a new mesh sequence
-                if self.sequenceSettings.showAsSingleMesh:
-                    seqObj = newMeshSequence('SingleMesh')
-                else:
-                    seqObj = newMeshSequence('emptyMesh')
-
+                seqObj = newMeshSequence()
                 global_matrix = axis_conversion(from_forward=b_axis_forward,from_up=b_axis_up).to_4x4()
                 seqObj.matrix_world = global_matrix
 
@@ -289,8 +281,6 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
                 mss.cacheMode = self.sequenceSettings.cacheMode
                 mss.fileFormat = self.sequenceSettings.fileFormat
                 mss.dirPathIsRelative = self.sequenceSettings.dirPathIsRelative
-                mss.showAsSingleMesh = self.sequenceSettings.showAsSingleMesh
-
 
                 # this needs to be set to True if dirPath is supposed to be relative
                 # once the path is made relative, it will be set to False
@@ -320,14 +310,6 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
                 firstMeshName = os.path.splitext(mss.meshNameArray[1].basename)[0].rstrip('._0123456789')
                 seqObj.name = createUniqueName(firstMeshName + '_sequence', bpy.data.objects)
                 seqObj.mesh_sequence_settings.isImported = True
-
-                # If we import the sequence as a single mesh, the user most likey
-                # wants to export it as an alembic. Without a modifier attached,
-                # blender won't export the alembic correctly, so we add a harmless one
-                if mss.showAsSingleMesh:
-                    arrayModifier = seqObj.modifiers.new(name='Array', type='ARRAY')
-                    arrayModifier.count = 1
-
             else:
                 # this filename prefix had no matching files
                 noMatchFileNames.append(fileName)
@@ -447,8 +429,6 @@ class SMO_PT_SequenceImportSettingsPanel(bpy.types.Panel):
         col.prop(op.sequenceSettings, "cacheMode")
         col.prop(op.sequenceSettings, "perFrameMaterial")
         col.prop(op.sequenceSettings, "dirPathIsRelative")
-        col.prop(op.sequenceSettings, "showAsSingleMesh")
-
 
 
 def menu_func_import_sequence(self, context):
