@@ -32,6 +32,7 @@ storedUseLockInterface = False
 forceMeshLoad = False
 loadingSequenceLock = False
 inRenderMode = False
+lockFrameSwitch = False
 
 def alphanumKey(string):
     """ Turn a string into a list of string and number chunks.
@@ -42,6 +43,9 @@ def alphanumKey(string):
 def clamp(value, minVal, maxVal):
     return max(minVal, min(value, maxVal))
 
+def selectOnly(obj):
+    deselectAll()
+    obj.select_set(state=True)
 
 def deselectAll():
     for ob in bpy.context.scene.objects:
@@ -53,8 +57,10 @@ def checkMeshChangesFrameChangePre(scene):
     if inRenderMode == True:
         return
 
+    obj = bpy.context.object
+
     # if the selected object is not a loaded and initialized mesh sequence, return
-    mss = bpy.context.object.mesh_sequence_settings
+    mss = obj.mesh_sequence_settings
     if mss.initialized is False or mss.loaded is False:
         return
 
@@ -68,15 +74,19 @@ def checkMeshChangesFrameChangePre(scene):
         return
     
     # generate the mesh hash for the current mesh (just before the frame switches)
-    meshHashStr = getMeshHashStr(bpy.context.object.data)
+    meshHashStr = getMeshHashStr(obj.data)
 
     # if the generated mesh hash does not match the mesh's stored hash
     # for some reason we also have to check whether the meshHash has not been calculated yet
-    if bpy.context.object.data.meshHash != '' and meshHashStr != bpy.context.object.data.meshHash:
-        # update the mesh hash
-        bpy.context.object.data.meshHash = meshHashStr
+    if obj.data.meshHash != '' and meshHashStr != obj.data.meshHash:
+        # lock frame switching until we're done exporting (so that we export the correct frame beofre the next one is loaded)
+        global lockFrameSwitch
+        lockFrameSwitch = True
 
-        #   export this updated mesh
+        # update the mesh hash
+        obj.data.meshHash = meshHashStr
+
+        # export this updated mesh
         absDir = ''
         if mss.overwriteSrcDir is True:
             # writing over the original meshes
@@ -90,11 +100,20 @@ def checkMeshChangesFrameChangePre(scene):
                 return
 
         filename = os.path.join(absDir, mss.meshNameArray[mss.curVisibleMeshIdx].basename)
+
+        # select only this object so that this object is the only one that will be exported
+        selectOnly(obj)
+
+        # actually export the file
         mss.fileImporter.export(mss.fileFormat, filename)
 
         # show an unobtrusive message that the mesh has been exported
         msg = "Mesh exported: " + filename
         bpy.context.workspace.status_text_set(text=msg)
+
+        # once the export operation has fully finished, unlock importing/changing meshes, then trigger an updateFrame call
+        lockFrameSwitch = False
+        updateFrame(0)
 
 
 def showError(message=""):
@@ -204,6 +223,10 @@ def lockLoadingSequence(lock):
 # set the frame number for all mesh sequence objects
 @persistent
 def updateFrame(scene):
+    global lockFrameSwitch
+    if lockFrameSwitch is True:
+        # we're not ready to switch frames yet
+        return
     global loadingSequenceLock
     if loadingSequenceLock is False:
         scn = bpy.context.scene
@@ -985,6 +1008,7 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
     # if we want to load new meshes as needed and it's not already loaded
     if nextMeshProp.inMemory is False and (mss.streamDuringPlayback is True or forceLoad is True):
         importStreamedFile(obj, idx)
+        obj.select_set(state=True)
         if deleteMaterials is True:
             nextMesh = getMeshFromIndex(obj, idx)
             deleteLinkedMeshMaterials(nextMesh)
