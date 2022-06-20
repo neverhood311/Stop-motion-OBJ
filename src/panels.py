@@ -450,7 +450,7 @@ class ConvertToMeshSequence(bpy.types.Operator):
             return {'CANCELLED'}
 
         # hijack the mesh from the selected object and add it to a new mesh sequence
-        msObj = newMeshSequence('emptyMesh')
+        msObj = newMeshSequence()
         msObj.mesh_sequence_settings.isImported = False
         addMeshToSequence(msObj, obj.data)
 
