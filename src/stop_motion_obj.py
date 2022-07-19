@@ -58,6 +58,7 @@ def checkMeshChangesFrameChangePre(scene):
         return
     
     obj = bpy.context.object
+    
     # make sure an object is selected
     if obj is None:
         return
@@ -647,6 +648,14 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         precision=2,
         default=1,
         update=handlePlaybackChange)
+    
+    # note: this is really only used for streaming sequences
+    shadingMode: bpy.props.EnumProperty(
+        name='Shading Mode',
+        items=[('flat', 'Flat', 'Flat shading'),
+                ('smooth', 'Smooth', 'Smooth shading'),
+                ('imported', 'As Imported', 'Allow the importer to read the shading mode from the file')],
+        default='imported')
 
 
 @persistent
@@ -1019,6 +1028,12 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
     # if the mesh is in memory, show it
     if nextMeshProp.inMemory is True:
         nextMesh = getMeshFromIndex(obj, idx)
+        
+        # if the user has enabled auto-shading
+        if (mss.shadingMode != 'imported'):
+            # shade smooth/flat the mesh based on the sequence settings
+            useSmooth = True if mss.shadingMode == 'smooth' else False
+            shadeMesh(nextMesh, useSmooth)
 
         # store the current mesh for grabbing the material later
         prevMesh = obj.data
@@ -1032,6 +1047,7 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
                     obj.data.materials.clear()
                     for material in prevMesh.materials:
                         obj.data.materials.append(material)
+
 
     if mss.cacheSize > 0 and mss.numMeshesInMemory > mss.cacheSize:
         idxToDelete = nextCachedMeshToDelete(obj, idx)
@@ -1101,15 +1117,36 @@ def removeMeshFromScene(meshKey, removeOwnedMaterials):
         meshToRemove.use_fake_user = False
         bpy.data.meshes.remove(meshToRemove)
 
+# shadeMesh function
+def shadeMesh(mesh, smooth):
+    mesh.polygons.foreach_set('use_smooth', [smooth] * len(mesh.polygons))
+    
+    # update the mesh to force a UI update
+    mesh.update()
 
-def shadeSequence(_obj, smooth):
-    for idx in range(1, _obj.mesh_sequence_settings.numMeshes):
-        mesh = getMeshFromIndex(_obj, idx)
-        mesh.polygons.foreach_set('use_smooth', [smooth] * len(mesh.polygons))
+
+def shadeSequence(obj, smooth):
+    mss = obj.mesh_sequence_settings
+    mss.shadingMode = 'smooth' if smooth else 'flat'
+    
+    # if this is a cached sequence, simply smooth/flatten all the faces in every mesh
+    if (mss.cacheMode == 'cached'):
+        for idx in range(1, mss.numMeshes):
+            mesh = getMeshFromIndex(obj, idx)
+            shadeMesh(mesh, smooth)
+            
+    elif (mss.cacheMode == 'streaming'):
+        useSmooth = True if mss.shadingMode == 'smooth' else False
         
-        # update the mesh to force a UI update
-        mesh.update()
-
+        # iterate over the cached meshes, smoothing/flattening each mesh
+        for idx in range(1, len(mss.meshNameArray)):
+            meshNameObj = mss.meshNameArray[idx]
+            
+            # if the mesh is in memory, shade it smooth/flat
+            if (meshNameObj.inMemory is True):
+                mesh = bpy.data.meshes[meshNameObj.key]
+                shadeMesh(mesh, useSmooth)
+    
 
 def bakeSequence(_obj):
     scn = bpy.context.scene

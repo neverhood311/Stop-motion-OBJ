@@ -152,13 +152,15 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
                 row = layout.row(align=True)
                 row.enabled = inObjectMode or inSculptMode
                 row.operator("ms.duplicate_mesh_frame")
-            if objSettings.cacheMode == 'cached':
+                
+            if objSettings.cacheMode == 'cached' or objSettings.cacheMode == 'streaming':
                 row = layout.row(align=True)
                 row.enabled = inObjectMode
                 row.label(text="Shading:")
                 row.operator("ms.batch_shade_smooth")
                 row.operator("ms.batch_shade_flat")
-
+                
+            if objSettings.cacheMode == 'cached':
                 row = layout.row(align=True)
                 row.enabled = inObjectMode
                 row.operator("ms.merge_duplicate_materials")
