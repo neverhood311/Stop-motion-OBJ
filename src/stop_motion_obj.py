@@ -56,8 +56,11 @@ def checkMeshChangesFrameChangePre(scene):
     global inRenderMode
     if inRenderMode == True:
         return
-
+    
     obj = bpy.context.object
+    # make sure an object is selected
+    if obj is None:
+        return
 
     # if the selected object is not a loaded and initialized mesh sequence, return
     mss = obj.mesh_sequence_settings
