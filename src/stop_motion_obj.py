@@ -58,6 +58,7 @@ def checkMeshChangesFrameChangePre(scene):
         return
     
     obj = bpy.context.object
+    
     # make sure an object is selected
     if obj is None:
         return
