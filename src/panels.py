@@ -106,7 +106,8 @@ class SMO_PT_MeshSequenceExportPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.object.mesh_sequence_settings.initialized == True
+        mss = context.object.mesh_sequence_settings
+        return mss.initialized == True and mss.isImported == True
     
     def draw(self, context):
         layout = self.layout
@@ -120,12 +121,14 @@ class SMO_PT_MeshSequenceExportPanel(bpy.types.Panel):
             row.enabled = inObjectMode or inSculptMode
             row.prop(objSettings, "autoExportChanges")
             
+            exportEnabled = objSettings.autoExportChanges
+            
             row = layout.row()
-            row.enabled = inObjectMode or inSculptMode
+            row.enabled = (inObjectMode or inSculptMode) and exportEnabled
             row.prop(objSettings, "overwriteSrcDir")
 
             row = layout.row()
-            row.enabled = (inObjectMode or inSculptMode) and objSettings.overwriteSrcDir is False
+            row.enabled = (inObjectMode or inSculptMode) and objSettings.overwriteSrcDir is False and exportEnabled
             row.alert = objSettings.exportDir == '' and objSettings.overwriteSrcDir is False
 
             row.prop(objSettings, "exportDir")
