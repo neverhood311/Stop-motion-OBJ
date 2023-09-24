@@ -404,7 +404,7 @@ class MeshImporter(bpy.types.PropertyGroup):
     # (PLY has no import parameters)
     # (X3D has no import parameters)
     # Shared import parameters
-    axis_forward: bpy.props.StringProperty(name="Axis Forward",default="-Z")
+    axis_forward: bpy.props.StringProperty(name="Axis Forward",default="NEGATIVE_Z")
     axis_up: bpy.props.StringProperty(name="Axis Up",default="Y")
 
     def draw(self):
@@ -440,6 +440,26 @@ class MeshImporter(bpy.types.PropertyGroup):
 
     def loadOBJ(self, filePath):
         # call the obj load function with all the correct parameters
+        if bpy.app.version >= (3, 6, 0):
+            bpy.ops.wm.obj_import(
+                filepath=filePath,
+                use_split_objects=False,
+                use_split_groups=False,
+                forward_axis=self.axis_forward,
+                up_axis=self.axis_up,
+                validate_meshes=False)
+            """bpy.ops.wm.obj_import(
+                filepath=IMPORT, up_axis='Z', forward_axis='Y', import_vertex_groups=True, validate_meshes=False)
+                
+                (filepath="", directory="", files=[], check_existing=False, filter_blender=False, 
+                filter_backup=False, filter_image=False, filter_movie=False, filter_python=False, 
+                filter_font=False, filter_sound=False, filter_text=False, filter_archive=False, 
+                filter_btx=False, filter_collada=False, filter_alembic=False, filter_usd=False, 
+                filter_obj=False, filter_volume=False, filter_folder=True, filter_blenlib=False,
+                filemode=8, display_type='DEFAULT', sort_method='DEFAULT', global_scale=1, clamp_size=0,
+                forward_axis='NEGATIVE_Z', up_axis='Y', use_split_objects=True, use_split_groups=False,
+                import_vertex_groups=False, validate_meshes=False, filter_glob="*.obj;*.mtl")
+            """
         if bpy.app.version >= (2, 92, 0):
             bpy.ops.import_scene.obj(
                 filepath=filePath,
