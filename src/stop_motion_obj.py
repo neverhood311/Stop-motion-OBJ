@@ -404,9 +404,8 @@ class MeshImporter(bpy.types.PropertyGroup):
     # (PLY has no import parameters)
     # (X3D has no import parameters)
     # Shared import parameters
-    # TODO (ivpe): Current implementation ruins other than OBJ file imports. This should be fixed.
-    axis_forward: bpy.props.StringProperty(name="Axis Forward",default="NEGATIVE_Z")
-    axis_up: bpy.props.StringProperty(name="Axis Up",default="Y")
+    axis_forward: bpy.props.StringProperty(name="Axis Forward", default="-Z")
+    axis_up: bpy.props.StringProperty(name="Axis Up", default="Y")
 
     def draw(self):
         pass
@@ -442,12 +441,25 @@ class MeshImporter(bpy.types.PropertyGroup):
     def loadOBJ(self, filePath):
         # call the obj load function with all the correct parameters
         if bpy.app.version >= (3, 6, 0):
+            # NOTE: Current implementation should be tweaked in a future. For now, this is the only place where
+            # different enumerators are used.
+            arg_axis_mapping = {
+                'X': 'X',
+                'Y': 'Y',
+                'Z': 'Z',
+                '-X': 'NEGATIVE_X',
+                '-Y': 'NEGATIVE_Y',
+                '-Z': 'NEGATIVE_Z',
+            }
+            arg_forward_axis = arg_axis_mapping[self.axis_forward]
+            arg_up_axis = arg_axis_mapping[self.axis_up]
+
             bpy.ops.wm.obj_import(
                 filepath=filePath,
                 use_split_objects=False,
                 use_split_groups=False,
-                forward_axis=self.axis_forward,
-                up_axis=self.axis_up,
+                forward_axis=arg_forward_axis,
+                up_axis=arg_up_axis,
                 validate_meshes=False)
         if bpy.app.version >= (2, 92, 0):
             bpy.ops.import_scene.obj(
@@ -1476,4 +1488,3 @@ def addMeshToSequence(seqObj, mesh):
     mss.loaded = True
 
     return mss.numMeshes - 1
-
