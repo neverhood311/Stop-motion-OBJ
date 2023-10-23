@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2022  Justin Jensen
+#   Copyright (C) 2016-2023  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY or X3D) files and display them each as a single frame of animation. This add-on also supports the .STL, .PLY, and .X3D file formats.",
     "author": "Justin Jensen",
-    "version": (2, 2, 0, "beta.0"),
+    "version": (2, 2, 0, "3.6_beta.0"),
     "blender": (2, 83, 0),
     "location": "File > Import > Mesh Sequence",
     "warning": "",
