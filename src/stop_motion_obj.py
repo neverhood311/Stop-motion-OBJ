@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2022  Justin Jensen
+#   Copyright (C) 2016-2023  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -440,7 +440,17 @@ class MeshImporter(bpy.types.PropertyGroup):
 
     def loadOBJ(self, filePath):
         # call the obj load function with all the correct parameters
-        if bpy.app.version >= (2, 92, 0):
+        # use the C++ OBJ importer if available
+        if bpy.app.version >= (3, 2, 0):
+            bpy.ops.wm.obj_import(
+                filepath=filePath,
+                global_scale=1, # TODO
+                clamp_size=self.obj_global_clamp_size,
+                forward_axis="NEGATIVE_Z",  # TODO: don't hard-code
+                up_axis="Y",    # TODO: don't hard-code
+                use_split_objects=False,
+                use_split_groups=False)
+        elif bpy.app.version >= (2, 92, 0):
             bpy.ops.import_scene.obj(
                 filepath=filePath,
                 use_edges=self.obj_use_edges,
@@ -480,6 +490,7 @@ class MeshImporter(bpy.types.PropertyGroup):
             axis_up=self.axis_up)
     
     def loadPLY(self, filePath):
+        # TODO: use the C++ PLY importer if available
         # call the ply load function with all the correct parameters
         bpy.ops.import_mesh.ply(filepath=filePath)
 
@@ -490,6 +501,7 @@ class MeshImporter(bpy.types.PropertyGroup):
             axis_up=self.axis_up)
     
     def exportOBJ(self, filePath):
+        # TODO: use the C++ OBJ exporter if available
         bpy.ops.export_scene.obj(
             filepath=filePath,
             check_existing=False,
@@ -511,6 +523,7 @@ class MeshImporter(bpy.types.PropertyGroup):
             axis_up=self.axis_up)
     
     def exportPLY(self, filePath):
+        # TODO: use the C++ PLY exporter if available
         bpy.ops.export_mesh.ply(
             filepath=filePath,
             check_existing=False,
