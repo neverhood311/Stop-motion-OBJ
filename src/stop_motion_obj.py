@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2022  Justin Jensen
+#   Copyright (C) 2016-2023  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -402,6 +402,7 @@ class MeshImporter(bpy.types.PropertyGroup):
         default=False)
 
     # (PLY has no import parameters)
+    # TODO: now PLY has import parameters
     # (X3D has no import parameters)
     # Shared import parameters
     axis_forward: bpy.props.StringProperty(name="Axis Forward",default="-Z")
@@ -440,34 +441,15 @@ class MeshImporter(bpy.types.PropertyGroup):
 
     def loadOBJ(self, filePath):
         # call the obj load function with all the correct parameters
-        if bpy.app.version >= (2, 92, 0):
-            bpy.ops.import_scene.obj(
+        if bpy.app.version >= (4, 0, 0):
+            bpy.ops.wm.obj_import(
                 filepath=filePath,
-                use_edges=self.obj_use_edges,
-                use_smooth_groups=self.obj_use_smooth_groups,
+                global_scale=1,  # TODO
+                clamp_size=self.obj_global_clamp_size,
+                forward_axis="NEGATIVE_Z",  # TODO: don't hard-code
+                up_axis="Y",    # TODO: don't hard-code
                 use_split_objects=False,
-                use_split_groups=False,
-                use_groups_as_vgroups=self.obj_use_groups_as_vgroups,
-                use_image_search=self.obj_use_image_search,
-                split_mode="OFF",
-                global_clamp_size=self.obj_global_clamp_size,
-                axis_forward=self.axis_forward,
-                axis_up=self.axis_up)
-        else:
-            # Note the parameter called "global_clight_size", which is probably a typo
-            #   It was corrected to "global_clamp_size" in Blender 2.92
-            bpy.ops.import_scene.obj(
-                filepath=filePath,
-                use_edges=self.obj_use_edges,
-                use_smooth_groups=self.obj_use_smooth_groups,
-                use_split_objects=False,
-                use_split_groups=False,
-                use_groups_as_vgroups=self.obj_use_groups_as_vgroups,
-                use_image_search=self.obj_use_image_search,
-                split_mode="OFF",
-                global_clight_size=self.obj_global_clamp_size,
-                axis_forward=self.axis_forward,
-                axis_up=self.axis_up)
+                use_split_groups=False)
 
     def loadSTL(self, filePath):
         # call the stl load function with all the correct parameters
@@ -481,7 +463,13 @@ class MeshImporter(bpy.types.PropertyGroup):
     
     def loadPLY(self, filePath):
         # call the ply load function with all the correct parameters
-        bpy.ops.import_mesh.ply(filepath=filePath)
+        bpy.ops.wm.ply_import(
+            filepath=filePath,
+            global_scale=1, # TODO
+            use_scene_unit=True,    # TODO
+            forward_axis="NEGATIVE_Z",  # TODO
+            up_axis="Y",    # TODO
+            merge_verts=False)
 
     def loadX3D(self, filePath):
         bpy.ops.import_scene.x3d(
@@ -608,8 +596,6 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         description='The path to the folder where exported files will be stored. If none is specified, a temp folder will be created',
         subtype='DIR_PATH')
 
-    # TODO: deprecate meshNames in version 3.0.0. This will break backwards compatibility with version 2.0.2 and earlier
-    meshNames: bpy.props.StringProperty()
     meshNameArray: bpy.props.CollectionProperty(type=MeshNameProp)
     numMeshes: bpy.props.IntProperty()
     numMeshesInMemory: bpy.props.IntProperty(default=0)
@@ -779,6 +765,10 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
     sortedFiles = sorted(unsortedFiles, key=alphanumKey)
 
     mss = _obj.mesh_sequence_settings
+    
+    # get the basename without frame numbers
+    firstBaseName = os.path.basename(sortedFiles[0])
+    commonMeshName = os.path.splitext(firstBaseName)[0].rstrip('._0123456789')
 
     deselectAll()
     for file in sortedFiles:
@@ -789,8 +779,16 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
         # TODO: eventually, let's pull out all MESH objects and put them into their own individual sequences
         tmpObject = next(filter(lambda meshObj: meshObj.type == 'MESH', bpy.context.selected_objects), None)
 
-        # IMPORTANT: don't copy it; just copy the pointer. This cuts memory usage in half.
-        tmpMesh = tmpObject.data
+        tmpMesh = None
+        
+        # if the mesh is None, we need to create an empty mesh, otherwise it will fail and/or leave gaps in the sequence
+        if (tmpObject is None):
+            meshBaseName = os.path.splitext(os.path.basename(file))[0]
+            tmpMesh = bpy.data.meshes.new(meshBaseName)
+        else:
+            # IMPORTANT: don't copy it; just copy the pointer. This cuts memory usage in half.
+            tmpMesh = tmpObject.data
+
         tmpMesh.use_fake_user = True
         tmpMesh.inMeshSequence = True
 
@@ -829,18 +827,6 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
 def loadSequenceFromBlendFile(_obj):
     scn = bpy.context.scene
     mss = _obj.mesh_sequence_settings
-
-    # if meshNames is not blank, we have an old file that must be converted to the new CollectionProperty format
-    if mss.meshNames:
-        # split meshNames
-        # store them in mesh_sequence_settings.meshNameArray
-        for meshName in mss.meshNames.split('/'):
-            meshNameArrayElement = mss.meshNameArray.add()
-            meshNameArrayElement.key = meshName
-            meshNameArrayElement.inMemory = True
-
-        # make sure the meshNames is not saved to the .blend file
-        mss.meshNames = ''
 
     # count the number of mesh names (helps with backwards compatibility)
     mss.numMeshes = len(mss.meshNameArray)
@@ -1080,7 +1066,16 @@ def importStreamedFile(obj, idx):
 
     selectedObjects = getSelectedObjects()
     tmpObject = next(filter(lambda meshObj: meshObj.type == 'MESH', selectedObjects), None)
-    tmpMesh = tmpObject.data
+    
+    tmpMesh = None
+    
+    # if tmpObject is None, we'll need to create an empty mesh to take its place
+    if (tmpObject is None):
+        # take the frame numbers off the basename
+        meshBaseName = os.path.splitext(mss.meshNameArray[idx].basename)[0]
+        tmpMesh = bpy.data.meshes.new(meshBaseName)
+    else:
+        tmpMesh = tmpObject.data
 
     # make a list of the objects we're going to delete
     objsToDelete = selectedObjects.copy()
