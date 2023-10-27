@@ -276,6 +276,17 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
                 seqObj = newMeshSequence()
                 global_matrix = axis_conversion(from_forward=b_axis_forward,from_up=b_axis_up).to_4x4()
                 seqObj.matrix_world = global_matrix
+                
+                # global scale for OBJ, PLY, and STL
+                globalScale = 1.0
+                if self.sequenceSettings.fileFormat == 'obj':
+                    globalScale = self.importSettings.obj_global_scale
+                elif self.sequenceSettings.fileFormat == 'stl':
+                    globalScale = self.importSettings.stl_global_scale
+                elif self.sequenceSettings.fileFormat == 'ply':
+                    globalScale = self.importSettings.ply_global_scale
+                    
+                seqObj.scale = (globalScale, globalScale, globalScale)
 
                 mss = seqObj.mesh_sequence_settings
 
@@ -327,14 +338,22 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
     def copyImportSettings(self, source, dest):
         dest.axis_forward = source.axis_forward
         dest.axis_up = source.axis_up
+        
         dest.obj_use_edges = source.obj_use_edges
         dest.obj_use_smooth_groups = source.obj_use_smooth_groups
         dest.obj_use_split_objects = False
         dest.obj_use_split_groups = False
-        dest.obj_use_groups_as_vgroups = source.obj_use_groups_as_vgroups
+        dest.obj_import_vertex_groups = source.obj_import_vertex_groups
         dest.obj_use_image_search = source.obj_use_image_search
         dest.obj_split_mode = "OFF"
-        dest.obj_global_clamp_size = source.obj_global_clamp_size
+        dest.obj_clamp_size = source.obj_clamp_size
+        dest.obj_global_scale = source.obj_global_scale
+        
+        dest.ply_global_scale = source.ply_global_scale
+        dest.ply_use_scene_unit = source.ply_use_scene_unit
+        dest.ply_merge_verts = source.ply_merge_verts
+        dest.ply_import_colors = source.ply_import_colors
+        
         dest.stl_global_scale = source.stl_global_scale
         dest.stl_use_scene_unit = source.stl_use_scene_unit
         dest.stl_use_facet_normal = source.stl_use_facet_normal
@@ -373,17 +392,21 @@ class SMO_PT_FileImportSettingsPanel(bpy.types.Panel):
             layout.prop(op.importSettings, 'obj_use_image_search')
             layout.prop(op.importSettings, 'obj_use_smooth_groups')
             layout.prop(op.importSettings, 'obj_use_edges')
-            layout.prop(op.importSettings, 'obj_global_clamp_size')
+            layout.prop(op.importSettings, 'obj_clamp_size')
+            layout.prop(op.importSettings, 'obj_global_scale')
 
             col = layout.column()
-            col.prop(op.importSettings, "obj_use_groups_as_vgroups")
+            col.prop(op.importSettings, "obj_import_vertex_groups")
 
         elif op.sequenceSettings.fileFormat == 'stl':
             layout.row().prop(op.importSettings, "stl_global_scale")
             layout.row().prop(op.importSettings, "stl_use_scene_unit")
             layout.row().prop(op.importSettings, "stl_use_facet_normal")
         elif op.sequenceSettings.fileFormat == 'ply':
-            layout.label(text="No .ply settings")
+            layout.prop(op.importSettings, 'ply_global_scale')
+            layout.prop(op.importSettings, 'ply_use_scene_unit')
+            layout.prop(op.importSettings, 'ply_merge_verts')
+            layout.prop(op.importSettings, 'ply_import_colors')
         elif op.sequenceSettings.fileFormat == 'x3d':
             layout.label(text="No .x3d settings")
 

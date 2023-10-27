@@ -34,6 +34,16 @@ loadingSequenceLock = False
 inRenderMode = False
 lockFrameSwitch = False
 
+def convertOldToNewAxisStr(oldAxisStr):
+    if oldAxisStr == '-X':
+        return 'NEGATIVE_X'
+    elif oldAxisStr == '-Y':
+        return 'NEGATIVE_Y'
+    elif oldAxisStr == '-Z':
+        return 'NEGATIVE_Z'
+    else:
+        return oldAxisStr
+
 def alphanumKey(string):
     """ Turn a string into a list of string and number chunks.
         "z23a" -> ["z", 23, "a"]
@@ -373,9 +383,9 @@ class MeshImporter(bpy.types.PropertyGroup):
     #     name="Split",
     #     items=(('ON', "Split", "Split geometry, omits unused vertices"),
     #            ('OFF', "Keep Vert Order", "Keep vertex order from file")))
-    obj_use_groups_as_vgroups: bpy.props.BoolProperty(name="Poly Groups", description="Import OBJ groups as vertex groups", default=False)
+    obj_import_vertex_groups: bpy.props.BoolProperty(name="Poly Groups", description="Import OBJ groups as vertex groups", default=False)
     obj_use_image_search: bpy.props.BoolProperty(name="Image Search", description="Search subdirs for any associated images (Warning: may be slow)", default=True)
-    obj_global_clamp_size: bpy.props.FloatProperty(
+    obj_clamp_size: bpy.props.FloatProperty(
         name="Clamp Size",
         description="Clamp bounds under this value (zero to disable)",
         min=0.0,
@@ -383,6 +393,13 @@ class MeshImporter(bpy.types.PropertyGroup):
         soft_min=0.0,
         soft_max=1000.0,
         default=0.0)
+    obj_global_scale: bpy.props.FloatProperty(
+        name="Scale",
+        soft_min=0.001,
+        soft_max=1000.0,
+        min=1e-6,
+        max=1e6,
+        default=1.0)
 
     # STL import parameters
     stl_global_scale: bpy.props.FloatProperty(
@@ -401,8 +418,27 @@ class MeshImporter(bpy.types.PropertyGroup):
         description="Use (import) facet normals (note that this will still give flat shading)",
         default=False)
 
-    # (PLY has no import parameters)
-    # TODO: now PLY has import parameters
+    # PLY import parameters
+    ply_global_scale: bpy.props.FloatProperty(
+        name="Scale",
+        soft_min=0.001,
+        soft_max=1000.0,
+        min=1e-6,
+        max=1e6,
+        default=1.0)
+    ply_use_scene_unit: bpy.props.BoolProperty(
+        name="Scene Unit",
+        description="Apply current scene's unit (as defined by unit scale) to imported data",
+        default=False)
+    ply_merge_verts: bpy.props.BoolProperty(
+        name="Merge Vertices",
+        description="Merge vertices by distance",
+        default=False)
+    ply_import_colors: bpy.props.EnumProperty(
+         name="Import Vertex color attributes",
+         items=(('NONE', "None", "Do not import/export color attributes"),
+                ('SRGB', "sRGB", "Vertex colors in the file are in sRGB color space"),
+                ('LINEAR', "Linear", "Vertex colors in the file are in linear color space")))
     # (X3D has no import parameters)
     # Shared import parameters
     axis_forward: bpy.props.StringProperty(name="Axis Forward",default="-Z")
@@ -442,12 +478,15 @@ class MeshImporter(bpy.types.PropertyGroup):
     def loadOBJ(self, filePath):
         # call the obj load function with all the correct parameters
         if bpy.app.version >= (4, 0, 0):
+            # convert '-Z' to 'NEGATIVE_Z'
+            newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
+            newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
             bpy.ops.wm.obj_import(
                 filepath=filePath,
-                global_scale=1,  # TODO
-                clamp_size=self.obj_global_clamp_size,
-                forward_axis="NEGATIVE_Z",  # TODO: don't hard-code
-                up_axis="Y",    # TODO: don't hard-code
+                global_scale=self.obj_global_scale,
+                clamp_size=self.obj_clamp_size,
+                forward_axis=newForwardAxisStr,
+                up_axis=newUpAxisStr,
                 use_split_objects=False,
                 use_split_groups=False)
 
@@ -463,13 +502,17 @@ class MeshImporter(bpy.types.PropertyGroup):
     
     def loadPLY(self, filePath):
         # call the ply load function with all the correct parameters
-        bpy.ops.wm.ply_import(
-            filepath=filePath,
-            global_scale=1, # TODO
-            use_scene_unit=True,    # TODO
-            forward_axis="NEGATIVE_Z",  # TODO
-            up_axis="Y",    # TODO
-            merge_verts=False)
+        if bpy.app.version >= (4, 0, 0):
+            newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
+            newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
+            bpy.ops.wm.ply_import(
+                filepath=filePath,
+                global_scale=self.ply_global_scale,
+                use_scene_unit=self.ply_use_scene_unit,
+                forward_axis=newForwardAxisStr,
+                up_axis=newUpAxisStr,
+                merge_verts=self.ply_merge_verts,
+                import_colors=self.ply_import_colors)
 
     def loadX3D(self, filePath):
         bpy.ops.import_scene.x3d(
