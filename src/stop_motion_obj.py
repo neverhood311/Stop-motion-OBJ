@@ -236,6 +236,8 @@ class MeshImporter(bpy.types.PropertyGroup):
             self.loadSTL(filePath)
         elif fileType == 'ply':
             self.loadPLY(filePath)
+        elif fileType == 'x3d':
+            self.loadX3D(filePath)
 
     def loadOBJ(self, filePath):
         # call the obj load function with all the correct parameters
@@ -282,6 +284,10 @@ class MeshImporter(bpy.types.PropertyGroup):
         # call the ply load function with all the correct parameters
         bpy.ops.import_mesh.ply(filepath=filePath)
 
+    def loadX3D(self, filePath):
+        # call the X3D load function with all the correct parameters
+        bpy.ops.import_scene.x3d(filepath=filePath)
+
 
 class MeshNameProp(bpy.types.PropertyGroup):
     key: bpy.props.StringProperty()
@@ -323,7 +329,9 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
     fileFormat: bpy.props.EnumProperty(
         items=[('obj', 'OBJ', 'Wavefront OBJ'),
                ('stl', 'STL', 'STereoLithography'),
-               ('ply', 'PLY', 'Stanford PLY')],
+               ('ply', 'PLY', 'Stanford PLY'),
+               ('x3d', 'X3D/WRL', 'X3D/WRL file'),
+               ],
         name='File Format',
         default='obj')
 

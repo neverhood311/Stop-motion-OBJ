@@ -140,7 +140,9 @@ class SequenceImportSettings(bpy.types.PropertyGroup):
     fileFormat: bpy.props.EnumProperty(
         items=[('obj', 'OBJ', 'Wavefront OBJ'),
                ('stl', 'STL', 'STereoLithography'),
-               ('ply', 'PLY', 'Stanford PLY')],
+               ('ply', 'PLY', 'Stanford PLY'),
+               ('x3d', 'X3D/WRL', 'X3D/WRL file'),
+               ],
         name='File Format',
         default='obj')
     dirPathIsRelative: bpy.props.BoolProperty(
@@ -279,6 +281,8 @@ class SMO_PT_FileImportSettingsPanel(bpy.types.Panel):
             layout.row().prop(op.importSettings, "stl_use_facet_normal")
         elif op.sequenceSettings.fileFormat == 'ply':
             layout.label(text="No .ply settings")
+        elif op.sequenceSettings.fileFormat == 'x3d':
+            layout.label(text="No .x3d/.wrl settings")
 
 
 class SMO_PT_TransformSettingsPanel(bpy.types.Panel):
