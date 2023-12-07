@@ -162,6 +162,8 @@ def fileExtensionFromType(_type):
         return 'stl'
     elif(_type == 'ply'):
         return 'ply'
+    elif(_type == 'x3d'):
+        return 'wrl'
     return ''
 
 
@@ -287,6 +289,10 @@ class MeshImporter(bpy.types.PropertyGroup):
     def loadX3D(self, filePath):
         # call the X3D load function with all the correct parameters
         bpy.ops.import_scene.x3d(filepath=filePath)
+        for obj in bpy.context.selected_objects:
+            if obj.type != 'MESH':
+                print('deleting ', obj)
+                bpy.data.objects.remove(obj)
 
 
 class MeshNameProp(bpy.types.PropertyGroup):

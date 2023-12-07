@@ -162,7 +162,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
     sequenceSettings: bpy.props.PointerProperty(type=SequenceImportSettings)
 
     # for now, we'll just show any file type that Stop Motion OBJ supports
-    filter_glob: bpy.props.StringProperty(default="*.stl;*.obj;*.mtl;*.ply")
+    filter_glob: bpy.props.StringProperty(default="*.stl;*.obj;*.mtl;*.ply;*.wrl;*.x3d")
 
     directory: bpy.props.StringProperty(subtype='DIR_PATH')
 
