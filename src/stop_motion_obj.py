@@ -162,6 +162,8 @@ def fileExtensionFromType(_type):
         return 'stl'
     elif(_type == 'ply'):
         return 'ply'
+    elif(_type == 'wrl'):
+        return 'wrl'
     return ''
 
 
@@ -236,6 +238,8 @@ class MeshImporter(bpy.types.PropertyGroup):
             self.loadSTL(filePath)
         elif fileType == 'ply':
             self.loadPLY(filePath)
+        elif fileType == 'wrl':
+            self.loadWRL(filePath)
 
     def loadOBJ(self, filePath):
         # call the obj load function with all the correct parameters
@@ -282,6 +286,14 @@ class MeshImporter(bpy.types.PropertyGroup):
         # call the ply load function with all the correct parameters
         bpy.ops.import_mesh.ply(filepath=filePath)
 
+    def loadWRL(self, filePath):
+        # call the WRL load function with all the correct parameters
+        bpy.ops.import_scene.x3d(filepath=filePath)
+        for obj in bpy.context.selected_objects:
+            if obj.type != 'MESH':
+                print('deleting ', obj)
+                bpy.data.objects.remove(obj)
+
 
 class MeshNameProp(bpy.types.PropertyGroup):
     key: bpy.props.StringProperty()
@@ -323,7 +335,9 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
     fileFormat: bpy.props.EnumProperty(
         items=[('obj', 'OBJ', 'Wavefront OBJ'),
                ('stl', 'STL', 'STereoLithography'),
-               ('ply', 'PLY', 'Stanford PLY')],
+               ('ply', 'PLY', 'Stanford PLY'),
+               ('wrl', 'WRL', 'WRL file'),
+               ],
         name='File Format',
         default='obj')
 
