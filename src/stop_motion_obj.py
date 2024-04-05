@@ -363,6 +363,8 @@ def fileExtensionFromType(_type):
         return 'ply'
     elif(_type == 'x3d'):
         return 'x3d'
+    elif(_type == 'wrl'):
+        return 'wrl'
     return ''
 
 
@@ -451,6 +453,7 @@ class MeshImporter(bpy.types.PropertyGroup):
                 ('SRGB', "sRGB", "Vertex colors in the file are in sRGB color space"),
                 ('LINEAR', "Linear", "Vertex colors in the file are in linear color space")))
     # (X3D has no import parameters)
+    # (WRL has no import parameters)
     # Shared import parameters
     axis_forward: bpy.props.StringProperty(name="Axis Forward",default="-Z")
     axis_up: bpy.props.StringProperty(name="Axis Up",default="Y")
@@ -465,7 +468,7 @@ class MeshImporter(bpy.types.PropertyGroup):
             self.loadSTL(filePath)
         elif fileType == 'ply':
             self.loadPLY(filePath, streaming)
-        elif fileType == 'x3d':
+        elif fileType == 'x3d' or fileType == 'wrl':
             self.loadX3D(filePath)
     
     def export(self, fileType, filePath):
@@ -479,7 +482,7 @@ class MeshImporter(bpy.types.PropertyGroup):
             self.exportSTL(filePath)
         elif fileType == 'ply':
             self.exportPLY(filePath)
-        elif fileType == 'x3d':
+        elif fileType == 'x3d' or fileType == 'wrl':
             self.exportX3D(filePath)
 
         # set the context mode back to the one it was in before
@@ -551,7 +554,7 @@ class MeshImporter(bpy.types.PropertyGroup):
             filepath=filePath,
             axis_forward=self.axis_forward,
             axis_up=self.axis_up)
-    
+        
     def exportOBJ(self, filePath):
         if bpy.app.version >= (4, 0, 0):
             showError("This version of Stop Motion OBJ doesn't support Blender 4.0")
@@ -660,7 +663,8 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         items=[('obj', 'OBJ', 'Wavefront OBJ'),
                ('stl', 'STL', 'STereoLithography'),
                ('ply', 'PLY', 'Stanford PLY'),
-               ('x3d', 'X3D', 'X3D Extensible 3D')],
+               ('x3d', 'X3D', 'X3D Extensible 3D'),
+               ('wrl', 'WRL', 'VRML2 (WRL)')],
         name='File Format',
         default='obj')
 

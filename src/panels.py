@@ -216,7 +216,8 @@ class SequenceImportSettings(bpy.types.PropertyGroup):
         items=[('obj', 'OBJ', 'Wavefront OBJ'),
                ('stl', 'STL', 'STereoLithography'),
                ('ply', 'PLY', 'Stanford PLY'),
-               ('x3d', 'X3D', 'X3D Extensible 3D')],
+               ('x3d', 'X3D', 'X3D Extensible 3D'),
+               ('wrl', 'WRL', 'VRML2 (WRL)')],
         name='File Format',
         default='obj')
     dirPathIsRelative: bpy.props.BoolProperty(
@@ -236,7 +237,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
     sequenceSettings: bpy.props.PointerProperty(type=SequenceImportSettings)
 
     # for now, we'll just show any file type that Stop Motion OBJ supports
-    filter_glob: bpy.props.StringProperty(default="*.stl;*.obj;*.mtl;*.ply;*.x3d")
+    filter_glob: bpy.props.StringProperty(default="*.stl;*.obj;*.mtl;*.ply;*.x3d;*.wrl")
 
     directory: bpy.props.StringProperty(subtype='DIR_PATH')
 
@@ -417,6 +418,8 @@ class SMO_PT_FileImportSettingsPanel(bpy.types.Panel):
             layout.prop(op.importSettings, 'ply_import_colors')
         elif op.sequenceSettings.fileFormat == 'x3d':
             layout.label(text="No .x3d settings")
+        elif op.sequenceSettings.fileFormat == 'wrl':
+            layout.label(text="No .wrl settings")
 
 
 class SMO_PT_TransformSettingsPanel(bpy.types.Panel):

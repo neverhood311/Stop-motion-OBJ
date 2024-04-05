@@ -23,7 +23,7 @@ from .panels import *
 
 bl_info = {
     "name": "Stop motion OBJ",
-    "description": "Import a sequence of OBJ (or STL or PLY or X3D) files and display them each as a single frame of animation. This add-on also supports the .STL, .PLY, and .X3D file formats.",
+    "description": "Import a sequence of OBJ (or STL or PLY or X3D or VRML2) files and display them each as a single frame of animation. This add-on also supports the .STL, .PLY, .X3D, and .WRL file formats.",
     "author": "Justin Jensen",
     "version": (2, 2, 0, "beta.1"),
     "blender": (2, 92, 0),
