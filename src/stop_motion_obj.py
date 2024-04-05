@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2023  Justin Jensen
+#   Copyright (C) 2016-2024  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -65,6 +65,10 @@ def deselectAll():
 def checkMeshChangesFrameChangePre(scene):
     global inRenderMode
     if inRenderMode == True:
+        return
+    
+    # just in case we're still in the Render context
+    if hasattr(bpy.context, "object") is False:
         return
     
     obj = bpy.context.object
@@ -137,22 +141,29 @@ def showError(message=""):
 
 @persistent
 def checkMeshChangesFrameChangePost(scene):
-    # if we're not in Sculpt mode, return
+    # make sure we're not rendering
+    global inRenderMode
+    if inRenderMode == True:
+        return
+    
+    # if we're not in Sculpt mode or Object mode, return
+    #if bpy.context.mode != 'SCULPT' and bpy.context.mode != 'OBJECT':
     if bpy.context.mode != 'SCULPT':
         return
 
-    # if the selected object is not a loaded and initialized mesh sequence, return
-    mss = bpy.context.object.mesh_sequence_settings
-    if mss.initialized is False or mss.loaded is False:
-        return
+    if hasattr(bpy.context, "object") and bpy.context.object != None:
+        # if the selected object is not a loaded and initialized mesh sequence, return
+        mss = bpy.context.object.mesh_sequence_settings
+        if mss.initialized is False or mss.loaded is False:
+            return
 
-    # if the selected object is not in auto-export mode, return
-    if mss.autoExportChanges is False:
-        return
+        # if the selected object is not in auto-export mode, return
+        if mss.autoExportChanges is False:
+            return
 
-    # generate the mesh hash for the current mesh and store that value on the mesh
-    meshHashStr = getMeshHashStr(bpy.context.object.data)
-    bpy.context.object.data.meshHash = meshHashStr
+        # generate the mesh hash for the current mesh and store that value on the mesh
+        meshHashStr = getMeshHashStr(bpy.context.object.data)
+        bpy.context.object.data.meshHash = meshHashStr
 
 def getMeshSignature(mesh):
     # Build a string composed of the following elements:
@@ -447,13 +458,13 @@ class MeshImporter(bpy.types.PropertyGroup):
     def draw(self):
         pass
 
-    def load(self, fileType, filePath):
+    def load(self, fileType, filePath, streaming=False):
         if fileType == 'obj':
-            self.loadOBJ(filePath)
+            self.loadOBJ(filePath, streaming)
         elif fileType == 'stl':
             self.loadSTL(filePath)
         elif fileType == 'ply':
-            self.loadPLY(filePath)
+            self.loadPLY(filePath, streaming)
         elif fileType == 'x3d':
             self.loadX3D(filePath)
     
@@ -475,9 +486,13 @@ class MeshImporter(bpy.types.PropertyGroup):
         #   (the OBJ exporter likes to switch to Object mode during the export)
         bpy.ops.object.mode_set(mode=contextMode)
 
-    def loadOBJ(self, filePath):
-        # call the obj load function with all the correct parameters
+    def loadOBJ(self, filePath, streaming=False):
         if bpy.app.version >= (4, 0, 0):
+            showError("This version of Stop Motion OBJ doesn't support Blender 4.0")
+        elif bpy.app.version < (2, 92, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 2.92")
+        # if we're not streaming and the fast OBJ importer is available, use it
+        elif bpy.app.version >= (3, 3, 0) and streaming is False:
             # convert '-Z' to 'NEGATIVE_Z'
             newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
             newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
@@ -489,6 +504,18 @@ class MeshImporter(bpy.types.PropertyGroup):
                 up_axis=newUpAxisStr,
                 use_split_objects=False,
                 use_split_groups=False)
+        # if we are streaming or we're running an older version of Blender, use the legacy OBJ importer
+        elif bpy.app.version < (3, 3, 0) or streaming is True:
+            bpy.ops.import_scene.obj(
+                filepath=filePath,
+                use_edges=self.obj_use_edges,
+                use_groups_as_vgroups=self.obj_import_vertex_groups,
+                use_image_search=self.obj_use_image_search,
+                split_mode="OFF",
+                global_clamp_size=self.obj_clamp_size,
+                axis_forward=self.axis_forward,
+                axis_up=self.axis_up)
+        
 
     def loadSTL(self, filePath):
         # call the stl load function with all the correct parameters
@@ -500,19 +527,24 @@ class MeshImporter(bpy.types.PropertyGroup):
             axis_forward=self.axis_forward,
             axis_up=self.axis_up)
     
-    def loadPLY(self, filePath):
+    def loadPLY(self, filePath, streaming=False):
         # call the ply load function with all the correct parameters
         if bpy.app.version >= (4, 0, 0):
-            newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
-            newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
-            bpy.ops.wm.ply_import(
-                filepath=filePath,
-                global_scale=self.ply_global_scale,
-                use_scene_unit=self.ply_use_scene_unit,
-                forward_axis=newForwardAxisStr,
-                up_axis=newUpAxisStr,
-                merge_verts=self.ply_merge_verts,
-                import_colors=self.ply_import_colors)
+            showError("This version of Stop Motion OBJ doesn't support Blender 4.0")
+        elif bpy.app.version >= (3, 3, 0):
+            if streaming is False:
+                newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
+                newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
+                bpy.ops.wm.ply_import(
+                    filepath=filePath,
+                    global_scale=self.ply_global_scale,
+                    use_scene_unit=self.ply_use_scene_unit,
+                    forward_axis=newForwardAxisStr,
+                    up_axis=newUpAxisStr,
+                    merge_verts=self.ply_merge_verts,
+                    import_colors=self.ply_import_colors)
+            else:
+                bpy.ops.import_mesh.ply(filepath=filePath)
 
     def loadX3D(self, filePath):
         bpy.ops.import_scene.x3d(
@@ -521,17 +553,34 @@ class MeshImporter(bpy.types.PropertyGroup):
             axis_up=self.axis_up)
     
     def exportOBJ(self, filePath):
-        bpy.ops.export_scene.obj(
-            filepath=filePath,
-            check_existing=False,
-            use_selection=True,
-            use_animation=False,
-            use_edges=self.obj_use_edges,
-            use_smooth_groups=self.obj_use_smooth_groups,
-            use_materials=False,
-            keep_vertex_order=True,
-            axis_forward=self.axis_forward,
-            axis_up=self.axis_up)
+        if bpy.app.version >= (4, 0, 0):
+            showError("This version of Stop Motion OBJ doesn't support Blender 4.0")
+        elif bpy.app.version < (2, 92, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 2.92")
+        elif bpy.app.version >= (3, 3, 0):
+            newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
+            newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
+            bpy.ops.wm.obj_export(
+                filepath=filePath,
+                check_existing=False,
+                export_selected_objects=True,
+                export_animation=False,
+                export_triangulated_mesh=False,
+                forward_axis=newForwardAxisStr,
+                up_axis=newUpAxisStr)
+        elif bpy.app.version < (3, 3, 0):
+            bpy.ops.export_scene.obj(
+                filepath=filePath,
+                check_existing=False,
+                use_selection=True,
+                use_animation=False,
+                use_edges=self.obj_use_edges,
+                use_smooth_groups=self.obj_use_smooth_groups,
+                use_materials=False,
+                keep_vertex_order=True,
+                axis_forward=self.axis_forward,
+                axis_up=self.axis_up)
+            # TODO: apply modifiers? global_scale?
     
     def exportSTL(self, filePath):
         bpy.ops.export_mesh.stl(
@@ -542,12 +591,20 @@ class MeshImporter(bpy.types.PropertyGroup):
             axis_up=self.axis_up)
     
     def exportPLY(self, filePath):
-        bpy.ops.export_mesh.ply(
-            filepath=filePath,
-            check_existing=False,
-            use_selection=True,
-            axis_forward=self.axis_forward,
-            axis_up=self.axis_up)
+        if bpy.app.version >= (4, 0, 0):
+            showError("This version of Stop Motion OBJ doesn't support Blender 4.0")
+        elif bpy.app.version >= (3, 3, 0):
+            newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
+            newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
+            bpy.ops.wm.ply_export(
+                filepath=filePath,
+                check_existing=False,
+                export_selected_objects=True,
+                export_animation=False,
+                export_triangulated_mesh=False,
+                forward_axis=newForwardAxisStr,
+                up_axis=newUpAxisStr)
+            # TODO: apply modifiers? global_scale?
     
     def exportX3D(self, filePath):
         bpy.ops.export_scene.x3d(
@@ -624,7 +681,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
     )
     
     autoExportChanges: bpy.props.BoolProperty(
-        name='Auto-export changes',
+        name='Auto-export changes (slow)',
         description='Automatically export meshes that have been modified while in Sculpt Mode',
         update=handleAutoExportChange,
         default=False)
@@ -816,7 +873,7 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
     deselectAll()
     for file in sortedFiles:
         # import the mesh file
-        mss.fileImporter.load(mss.fileFormat, file)
+        mss.fileImporter.load(mss.fileFormat, file, False)
 
         # get the first object of type MESH
         # TODO: eventually, let's pull out all MESH objects and put them into their own individual sequences
@@ -1104,7 +1161,7 @@ def importStreamedFile(obj, idx):
     deselectAll()
     
     lockLoadingSequence(True)
-    mss.fileImporter.load(mss.fileFormat, filename)
+    mss.fileImporter.load(mss.fileFormat, filename, True)
     lockLoadingSequence(False)
 
     selectedObjects = getSelectedObjects()

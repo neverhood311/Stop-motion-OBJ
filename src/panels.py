@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2023  Justin Jensen
+#   Copyright (C) 2016-2024  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -244,6 +244,14 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
     axis_up: bpy.props.StringProperty(default="Y")
 
     def execute(self, context):
+        if bpy.app.version >= (4, 0, 0):
+            showError("This version of Stop Motion OBJ doesn't support Blender 4.0")
+            return {'CANCELLED'}
+        
+        if bpy.app.version < (2, 92, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 2.92")
+            return {'CANCELLED'}
+            
         if self.sequenceSettings.fileNamePrefix == "":
             self.report({'ERROR_INVALID_INPUT'}, "Please enter a file name prefix")
             return {'CANCELLED'}
