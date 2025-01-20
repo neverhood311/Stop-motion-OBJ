@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2024  Justin Jensen
+#   Copyright (C) 2016-2025  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -534,7 +534,7 @@ class MeshImporter(bpy.types.PropertyGroup):
         # call the ply load function with all the correct parameters
         if bpy.app.version >= (4, 0, 0):
             showError("This version of Stop Motion OBJ doesn't support Blender 4.0")
-        elif bpy.app.version >= (3, 3, 0):
+        elif bpy.app.version >= (3, 6, 0):
             if streaming is False:
                 newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
                 newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
@@ -548,6 +548,9 @@ class MeshImporter(bpy.types.PropertyGroup):
                     import_colors=self.ply_import_colors)
             else:
                 bpy.ops.import_mesh.ply(filepath=filePath)
+        else:
+            # blender 2.92-3.5.x
+            bpy.ops.import_mesh.ply(filepath=filePath)
 
     def loadX3D(self, filePath):
         bpy.ops.import_scene.x3d(
@@ -596,7 +599,7 @@ class MeshImporter(bpy.types.PropertyGroup):
     def exportPLY(self, filePath):
         if bpy.app.version >= (4, 0, 0):
             showError("This version of Stop Motion OBJ doesn't support Blender 4.0")
-        elif bpy.app.version >= (3, 3, 0):
+        elif bpy.app.version >= (3, 6, 0):
             newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
             newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
             bpy.ops.wm.ply_export(
@@ -608,6 +611,14 @@ class MeshImporter(bpy.types.PropertyGroup):
                 forward_axis=newForwardAxisStr,
                 up_axis=newUpAxisStr)
             # TODO: apply modifiers? global_scale?
+        else:
+            # blender 2.92-3.5.x
+            bpy.ops.export_mesh.ply(
+                filepath=filePath,
+                check_existing=False,
+                use_selection=True,
+                axis_forward=self.axis_forward,
+                axix_up=self.axis_up)
     
     def exportX3D(self, filePath):
         bpy.ops.export_scene.x3d(
