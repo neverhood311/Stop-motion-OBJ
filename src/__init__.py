@@ -75,6 +75,10 @@ def register():
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import_sequence)
     bpy.types.VIEW3D_MT_object.append(menu_func_convert_to_sequence)
 
+
+    bpy.utils.register_class(Multi_Render)
+
+
     # the order here is important since it is the order in which these sections will be drawn
     bpy.utils.register_class(SMO_PT_FileImportSettingsPanel)
     bpy.utils.register_class(SMO_PT_TransformSettingsPanel)
@@ -94,6 +98,10 @@ def register():
             SMOKeymaps.append((keyMap, keyMapItem))
 
 def unregister():
+
+    bpy.utils.unregister_class(Multi_Render)
+
+
     bpy.app.handlers.frame_change_pre.remove(checkMeshChangesFrameChangePre)
     bpy.app.handlers.frame_change_post.remove(checkMeshChangesFrameChangePost)
 

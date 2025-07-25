@@ -1587,6 +1587,76 @@ class RenderAnimation(bpy.types.Operator):
         # restore the original frame range
         return {'FINISHED'}
 
+class Multi_Render(bpy.types.Operator):
+    """Docstring"""
+    bl_idname = "render.multi"
+    bl_label = "Render multiple times"
+
+    _timer = None
+    shots = None
+    stop = None
+    rendering = None
+    path = "/tmp/"
+
+    def pre(self, scene, context=None):
+        print("render pre")
+        self.rendering = True
+
+    def post(self, scene, context=None):
+        print("render post")
+        self.shots.pop(0)   # this is just to render the next image in another path
+        self.rendering = False
+
+    def cancelled(self, scene, context=None):
+        print("cancelled render")
+        self.stop = True
+    
+    def execute(self, context):
+        # define the vars during execution. This allows us to define when called from a button
+        self.stop = False
+        self.rendering = False
+        self.shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+        #self.shots = [1, 2, 3, 4, 5, 6]
+
+        context.scene.render.filepath = self.path
+
+        bpy.app.handlers.render_pre.append(self.pre)
+        bpy.app.handlers.render_post.append(self.post)
+        bpy.app.handlers.render_cancel.append(self.cancelled)
+
+        # the timer gets created and the modal handler is added to the window manager
+        self._timer = context.window_manager.event_timer_add(0.5, window=context.window)
+        context.window_manager.modal_handler_add(self)
+
+        return {"RUNNING_MODAL"}
+    
+    def modal(self, context, event):
+        if event.type == 'TIMER':   # this event is signaled every half second and will start the next render if available
+            # if cancelled or no more shots to render, finish
+            if True in (not self.shots, self.stop is True):
+                # remove the handlers and the modal timer to clean up
+                bpy.app.handlers.render_pre.remove(self.pre)
+                bpy.app.handlers.render_post.remove(self.post)
+                bpy.app.handlers.render_cancel.remove(self.cancelled)
+                context.window_manager.event_timer_remove(self._timer)
+
+                # if needed, we can separate the cancel and finish events
+                return {"FINISHED"}
+            elif self.rendering is False:
+                # nothing is currently rendering. Proceed to render
+                #context.scene.camera = bpy.data.objects[self.shots[0]]
+                context.scene.frame_set(self.shots[0])
+
+                context.scene.render.filepath = self.path + str(self.shots[0]) + ".png"
+                bpy.ops.render.render("INVOKE_DEFAULT", write_still=True)
+    
+        # This is very important! If we use "RUNNING_MODAL", this new modal function
+        # would prevent the use of the X button to cancel rendering, because this
+        # button is managed by the modal function of the render operator,
+        # not this new operator!
+        return {"PASS_THROUGH"}
+
+
 # 'mesh' is a Blender mesh
 # TODO: write another version that accepts a list of vertices and triangles
 #       and creates a new Blender mesh

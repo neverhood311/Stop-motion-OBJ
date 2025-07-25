@@ -157,6 +157,8 @@ class SMO_PT_MeshSequenceRenderPanel(bpy.types.Panel):
             row = layout.row()
             row.progress(factor = 0.33, type='BAR')
             #row.operator("ms.cancel_render_animation")  # TODO jjensen
+            row = layout.row()
+            row.operator("render.multi")
 
 
 class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
