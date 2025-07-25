@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2024  Justin Jensen
+#   Copyright (C) 2016-2025  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -25,8 +25,8 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY or X3D or VRML2) files and display them each as a single frame of animation. This add-on also supports the .STL, .PLY, .X3D, and .WRL file formats.",
     "author": "Justin Jensen",
-    "version": (2, 2, 0, "beta.1"),
-    "blender": (2, 92, 0),
+    "version": (3, 0, 0, "alpha.1"),
+    "blender": (4, 1, 0),
     "location": "File > Import > Mesh Sequence",
     "warning": "",
     "category": "Import",
@@ -58,6 +58,7 @@ def register():
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(DeepDeleteSequence)
     bpy.utils.register_class(MergeDuplicateMaterials)
+    bpy.utils.register_class(RenderAnimation)
     bpy.utils.register_class(ConvertToMeshSequence)
     bpy.utils.register_class(DuplicateMeshFrame)
     bpy.utils.register_class(SMO_PT_MeshSequencePanel)
@@ -66,6 +67,7 @@ def register():
     bpy.utils.register_class(SMO_PT_MeshSequenceStreamingPanel)
     bpy.utils.register_class(SMO_PT_MeshSequenceExportPanel)
     bpy.utils.register_class(SMO_PT_MeshSequenceAdvancedPanel)
+    bpy.utils.register_class(SMO_PT_MeshSequenceRenderPanel)
     bpy.app.handlers.render_init.append(renderInitHandler)
     bpy.app.handlers.render_complete.append(renderCompleteHandler)
     bpy.app.handlers.render_cancel.append(renderCancelHandler)
@@ -107,6 +109,7 @@ def unregister():
     bpy.utils.unregister_class(BakeMeshSequence)
     bpy.utils.unregister_class(DeepDeleteSequence)
     bpy.utils.unregister_class(MergeDuplicateMaterials)
+    bpy.utils.unregister_class(RenderAnimation)
     bpy.utils.unregister_class(ConvertToMeshSequence)
     bpy.utils.unregister_class(DuplicateMeshFrame)
     bpy.utils.unregister_class(SMO_PT_MeshSequencePanel)
@@ -114,6 +117,8 @@ def unregister():
     bpy.utils.unregister_class(SMO_PT_MeshSequenceStreamingPanel)
     bpy.utils.unregister_class(SMO_PT_MeshSequenceExportPanel)
     bpy.utils.unregister_class(SMO_PT_MeshSequenceAdvancedPanel)
+    bpy.utils.unregister_class(SMO_PT_MeshSequenceRenderPanel)
+
     bpy.utils.unregister_class(MeshSequenceSettings)
     bpy.utils.unregister_class(MeshNameProp)
 

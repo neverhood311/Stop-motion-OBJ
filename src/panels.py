@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2024  Justin Jensen
+#   Copyright (C) 2016-2025  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -133,6 +133,32 @@ class SMO_PT_MeshSequenceExportPanel(bpy.types.Panel):
 
             row.prop(objSettings, "exportDir")
 
+# TODO jjensen: MeshSequenceRenderPanel
+#   a panel that lets the user kick off an animation render and the script manually renders the frames individually
+#   so that we try to avoid issues with separate threads
+class SMO_PT_MeshSequenceRenderPanel(bpy.types.Panel):
+    bl_label = 'Render'
+    bl_parent_id = "OBJ_SEQUENCE_PT_properties"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_options = {'DEFAULT_CLOSED'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.object.mesh_sequence_settings.initialized == True
+    
+    def draw(self, context):
+        layout = self.layout
+        objSettings = context.object.mesh_sequence_settings
+
+        if objSettings.isImported is True:
+            row = layout.row()
+            row.operator("ms.render_animation")
+            row = layout.row()
+            row.progress(factor = 0.33, type='BAR')
+            #row.operator("ms.cancel_render_animation")  # TODO jjensen
+
+
 class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
     bl_label = 'Advanced'
     bl_parent_id = "OBJ_SEQUENCE_PT_properties"
@@ -177,6 +203,8 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
                 row = layout.row()
                 row.enabled = inObjectMode
                 row.operator("ms.bake_sequence")
+            
+            # TODO jjensen: show a reminder that sequence baking is available only for Cached sequences
             
             
 
@@ -245,12 +273,8 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
     axis_up: bpy.props.StringProperty(default="Y")
 
     def execute(self, context):
-        if bpy.app.version >= (4, 0, 0):
-            showError("This version of Stop Motion OBJ doesn't support Blender 4.0")
-            return {'CANCELLED'}
-        
-        if bpy.app.version < (2, 92, 0):
-            showError("This version of Stop Motion OBJ requires at least Blender 2.92")
+        if bpy.app.version < (4, 1, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
             return {'CANCELLED'}
             
         if self.sequenceSettings.fileNamePrefix == "":

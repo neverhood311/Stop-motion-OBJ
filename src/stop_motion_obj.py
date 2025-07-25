@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #   Stop motion OBJ: A Mesh sequence importer for Blender
-#   Copyright (C) 2016-2024  Justin Jensen
+#   Copyright (C) 2016-2025  Justin Jensen
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -490,12 +490,9 @@ class MeshImporter(bpy.types.PropertyGroup):
         bpy.ops.object.mode_set(mode=contextMode)
 
     def loadOBJ(self, filePath, streaming=False):
-        if bpy.app.version >= (4, 0, 0):
-            showError("This version of Stop Motion OBJ doesn't support Blender 4.0")
-        elif bpy.app.version < (2, 92, 0):
-            showError("This version of Stop Motion OBJ requires at least Blender 2.92")
-        # if we're not streaming and the fast OBJ importer is available, use it
-        elif bpy.app.version >= (3, 3, 0) and streaming is False:
+        if bpy.app.version < (4, 1, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
+        else:
             # convert '-Z' to 'NEGATIVE_Z'
             newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
             newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
@@ -507,21 +504,11 @@ class MeshImporter(bpy.types.PropertyGroup):
                 up_axis=newUpAxisStr,
                 use_split_objects=False,
                 use_split_groups=False)
-        # if we are streaming or we're running an older version of Blender, use the legacy OBJ importer
-        elif bpy.app.version < (3, 3, 0) or streaming is True:
-            bpy.ops.import_scene.obj(
-                filepath=filePath,
-                use_edges=self.obj_use_edges,
-                use_groups_as_vgroups=self.obj_import_vertex_groups,
-                use_image_search=self.obj_use_image_search,
-                split_mode="OFF",
-                global_clamp_size=self.obj_clamp_size,
-                axis_forward=self.axis_forward,
-                axis_up=self.axis_up)
         
 
     def loadSTL(self, filePath):
         # call the stl load function with all the correct parameters
+        # TODO jjensen: make sure this importer still lives here
         bpy.ops.import_mesh.stl(
             filepath=filePath,
             global_scale=self.stl_global_scale,
@@ -532,35 +519,31 @@ class MeshImporter(bpy.types.PropertyGroup):
     
     def loadPLY(self, filePath, streaming=False):
         # call the ply load function with all the correct parameters
-        if bpy.app.version >= (4, 0, 0):
-            showError("This version of Stop Motion OBJ doesn't support Blender 4.0")
-        elif bpy.app.version >= (3, 3, 0):
-            if streaming is False:
-                newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
-                newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
-                bpy.ops.wm.ply_import(
-                    filepath=filePath,
-                    global_scale=self.ply_global_scale,
-                    use_scene_unit=self.ply_use_scene_unit,
-                    forward_axis=newForwardAxisStr,
-                    up_axis=newUpAxisStr,
-                    merge_verts=self.ply_merge_verts,
-                    import_colors=self.ply_import_colors)
-            else:
-                bpy.ops.import_mesh.ply(filepath=filePath)
+        if bpy.app.version < (4, 1, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
+        else:
+            newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
+            newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
+            bpy.ops.wm.ply_import(
+                filepath=filePath,
+                global_scale=self.ply_global_scale,
+                use_scene_unit=self.ply_use_scene_unit,
+                forward_axis=newForwardAxisStr,
+                up_axis=newUpAxisStr,
+                merge_verts=self.ply_merge_verts,
+                import_colors=self.ply_import_colors)
 
     def loadX3D(self, filePath):
+        # TODO jjensen: make sure this importer still lives here
         bpy.ops.import_scene.x3d(
             filepath=filePath,
             axis_forward=self.axis_forward,
             axis_up=self.axis_up)
         
     def exportOBJ(self, filePath):
-        if bpy.app.version >= (4, 0, 0):
-            showError("This version of Stop Motion OBJ doesn't support Blender 4.0")
-        elif bpy.app.version < (2, 92, 0):
-            showError("This version of Stop Motion OBJ requires at least Blender 2.92")
-        elif bpy.app.version >= (3, 3, 0):
+        if bpy.app.version < (4, 1, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
+        else:
             newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
             newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
             bpy.ops.wm.obj_export(
@@ -571,21 +554,9 @@ class MeshImporter(bpy.types.PropertyGroup):
                 export_triangulated_mesh=False,
                 forward_axis=newForwardAxisStr,
                 up_axis=newUpAxisStr)
-        elif bpy.app.version < (3, 3, 0):
-            bpy.ops.export_scene.obj(
-                filepath=filePath,
-                check_existing=False,
-                use_selection=True,
-                use_animation=False,
-                use_edges=self.obj_use_edges,
-                use_smooth_groups=self.obj_use_smooth_groups,
-                use_materials=False,
-                keep_vertex_order=True,
-                axis_forward=self.axis_forward,
-                axis_up=self.axis_up)
-            # TODO: apply modifiers? global_scale?
     
     def exportSTL(self, filePath):
+        # TODO jjensen: make sure this exporter still lives here
         bpy.ops.export_mesh.stl(
             filepath=filePath,
             check_existing=False,
@@ -594,9 +565,9 @@ class MeshImporter(bpy.types.PropertyGroup):
             axis_up=self.axis_up)
     
     def exportPLY(self, filePath):
-        if bpy.app.version >= (4, 0, 0):
-            showError("This version of Stop Motion OBJ doesn't support Blender 4.0")
-        elif bpy.app.version >= (3, 3, 0):
+        if bpy.app.version < (4, 1, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
+        else:
             newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
             newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
             bpy.ops.wm.ply_export(
@@ -610,6 +581,7 @@ class MeshImporter(bpy.types.PropertyGroup):
             # TODO: apply modifiers? global_scale?
     
     def exportX3D(self, filePath):
+        # TODO jjensen: make sure this exporter still lives here
         bpy.ops.export_scene.x3d(
             filepath=filePath,
             check_existing=False,
@@ -1538,6 +1510,81 @@ class MergeDuplicateMaterials(bpy.types.Operator):
             return {'CANCELLED'}
 
         mergeDuplicateMaterials(obj)
+        return {'FINISHED'}
+
+class RenderAnimation(bpy.types.Operator):
+    """Render Animation"""
+    bl_idname = "ms.render_animation"
+    bl_label = "Render Animation"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        print("Start")
+
+    def __del__(self):
+        print("End")
+        super().__del__()
+
+    def modal(self, context, event):
+        print("Modal")
+        if event.type == 'ESC':
+            self.execute(context)
+            return {'FINISHED'}
+        return {'RUNNING_MODAL'}
+
+    def invoke(self, context, event):
+        # TODO jjensen: remove
+        print("invoke")
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+        
+
+        # TODO jjensen: invoke function should grab the frame range from the scene and store it
+        self.startFrame = bpy.context.scene.frame_start
+        self.endFrame = bpy.context.scene.frame_end
+        self.currentFrame = bpy.context.scene.frame_current
+
+        # then it should call execute with that frame range
+        #executeResult = self.execute(context)
+
+        # then it should restore that frame range to the scene when execute is done
+        bpy.context.scene.frame_set(self.currentFrame)
+        bpy.context.scene.frame_start = self.startFrame
+        bpy.context.scene.frame_end = self.endFrame
+
+        #return executeResult
+        return {'RUNNING_MODAL'}
+
+    def execute(self, context):
+        # TODO jjensen: remove
+        print("executing")
+        return {'FINISHED'}
+
+        # TODO jjensen: try this
+        # https://blender.stackexchange.com/a/71830/1170
+
+        # TODO jjensen
+        todoremovejjensen = 2
+        # read the frame range from `self` and store it for safe keeping
+        # for each frame in the range
+        for frNum in range(self.startFrame, self.endFrame + 1):
+            # set the current frame to this frame number
+            bpy.context.scene.frame_set(frNum)
+
+            # set the frame range to start and end on this frame
+            bpy.context.scene.frame_start = frNum
+            bpy.context.scene.frame_end = frNum
+            # call bpy.ops.render.render('INVOKE_DEFAULT',animation=True)
+            renderResult = bpy.ops.render.render('INVOKE_DEFAULT',animation=True)
+            #renderResult = bpy.ops.render.render(animation=True)    # this works but gives no feedback and blocks the UI
+            #renderResult = 'todoremovejjensen'
+            # TODO jjensen: check for a cancelled operation
+            #if renderResult == {'CANCELLED'}:
+            #    # if so, break out of the loop
+            #    return {'CANCELLED'}
+            # TODO jjensen: if a cancel has been requested, break
+            # TODO jjensen: update the progress bar
+        # restore the original frame range
         return {'FINISHED'}
 
 # 'mesh' is a Blender mesh
