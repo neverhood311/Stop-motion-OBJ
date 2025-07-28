@@ -262,6 +262,7 @@ def updateFrame(scene):
 def renderInitHandler(scene):
     global storedUseLockInterface
     storedUseLockInterface = bpy.data.scenes["Scene"].render.use_lock_interface
+    # TODO jjensen: maybe used the passed-in scene instead of bpy.data.scenes["Scene"]
     bpy.data.scenes["Scene"].render.use_lock_interface = True
     global forceMeshLoad
     forceMeshLoad = True
@@ -1074,6 +1075,7 @@ def setFrameObj(_obj, frameNum):
 
 
 def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
+    print("setFrameObjStreamed frame: " + str(frameNum))
     mss = obj.mesh_sequence_settings
     idx = getMeshIdxFromFrameNumber(obj, frameNum)
     mss.curVisibleMeshIdx = idx
@@ -1512,91 +1514,19 @@ class MergeDuplicateMaterials(bpy.types.Operator):
         mergeDuplicateMaterials(obj)
         return {'FINISHED'}
 
-class RenderAnimation(bpy.types.Operator):
-    """Render Animation"""
-    bl_idname = "ms.render_animation"
-    bl_label = "Render Animation"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        print("Start")
-
-    def __del__(self):
-        print("End")
-        super().__del__()
-
-    def modal(self, context, event):
-        print("Modal")
-        if event.type == 'ESC':
-            self.execute(context)
-            return {'FINISHED'}
-        return {'RUNNING_MODAL'}
-
-    def invoke(self, context, event):
-        # TODO jjensen: remove
-        print("invoke")
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
-        
-
-        # TODO jjensen: invoke function should grab the frame range from the scene and store it
-        self.startFrame = bpy.context.scene.frame_start
-        self.endFrame = bpy.context.scene.frame_end
-        self.currentFrame = bpy.context.scene.frame_current
-
-        # then it should call execute with that frame range
-        #executeResult = self.execute(context)
-
-        # then it should restore that frame range to the scene when execute is done
-        bpy.context.scene.frame_set(self.currentFrame)
-        bpy.context.scene.frame_start = self.startFrame
-        bpy.context.scene.frame_end = self.endFrame
-
-        #return executeResult
-        return {'RUNNING_MODAL'}
-
-    def execute(self, context):
-        # TODO jjensen: remove
-        print("executing")
-        return {'FINISHED'}
-
-        # TODO jjensen: try this
-        # https://blender.stackexchange.com/a/71830/1170
-
-        # TODO jjensen
-        todoremovejjensen = 2
-        # read the frame range from `self` and store it for safe keeping
-        # for each frame in the range
-        for frNum in range(self.startFrame, self.endFrame + 1):
-            # set the current frame to this frame number
-            bpy.context.scene.frame_set(frNum)
-
-            # set the frame range to start and end on this frame
-            bpy.context.scene.frame_start = frNum
-            bpy.context.scene.frame_end = frNum
-            # call bpy.ops.render.render('INVOKE_DEFAULT',animation=True)
-            renderResult = bpy.ops.render.render('INVOKE_DEFAULT',animation=True)
-            #renderResult = bpy.ops.render.render(animation=True)    # this works but gives no feedback and blocks the UI
-            #renderResult = 'todoremovejjensen'
-            # TODO jjensen: check for a cancelled operation
-            #if renderResult == {'CANCELLED'}:
-            #    # if so, break out of the loop
-            #    return {'CANCELLED'}
-            # TODO jjensen: if a cancel has been requested, break
-            # TODO jjensen: update the progress bar
-        # restore the original frame range
-        return {'FINISHED'}
-
+# https://blender.stackexchange.com/a/71830/1170
 class Multi_Render(bpy.types.Operator):
-    """Docstring"""
-    bl_idname = "render.multi"
-    bl_label = "Render multiple times"
+    """Render Animation using a custom render loop to allow streaming sequences to load properly"""
+    bl_idname = "ms.render_animation"
+    bl_label = "Render Mesh Sequence Animation"
 
     _timer = None
     shots = None
     stop = None
     rendering = None
-    path = "/tmp/"
+    frameStart = None
+    frameEnd = None
+    #path = "/tmp/"
 
     def pre(self, scene, context=None):
         print("render pre")
@@ -1615,10 +1545,11 @@ class Multi_Render(bpy.types.Operator):
         # define the vars during execution. This allows us to define when called from a button
         self.stop = False
         self.rendering = False
-        self.shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
-        #self.shots = [1, 2, 3, 4, 5, 6]
+        self.frameStart = context.scene.frame_start
+        self.frameEnd = context.scene.frame_end
+        self.shots = list(range(self.frameStart, self.frameEnd + 1))
 
-        context.scene.render.filepath = self.path
+        #self.path = context.scene.render.filepath
 
         bpy.app.handlers.render_pre.append(self.pre)
         bpy.app.handlers.render_post.append(self.post)
@@ -1633,22 +1564,29 @@ class Multi_Render(bpy.types.Operator):
     def modal(self, context, event):
         if event.type == 'TIMER':   # this event is signaled every half second and will start the next render if available
             # if cancelled or no more shots to render, finish
-            if True in (not self.shots, self.stop is True):
+            if len(self.shots) == 0 or self.stop is True:
                 # remove the handlers and the modal timer to clean up
                 bpy.app.handlers.render_pre.remove(self.pre)
                 bpy.app.handlers.render_post.remove(self.post)
                 bpy.app.handlers.render_cancel.remove(self.cancelled)
                 context.window_manager.event_timer_remove(self._timer)
 
+                # reset the scene's frame range
+                context.scene.frame_start = self.frameStart
+                context.scene.frame_end = self.frameEnd
+
                 # if needed, we can separate the cancel and finish events
                 return {"FINISHED"}
-            elif self.rendering is False:
-                # nothing is currently rendering. Proceed to render
-                #context.scene.camera = bpy.data.objects[self.shots[0]]
+            
+            elif self.rendering is False:   # nothing is currently rendering. Proceed to render
+                # restrict the frame range to this frame only
+                context.scene.frame_start = self.shots[0]
+                context.scene.frame_end = self.shots[0]
+
+                # set the frame number to change the mesh in the sequence
                 context.scene.frame_set(self.shots[0])
 
-                context.scene.render.filepath = self.path + str(self.shots[0]) + ".png"
-                bpy.ops.render.render("INVOKE_DEFAULT", write_still=True)
+                bpy.ops.render.render("INVOKE_DEFAULT", animation=True)
     
         # This is very important! If we use "RUNNING_MODAL", this new modal function
         # would prevent the use of the X button to cancel rendering, because this

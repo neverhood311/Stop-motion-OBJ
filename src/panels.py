@@ -133,9 +133,8 @@ class SMO_PT_MeshSequenceExportPanel(bpy.types.Panel):
 
             row.prop(objSettings, "exportDir")
 
-# TODO jjensen: MeshSequenceRenderPanel
-#   a panel that lets the user kick off an animation render and the script manually renders the frames individually
-#   so that we try to avoid issues with separate threads
+# a panel that lets the user kick off an animation render and the script manually renders the frames individually
+# so that we try to avoid issues with separate threads
 class SMO_PT_MeshSequenceRenderPanel(bpy.types.Panel):
     bl_label = 'Render'
     bl_parent_id = "OBJ_SEQUENCE_PT_properties"
@@ -155,11 +154,8 @@ class SMO_PT_MeshSequenceRenderPanel(bpy.types.Panel):
             row = layout.row()
             row.operator("ms.render_animation")
             row = layout.row()
-            row.progress(factor = 0.33, type='BAR')
+            row.progress(factor = 0.33, type='BAR') # TODO jjensen
             #row.operator("ms.cancel_render_animation")  # TODO jjensen
-            row = layout.row()
-            row.operator("render.multi")
-
 
 class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
     bl_label = 'Advanced'
@@ -550,6 +546,10 @@ def menu_func_convert_to_sequence(self, context):
         if context.object.type == 'MESH' and context.object.mesh_sequence_settings.initialized is False:
             self.layout.separator()
             self.layout.operator(ConvertToMeshSequence.bl_idname, icon="ONIONSKIN_ON")
+
+def menu_func_render_animation_SMO(self, context):
+    self.layout.separator()
+    self.layout.operator(Multi_Render.bl_idname, icon="RENDER_ANIMATION")
 
 
 class DuplicateMeshFrame(bpy.types.Operator):

@@ -58,7 +58,7 @@ def register():
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(DeepDeleteSequence)
     bpy.utils.register_class(MergeDuplicateMaterials)
-    bpy.utils.register_class(RenderAnimation)
+    #bpy.utils.register_class(RenderAnimation)
     bpy.utils.register_class(ConvertToMeshSequence)
     bpy.utils.register_class(DuplicateMeshFrame)
     bpy.utils.register_class(SMO_PT_MeshSequencePanel)
@@ -73,8 +73,8 @@ def register():
     bpy.app.handlers.render_cancel.append(renderCancelHandler)
 
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import_sequence)
+    bpy.types.TOPBAR_MT_render.append(menu_func_render_animation_SMO)
     bpy.types.VIEW3D_MT_object.append(menu_func_convert_to_sequence)
-
 
     bpy.utils.register_class(Multi_Render)
 
@@ -101,7 +101,6 @@ def unregister():
 
     bpy.utils.unregister_class(Multi_Render)
 
-
     bpy.app.handlers.frame_change_pre.remove(checkMeshChangesFrameChangePre)
     bpy.app.handlers.frame_change_post.remove(checkMeshChangesFrameChangePost)
 
@@ -117,7 +116,7 @@ def unregister():
     bpy.utils.unregister_class(BakeMeshSequence)
     bpy.utils.unregister_class(DeepDeleteSequence)
     bpy.utils.unregister_class(MergeDuplicateMaterials)
-    bpy.utils.unregister_class(RenderAnimation)
+    #bpy.utils.unregister_class(RenderAnimation)
     bpy.utils.unregister_class(ConvertToMeshSequence)
     bpy.utils.unregister_class(DuplicateMeshFrame)
     bpy.utils.unregister_class(SMO_PT_MeshSequencePanel)
@@ -131,6 +130,7 @@ def unregister():
     bpy.utils.unregister_class(MeshNameProp)
 
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_sequence)
+    bpy.types.TOPBAR_MT_render.remove(menu_func_render_animation_SMO)
     bpy.types.VIEW3D_MT_object.remove(menu_func_convert_to_sequence)
     bpy.utils.unregister_class(SMO_PT_FileImportSettingsPanel)
     bpy.utils.unregister_class(SMO_PT_TransformSettingsPanel)
