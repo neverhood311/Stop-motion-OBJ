@@ -46,7 +46,7 @@ def register():
     bpy.types.Mesh.inMeshSequence = bpy.props.BoolProperty()
     bpy.types.Mesh.meshHash = bpy.props.StringProperty()
     bpy.utils.register_class(SequenceVersion)
-    bpy.utils.register_class(MeshImporter)
+    bpy.utils.register_class(MeshIO)
     bpy.utils.register_class(MeshNameProp)
     bpy.utils.register_class(MeshSequenceSettings)
     bpy.types.Object.mesh_sequence_settings = bpy.props.PointerProperty(type=MeshSequenceSettings)
@@ -54,7 +54,6 @@ def register():
     bpy.app.handlers.frame_change_pre.append(updateFrame)
     
     # note: Blender tends to crash in Rendered viewport mode if we set the depsgraph_update_post instead of depsgraph_update_pre
-    #bpy.app.handlers.depsgraph_update_pre.append(updateFrame)   # TODO jjensen: do we need this?
     bpy.utils.register_class(ReloadMeshSequence)
     bpy.utils.register_class(BatchShadeSmooth)
     bpy.utils.register_class(BatchShadeFlat)
@@ -105,7 +104,6 @@ def unregister():
 
     bpy.app.handlers.load_post.remove(initializeSequences)
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
-    #bpy.app.handlers.depsgraph_update_pre.remove(updateFrame)
     bpy.app.handlers.render_init.remove(renderInitHandler)
     bpy.app.handlers.render_complete.remove(renderCompleteHandler)
     bpy.app.handlers.render_cancel.remove(renderCancelHandler)
@@ -134,7 +132,7 @@ def unregister():
     bpy.utils.unregister_class(SMO_PT_FileImportSettingsPanel)
     bpy.utils.unregister_class(SMO_PT_TransformSettingsPanel)
     bpy.utils.unregister_class(SMO_PT_SequenceImportSettingsPanel)
-    bpy.utils.unregister_class(MeshImporter)
+    bpy.utils.unregister_class(MeshIO)
     bpy.utils.unregister_class(SequenceVersion)
     bpy.utils.unregister_class(SequenceImportSettings)
 

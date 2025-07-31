@@ -63,6 +63,11 @@ def deselectAll():
     for ob in bpy.context.scene.objects:
         ob.select_set(state=False)
 
+def showError(message=""):
+    def draw(self, context):
+        self.layout.label(text=message)
+    bpy.context.window_manager.popup_menu(draw, title='Stop Motion OBJ Error', icon='ERROR')
+
 @persistent
 def checkMeshChangesFrameChangePre(scene):
     global inRenderMode
@@ -70,22 +75,9 @@ def checkMeshChangesFrameChangePre(scene):
         return
     
     # just in case we're still in the Render context
-    if hasattr(bpy.context, "object") is False:
+    if hasattr(bpy.context, "scene") is False:
         return
-    
-    obj = bpy.context.object
-    
-    # make sure an object is selected
-    if obj is None:
-        return
-
-    # if the selected object is not a loaded and initialized mesh sequence, return
-    mss = obj.mesh_sequence_settings
-    if mss.initialized is False or mss.loaded is False:
-        return
-
-    # if the selected object is not in auto-export mode, return
-    if mss.autoExportChanges is False:
+    if hasattr(bpy.context.scene, "objects") is False:
         return
     
     # if we're not in Sculpt or Object mode, return
@@ -93,57 +85,65 @@ def checkMeshChangesFrameChangePre(scene):
     if cMode != 'SCULPT' and cMode != 'OBJECT':
         return
     
-    # generate the mesh hash for the current mesh (just before the frame switches)
-    meshHashStr = getMeshHashStr(obj.data)
+    # loop over all objects looking for mesh sequences that have auto-export enabled
+    for obj in bpy.context.scene.objects:
+        # if the object is not a loaded and initialized mesh sequence, continue
+        mss = obj.mesh_sequence_settings
+        if mss.initialized is False or mss.loaded is False:
+            continue
 
-    # if the generated mesh hash does not match the mesh's stored hash
-    # for some reason we also have to check whether the meshHash has not been calculated yet
-    if obj.data.meshHash != '' and meshHashStr != obj.data.meshHash:
-        # lock frame switching until we're done exporting (so that we export the correct frame beofre the next one is loaded)
-        global lockFrameSwitch
-        lockFrameSwitch = True
+        # if the object is not in auto-export mode, continue
+        if mss.autoExportChanges is False:
+            continue
+        
+        # generate the mesh hash for the current mesh (just before the frame switches)
+        meshHashStr = getMeshHashStr(obj.data)
 
-        # update the mesh hash
-        obj.data.meshHash = meshHashStr
+        # if the generated mesh hash does not match the mesh's stored hash
+        # for some reason we also have to check whether the meshHash has not been calculated yet
+        if obj.data.meshHash != '' and meshHashStr != obj.data.meshHash:
+            # lock frame switching until we're done exporting (so that we export the correct frame beofre the next one is loaded)
+            global lockFrameSwitch
+            lockFrameSwitch = True
 
-        # export this updated mesh
-        absDir = ''
-        if mss.overwriteSrcDir is True:
-            # writing over the original meshes
-            absDir = bpy.path.abspath(mss.dirPath)
-        else:
-            # use the user-provided export directory
-            absDir = bpy.path.abspath(mss.exportDir)
-            if mss.exportDir == '' or os.path.isdir(absDir) is False:
-                # if the dirpath is invalid or empty, alert the user
-                showError("Invalid export directory")
-                return
+            # update the mesh hash
+            obj.data.meshHash = meshHashStr
 
-        filename = os.path.join(absDir, mss.meshNameArray[mss.curVisibleMeshIdx].basename)
+            # export this updated mesh
+            absDir = ''
+            if mss.overwriteSrcDir is True:
+                # writing over the original meshes
+                absDir = bpy.path.abspath(mss.dirPath)
+            else:
+                # use the user-provided export directory
+                absDir = bpy.path.abspath(mss.exportDir)
+                if mss.exportDir == '' or os.path.isdir(absDir) is False:
+                    # if the dirpath is invalid or empty, alert the user
+                    showError("Invalid export directory")
+                    return
 
-        # select only this object so that this object is the only one that will be exported
-        selectOnly(obj)
+            filename = os.path.join(absDir, mss.meshNameArray[mss.curVisibleMeshIdx].basename)
 
-        # actually export the file
-        mss.fileImporter.export(mss.fileFormat, filename)
+            # TODO jjensen: we need to save the current selection here
 
-        # show an unobtrusive message that the mesh has been exported
-        msg = "Mesh exported: " + filename
-        bpy.context.workspace.status_text_set(text=msg)
+            # select only this object so that this object is the only one that will be exported
+            selectOnly(obj)
 
-        # once the export operation has fully finished, unlock importing/changing meshes, then trigger an updateFrame call
-        lockFrameSwitch = False
-        updateFrame(0)
+            # actually export the file
+            mss.fileIO.export(mss.fileFormat, filename)
 
+            # TODO jjensen: here we should restore the previous selection
 
-def showError(message=""):
-    def draw(self, context):
-        self.layout.label(text=message)
-    bpy.context.window_manager.popup_menu(draw, title='Stop Motion OBJ Error', icon='ERROR')
+            # show an unobtrusive message that the mesh has been exported
+            msg = "Mesh exported: " + filename
+            bpy.context.workspace.status_text_set(text=msg)
+
+            # once the export operation has fully finished, unlock importing/changing meshes, then trigger an updateFrame call
+            lockFrameSwitch = False
+            updateFrame(0)
 
 @persistent
 def checkMeshChangesFrameChangePost(scene):
-    print("frameChangePost<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<todojjensenremove")
     # make sure we're not rendering
     global inRenderMode
     if inRenderMode == True:
@@ -154,19 +154,26 @@ def checkMeshChangesFrameChangePost(scene):
     if bpy.context.mode != 'SCULPT' and bpy.context.mode != 'OBJECT':
         return
 
-    if hasattr(bpy.context, "object") and bpy.context.object != None:
+    # in case we're in the Render context
+    if not hasattr(bpy.context, "scene"):
+        return
+    if not hasattr(bpy.context.scene, "objects"):
+        return
+    
+    # loop through all objects to do this check
+    for obj in bpy.context.scene.objects:
         # if the selected object is not a loaded and initialized mesh sequence, return
-        mss = bpy.context.object.mesh_sequence_settings
+        mss = obj.mesh_sequence_settings
         if mss.initialized is False or mss.loaded is False:
-            return
+            continue
 
         # if the selected object is not in auto-export mode, return
         if mss.autoExportChanges is False:
-            return
+            continue
 
         # generate the mesh hash for the current mesh and store that value on the mesh
-        meshHashStr = getMeshHashStr(bpy.context.object.data)
-        bpy.context.object.data.meshHash = meshHashStr
+        meshHashStr = getMeshHashStr(obj.data)
+        obj.data.meshHash = meshHashStr
 
 def getMeshSignature(mesh):
     # Build a string composed of the following elements:
@@ -388,7 +395,7 @@ class SequenceVersion(bpy.types.PropertyGroup):
             return mainVersionStr
         return mainVersionStr + '.' + self.versionDevelopment
 
-class MeshImporter(bpy.types.PropertyGroup):
+class MeshIO(bpy.types.PropertyGroup):
     # OBJ import parameters
     obj_use_edges: bpy.props.BoolProperty(name="Lines", description="Import lines and faces with 2 verts as edge", default=True)
     obj_use_smooth_groups: bpy.props.BoolProperty(name="Smooth Groups", description="Surround smooth groups by sharp edges", default=True)
@@ -585,9 +592,9 @@ class MeshImporter(bpy.types.PropertyGroup):
                 filepath=filePath,
                 check_existing=False,
                 export_selected_objects=True,
-                axis_forward=self.axis_forward,
+                axis_forward=newForwardAxisStr,
                 global_scale=self.stl_global_scale,
-                axis_up=self.axis_up)
+                axis_up=newUpAxisStr)
             # these are skipped:
             # apply_modifiers, use_scene_unit, collection, ascii_object
     
@@ -629,7 +636,7 @@ class MeshSequenceSettings(bpy.types.PropertyGroup):
         description="Whether the sequence was loaded from files on disk (True), or created in Blender (False)",
         default=True)
     version: bpy.props.PointerProperty(type=SequenceVersion)
-    fileImporter: bpy.props.PointerProperty(type=MeshImporter)
+    fileIO: bpy.props.PointerProperty(type=MeshIO)
 
     dirPath: bpy.props.StringProperty(
         name="Root Folder",
@@ -876,7 +883,7 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
     deselectAll()
     for file in sortedFiles:
         # import the mesh file
-        mss.fileImporter.load(mss.fileFormat, file, False)
+        mss.fileIO.load(mss.fileFormat, file, False)
 
         # get the first object of type MESH
         # TODO: eventually, let's pull out all MESH objects and put them into their own individual sequences
@@ -1013,6 +1020,7 @@ def setFrameNumber(frameNum):
     # Probably need to store them first and restore them at the end?
     for obj in bpy.data.objects:
         mss = obj.mesh_sequence_settings
+        # if it's an initialized, loaded SMO mesh sequence
         if mss.initialized is True and mss.loaded is True:
             cacheMode = mss.cacheMode
             if cacheMode == 'cached':
@@ -1111,12 +1119,8 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
 
     # if we want to load new meshes as needed and it's not already loaded
     if nextMeshProp.inMemory is False and (mss.streamDuringPlayback is True or forceLoad is True):
-        # TODO jjensen: remove
-        objIsSelectedBefore = obj.select_get()
         importStreamedFile(obj, idx)
-        objIsSelectedAfter = obj.select_get()
         obj.select_set(state=True)
-        objIsSelectedAfterAgain = obj.select_get()
         if deleteMaterials is True:
             nextMesh = getMeshFromIndex(obj, idx)
             deleteLinkedMeshMaterials(nextMesh)
@@ -1149,10 +1153,6 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
         idxToDelete = nextCachedMeshToDelete(obj, idx)
         if idxToDelete >= 0:
             removeMeshFromCache(obj, idxToDelete)
-    
-    objIsSelectedBeforeAgain = obj.select_get()
-    #selectOnly(obj)
-    objIsSelectedAfterAgainAgain = obj.select_get()
 
 
 def nextCachedMeshToDelete(obj, currentMeshIdx):
@@ -1172,19 +1172,17 @@ def importStreamedFile(obj, idx):
     mss = obj.mesh_sequence_settings
     absDirectory = bpy.path.abspath(mss.dirPath)
     filename = os.path.join(absDirectory, mss.meshNameArray[idx].basename)
-    deselectAll()
     
     lockLoadingSequence(True)
+    # Getting an imported object's name:
+    # https://blender.stackexchange.com/a/108112/1170
     objsBefore = set(bpy.context.scene.objects)
-    mss.fileImporter.load(mss.fileFormat, filename, True)
-    objsAfter = set(bpy.context.scene.objects)
-    objsNew = objsAfter - objsBefore    # TODO jjensen: use THIS method to get the new object(s), not simply by checking selected objects
+    mss.fileIO.load(mss.fileFormat, filename, True)
+    objsNew = set(bpy.context.scene.objects) - objsBefore
     lockLoadingSequence(False)
 
-    selectedObjects = getSelectedObjects()
     # get the first new object (ignore the rest)
-    tmpObject = next(filter(lambda meshObj: meshObj.type == 'MESH', selectedObjects), None)
-    #tmpObject = next(filter(lambda meshObj: meshObj.type == 'MESH', objsNew), None)
+    tmpObject = next(filter(lambda meshObj: meshObj.type == 'MESH', objsNew), None)
     
     tmpMesh = None
     
@@ -1197,7 +1195,7 @@ def importStreamedFile(obj, idx):
         tmpMesh = tmpObject.data
 
     # make a list of the objects we're going to delete
-    objsToDelete = selectedObjects.copy()
+    objsToDelete = objsNew.copy()
 
     # now delete all selected objects
     for obj in objsToDelete:
@@ -1487,6 +1485,7 @@ class BatchShadeSmooth(bpy.types.Operator):
             return {'CANCELLED'}
 
         obj = context.object
+
         # True for smooth
         shadeSequence(obj, True)
         return {'FINISHED'}
@@ -1504,6 +1503,7 @@ class BatchShadeFlat(bpy.types.Operator):
             return {'CANCELLED'}
 
         obj = context.object
+
         # False for flat
         shadeSequence(obj, False)
         return {'FINISHED'}
@@ -1522,6 +1522,7 @@ class BakeMeshSequence(bpy.types.Operator):
 
         obj = context.object
         bakeSequence(obj)
+
         # update the frame so the right shape is visible
         bpy.context.scene.frame_current = bpy.context.scene.frame_current
         return {'FINISHED'}

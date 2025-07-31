@@ -255,7 +255,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
     bl_label = "Select Folder"
     bl_options = {'UNDO'}
 
-    importSettings: bpy.props.PointerProperty(type=MeshImporter)
+    importSettings: bpy.props.PointerProperty(type=MeshIO)
     sequenceSettings: bpy.props.PointerProperty(type=SequenceImportSettings)
 
     # for now, we'll just show any file type that Stop Motion OBJ supports
@@ -329,7 +329,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
                 # once the path is made relative, it will be set to False
                 mss.dirPathNeedsRelativizing = mss.dirPathIsRelative
                 
-                self.copyImportSettings(self.importSettings, mss.fileImporter)
+                self.copyImportSettings(self.importSettings, mss.fileIO)
 
                 meshCount = 0
 
