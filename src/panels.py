@@ -200,11 +200,7 @@ class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
 
                 row = layout.row()
                 row.enabled = inObjectMode
-                row.operator("ms.bake_sequence")
-            
-            # TODO jjensen: show a reminder that sequence baking is available only for Cached sequences
-            
-            
+                row.operator("ms.bake_sequence")            
 
             row = layout.row()
             row.enabled = inObjectMode
@@ -549,7 +545,7 @@ def menu_func_convert_to_sequence(self, context):
 
 def menu_func_render_animation_SMO(self, context):
     self.layout.separator()
-    self.layout.operator(Multi_Render.bl_idname, icon="RENDER_ANIMATION")
+    self.layout.operator(RenderAnimationSMO.bl_idname, icon="RENDER_ANIMATION")
 
 
 class DuplicateMeshFrame(bpy.types.Operator):

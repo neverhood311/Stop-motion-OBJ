@@ -56,8 +56,10 @@ def clamp(value, minVal, maxVal):
 def selectOnly(obj):
     deselectAll()
     obj.select_set(state=True)
+    bpy.context.view_layer.objects.active = obj
 
 def deselectAll():
+    bpy.context.view_layer.objects.active = None
     for ob in bpy.context.scene.objects:
         ob.select_set(state=False)
 
@@ -141,14 +143,15 @@ def showError(message=""):
 
 @persistent
 def checkMeshChangesFrameChangePost(scene):
+    print("frameChangePost<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<todojjensenremove")
     # make sure we're not rendering
     global inRenderMode
     if inRenderMode == True:
         return
     
     # if we're not in Sculpt mode or Object mode, return
-    #if bpy.context.mode != 'SCULPT' and bpy.context.mode != 'OBJECT':
-    if bpy.context.mode != 'SCULPT':
+    #if bpy.context.mode != 'SCULPT':
+    if bpy.context.mode != 'SCULPT' and bpy.context.mode != 'OBJECT':
         return
 
     if hasattr(bpy.context, "object") and bpy.context.object != None:
@@ -453,6 +456,10 @@ class MeshImporter(bpy.types.PropertyGroup):
          items=(('NONE', "None", "Do not import/export color attributes"),
                 ('SRGB', "sRGB", "Vertex colors in the file are in sRGB color space"),
                 ('LINEAR', "Linear", "Vertex colors in the file are in linear color space")))
+    ply_import_attributes: bpy.props.BoolProperty(
+        name="Import Attributes",
+        description="Import custom vertex attributes",
+        default=False)
     # (X3D has no import parameters)
     # (WRL has no import parameters)
     # Shared import parameters
@@ -509,14 +516,19 @@ class MeshImporter(bpy.types.PropertyGroup):
 
     def loadSTL(self, filePath):
         # call the stl load function with all the correct parameters
-        # TODO jjensen: make sure this importer still lives here
-        bpy.ops.import_mesh.stl(
-            filepath=filePath,
-            global_scale=self.stl_global_scale,
-            use_scene_unit=self.stl_use_scene_unit,
-            use_facet_normal=self.stl_use_facet_normal,
-            axis_forward=self.axis_forward,
-            axis_up=self.axis_up)
+        if bpy.app.version < (4, 1, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
+        else:
+            newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
+            newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
+            bpy.ops.wm.stl_import(
+                filepath=filePath,
+                global_scale=self.stl_global_scale,
+                use_scene_unit=self.stl_use_scene_unit,
+                use_facet_normal=self.stl_use_facet_normal,
+                forward_axis=newForwardAxisStr,
+                use_mesh_validate=True,
+                up_axis=newUpAxisStr)
     
     def loadPLY(self, filePath, streaming=False):
         # call the ply load function with all the correct parameters
@@ -532,6 +544,7 @@ class MeshImporter(bpy.types.PropertyGroup):
                 forward_axis=newForwardAxisStr,
                 up_axis=newUpAxisStr,
                 merge_verts=self.ply_merge_verts,
+                import_attributes=self.ply_import_attributes,
                 import_colors=self.ply_import_colors)
 
     def loadX3D(self, filePath):
@@ -554,16 +567,29 @@ class MeshImporter(bpy.types.PropertyGroup):
                 export_animation=False,
                 export_triangulated_mesh=False,
                 forward_axis=newForwardAxisStr,
+                global_scale=self.obj_global_scale,
                 up_axis=newUpAxisStr)
+            # these attributes are skipped:
+            # apply_modifiers, export_uv, export_normals, 
+            # export_materials, export_pbr_extensions, export_triangulated_mesh,
+            # export_material_groups, export_vertex_groups, export_smooth_groups,
+            # smooth_group_bitflags
     
     def exportSTL(self, filePath):
-        # TODO jjensen: make sure this exporter still lives here
-        bpy.ops.export_mesh.stl(
-            filepath=filePath,
-            check_existing=False,
-            use_selection=True,
-            axis_forward=self.axis_forward,
-            axis_up=self.axis_up)
+        if bpy.app.version < (4, 1, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
+        else:
+            newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
+            newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
+            bpy.ops.wm.stl_export(
+                filepath=filePath,
+                check_existing=False,
+                export_selected_objects=True,
+                axis_forward=self.axis_forward,
+                global_scale=self.stl_global_scale,
+                axis_up=self.axis_up)
+            # these are skipped:
+            # apply_modifiers, use_scene_unit, collection, ascii_object
     
     def exportPLY(self, filePath):
         if bpy.app.version < (4, 1, 0):
@@ -575,11 +601,11 @@ class MeshImporter(bpy.types.PropertyGroup):
                 filepath=filePath,
                 check_existing=False,
                 export_selected_objects=True,
-                export_animation=False,
+                global_scale=self.ply_global_scale,
                 export_triangulated_mesh=False,
                 forward_axis=newForwardAxisStr,
                 up_axis=newUpAxisStr)
-            # TODO: apply modifiers? global_scale?
+            # skip apply modifiers
     
     def exportX3D(self, filePath):
         # TODO jjensen: make sure this exporter still lives here
@@ -983,6 +1009,8 @@ def getMeshPropFromIndex(obj, idx):
 
 
 def setFrameNumber(frameNum):
+    # TODO jjensen: don't change the active and selected objects.
+    # Probably need to store them first and restore them at the end?
     for obj in bpy.data.objects:
         mss = obj.mesh_sequence_settings
         if mss.initialized is True and mss.loaded is True:
@@ -1083,8 +1111,12 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
 
     # if we want to load new meshes as needed and it's not already loaded
     if nextMeshProp.inMemory is False and (mss.streamDuringPlayback is True or forceLoad is True):
+        # TODO jjensen: remove
+        objIsSelectedBefore = obj.select_get()
         importStreamedFile(obj, idx)
+        objIsSelectedAfter = obj.select_get()
         obj.select_set(state=True)
+        objIsSelectedAfterAgain = obj.select_get()
         if deleteMaterials is True:
             nextMesh = getMeshFromIndex(obj, idx)
             deleteLinkedMeshMaterials(nextMesh)
@@ -1117,6 +1149,10 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
         idxToDelete = nextCachedMeshToDelete(obj, idx)
         if idxToDelete >= 0:
             removeMeshFromCache(obj, idxToDelete)
+    
+    objIsSelectedBeforeAgain = obj.select_get()
+    #selectOnly(obj)
+    objIsSelectedAfterAgainAgain = obj.select_get()
 
 
 def nextCachedMeshToDelete(obj, currentMeshIdx):
@@ -1139,11 +1175,16 @@ def importStreamedFile(obj, idx):
     deselectAll()
     
     lockLoadingSequence(True)
+    objsBefore = set(bpy.context.scene.objects)
     mss.fileImporter.load(mss.fileFormat, filename, True)
+    objsAfter = set(bpy.context.scene.objects)
+    objsNew = objsAfter - objsBefore    # TODO jjensen: use THIS method to get the new object(s), not simply by checking selected objects
     lockLoadingSequence(False)
 
     selectedObjects = getSelectedObjects()
+    # get the first new object (ignore the rest)
     tmpObject = next(filter(lambda meshObj: meshObj.type == 'MESH', selectedObjects), None)
+    #tmpObject = next(filter(lambda meshObj: meshObj.type == 'MESH', objsNew), None)
     
     tmpMesh = None
     
@@ -1515,7 +1556,7 @@ class MergeDuplicateMaterials(bpy.types.Operator):
         return {'FINISHED'}
 
 # https://blender.stackexchange.com/a/71830/1170
-class Multi_Render(bpy.types.Operator):
+class RenderAnimationSMO(bpy.types.Operator):
     """Render Animation using a custom render loop to allow streaming sequences to load properly"""
     bl_idname = "ms.render_animation"
     bl_label = "Render Mesh Sequence Animation"

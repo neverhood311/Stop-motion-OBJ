@@ -21,6 +21,9 @@
 from .stop_motion_obj import *
 from .panels import *
 
+# TODO jjensen: native X3D and VRML2 support was removed in Blender 4.2.
+# Should I also remove support?
+
 bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY or X3D or VRML2) files and display them each as a single frame of animation. This add-on also supports the .STL, .PLY, .X3D, and .WRL file formats.",
@@ -51,14 +54,14 @@ def register():
     bpy.app.handlers.frame_change_pre.append(updateFrame)
     
     # note: Blender tends to crash in Rendered viewport mode if we set the depsgraph_update_post instead of depsgraph_update_pre
-    bpy.app.handlers.depsgraph_update_pre.append(updateFrame)
+    #bpy.app.handlers.depsgraph_update_pre.append(updateFrame)   # TODO jjensen: do we need this?
     bpy.utils.register_class(ReloadMeshSequence)
     bpy.utils.register_class(BatchShadeSmooth)
     bpy.utils.register_class(BatchShadeFlat)
     bpy.utils.register_class(BakeMeshSequence)
     bpy.utils.register_class(DeepDeleteSequence)
     bpy.utils.register_class(MergeDuplicateMaterials)
-    #bpy.utils.register_class(RenderAnimation)
+    bpy.utils.register_class(RenderAnimationSMO)
     bpy.utils.register_class(ConvertToMeshSequence)
     bpy.utils.register_class(DuplicateMeshFrame)
     bpy.utils.register_class(SMO_PT_MeshSequencePanel)
@@ -76,7 +79,6 @@ def register():
     bpy.types.TOPBAR_MT_render.append(menu_func_render_animation_SMO)
     bpy.types.VIEW3D_MT_object.append(menu_func_convert_to_sequence)
 
-    bpy.utils.register_class(Multi_Render)
 
 
     # the order here is important since it is the order in which these sections will be drawn
@@ -98,15 +100,12 @@ def register():
             SMOKeymaps.append((keyMap, keyMapItem))
 
 def unregister():
-
-    bpy.utils.unregister_class(Multi_Render)
-
     bpy.app.handlers.frame_change_pre.remove(checkMeshChangesFrameChangePre)
     bpy.app.handlers.frame_change_post.remove(checkMeshChangesFrameChangePost)
 
     bpy.app.handlers.load_post.remove(initializeSequences)
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
-    bpy.app.handlers.depsgraph_update_pre.remove(updateFrame)
+    #bpy.app.handlers.depsgraph_update_pre.remove(updateFrame)
     bpy.app.handlers.render_init.remove(renderInitHandler)
     bpy.app.handlers.render_complete.remove(renderCompleteHandler)
     bpy.app.handlers.render_cancel.remove(renderCancelHandler)
@@ -116,7 +115,7 @@ def unregister():
     bpy.utils.unregister_class(BakeMeshSequence)
     bpy.utils.unregister_class(DeepDeleteSequence)
     bpy.utils.unregister_class(MergeDuplicateMaterials)
-    #bpy.utils.unregister_class(RenderAnimation)
+    bpy.utils.unregister_class(RenderAnimationSMO)
     bpy.utils.unregister_class(ConvertToMeshSequence)
     bpy.utils.unregister_class(DuplicateMeshFrame)
     bpy.utils.unregister_class(SMO_PT_MeshSequencePanel)
