@@ -20,7 +20,7 @@ Stop Motion OBJ is able to import very complex mesh sequences that cannot fit in
 
 
 # Download & Install
-For Blender 4.1+, download the latest release [here](https://github.com/neverhood311/Stop-motion-OBJ/releases/latest).
+For Blender 4.0+, download the latest release [here](https://github.com/neverhood311/Stop-motion-OBJ/releases/latest).
 
 To install, just follow the normal procedure for installing Blender addons. Open Blender and click Edit > Preferences... > Add-ons. Then click Install… and find the .zip file you previously downloaded. Once you’ve enabled the add-on, it should be ready to use immediately.
 

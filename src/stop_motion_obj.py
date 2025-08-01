@@ -68,6 +68,27 @@ def showError(message=""):
         self.layout.label(text=message)
     bpy.context.window_manager.popup_menu(draw, title='Stop Motion OBJ Error', icon='ERROR')
 
+def getCurrentSelection(context, scene):
+    # for every object in the scene
+    #   add selected objects to a result set
+    objNames = set(obj.name for obj in context.selected_objects)
+    return objNames
+
+def restoreSelection(scene, selection):
+    # for every object in the scene, select it if it's in the selection
+    for obj in scene.objects:
+        doSelect = obj.name in selection
+        obj.select_set(state=doSelect)
+
+def getActiveObjectName(context):
+    if context.view_layer.objects.active is not None:
+        return context.view_layer.objects.active.name
+    return None
+
+def restoreActiveObject(context, scene, activeObjName):
+    if activeObjName is not None:
+        context.view_layer.objects.active = scene.objects[activeObjName]
+
 @persistent
 def checkMeshChangesFrameChangePre(scene):
     global inRenderMode
@@ -99,6 +120,7 @@ def checkMeshChangesFrameChangePre(scene):
         # generate the mesh hash for the current mesh (just before the frame switches)
         meshHashStr = getMeshHashStr(obj.data)
 
+        # TODO jjensen: for some reason this is exporting from only one mesh sequence
         # if the generated mesh hash does not match the mesh's stored hash
         # for some reason we also have to check whether the meshHash has not been calculated yet
         if obj.data.meshHash != '' and meshHashStr != obj.data.meshHash:
@@ -124,7 +146,9 @@ def checkMeshChangesFrameChangePre(scene):
 
             filename = os.path.join(absDir, mss.meshNameArray[mss.curVisibleMeshIdx].basename)
 
-            # TODO jjensen: we need to save the current selection here
+            # save the current selection here
+            selection = getCurrentSelection(bpy.context, scene)
+            activeObjName = getActiveObjectName(bpy.context)
 
             # select only this object so that this object is the only one that will be exported
             selectOnly(obj)
@@ -132,7 +156,9 @@ def checkMeshChangesFrameChangePre(scene):
             # actually export the file
             mss.fileIO.export(mss.fileFormat, filename)
 
-            # TODO jjensen: here we should restore the previous selection
+            # restore the previous selection
+            restoreActiveObject(bpy.context, scene, activeObjName)
+            restoreSelection(scene, selection)
 
             # show an unobtrusive message that the mesh has been exported
             msg = "Mesh exported: " + filename
@@ -505,8 +531,8 @@ class MeshIO(bpy.types.PropertyGroup):
         bpy.ops.object.mode_set(mode=contextMode)
 
     def loadOBJ(self, filePath, streaming=False):
-        if bpy.app.version < (4, 1, 0):
-            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
+        if bpy.app.version < (4, 0, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.0")
         else:
             # convert '-Z' to 'NEGATIVE_Z'
             newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
@@ -523,8 +549,8 @@ class MeshIO(bpy.types.PropertyGroup):
 
     def loadSTL(self, filePath):
         # call the stl load function with all the correct parameters
-        if bpy.app.version < (4, 1, 0):
-            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
+        if bpy.app.version < (4, 0, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.0")
         else:
             newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
             newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
@@ -539,8 +565,8 @@ class MeshIO(bpy.types.PropertyGroup):
     
     def loadPLY(self, filePath, streaming=False):
         # call the ply load function with all the correct parameters
-        if bpy.app.version < (4, 1, 0):
-            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
+        if bpy.app.version < (4, 0, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.0")
         else:
             newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
             newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
@@ -566,8 +592,8 @@ class MeshIO(bpy.types.PropertyGroup):
                 axis_up=self.axis_up)
         
     def exportOBJ(self, filePath):
-        if bpy.app.version < (4, 1, 0):
-            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
+        if bpy.app.version < (4, 0, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.0")
         else:
             newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
             newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
@@ -587,8 +613,8 @@ class MeshIO(bpy.types.PropertyGroup):
             # smooth_group_bitflags
     
     def exportSTL(self, filePath):
-        if bpy.app.version < (4, 1, 0):
-            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
+        if bpy.app.version < (4, 0, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.0")
         else:
             newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
             newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
@@ -603,8 +629,8 @@ class MeshIO(bpy.types.PropertyGroup):
             # apply_modifiers, use_scene_unit, collection, ascii_object
     
     def exportPLY(self, filePath):
-        if bpy.app.version < (4, 1, 0):
-            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
+        if bpy.app.version < (4, 0, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.0")
         else:
             newForwardAxisStr = convertOldToNewAxisStr(self.axis_forward)
             newUpAxisStr = convertOldToNewAxisStr(self.axis_up)
@@ -1024,8 +1050,6 @@ def getMeshPropFromIndex(obj, idx):
 
 
 def setFrameNumber(frameNum):
-    # TODO jjensen: don't change the active and selected objects.
-    # Probably need to store them first and restore them at the end?
     for obj in bpy.data.objects:
         mss = obj.mesh_sequence_settings
         # if it's an initialized, loaded SMO mesh sequence
@@ -1181,6 +1205,10 @@ def importStreamedFile(obj, idx):
     absDirectory = bpy.path.abspath(mss.dirPath)
     filename = os.path.join(absDirectory, mss.meshNameArray[idx].basename)
     
+    # save the current selection here
+    selection = getCurrentSelection(bpy.context, bpy.context.scene)
+    activeObjName = getActiveObjectName(bpy.context)
+
     lockLoadingSequence(True)
     # Getting an imported object's name:
     # https://blender.stackexchange.com/a/108112/1170
@@ -1188,6 +1216,10 @@ def importStreamedFile(obj, idx):
     mss.fileIO.load(mss.fileFormat, filename, True)
     objsNew = set(bpy.context.scene.objects) - objsBefore
     lockLoadingSequence(False)
+
+    # restore the previous selection
+    restoreActiveObject(bpy.context, bpy.context.scene, activeObjName)
+    restoreSelection(bpy.context.scene, selection)
 
     # get the first new object (ignore the rest)
     tmpObject = next(filter(lambda meshObj: meshObj.type == 'MESH', objsNew), None)

@@ -270,8 +270,8 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
     axis_up: bpy.props.StringProperty(default="Y")
 
     def execute(self, context):
-        if bpy.app.version < (4, 1, 0):
-            showError("This version of Stop Motion OBJ requires at least Blender 4.1")
+        if bpy.app.version < (4, 0, 0):
+            showError("This version of Stop Motion OBJ requires at least Blender 4.0")
             return {'CANCELLED'}
             
         if self.sequenceSettings.fileNamePrefix == "":

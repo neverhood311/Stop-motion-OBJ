@@ -21,15 +21,12 @@
 from .stop_motion_obj import *
 from .panels import *
 
-# TODO jjensen: native X3D and VRML2 support was removed in Blender 4.2.
-# Should I also remove support?
-
 bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY or X3D or VRML2) files and display them each as a single frame of animation. This add-on also supports the .STL, .PLY, .X3D, and .WRL file formats.",
     "author": "Justin Jensen",
-    "version": (3, 0, 0, "alpha.1"),
-    "blender": (4, 1, 0),
+    "version": (2, 3, 0, "alpha.1"),
+    "blender": (4, 0, 0),
     "location": "File > Import > Mesh Sequence",
     "warning": "",
     "category": "Import",
