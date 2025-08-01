@@ -555,11 +555,15 @@ class MeshIO(bpy.types.PropertyGroup):
                 import_colors=self.ply_import_colors)
 
     def loadX3D(self, filePath):
-        # TODO jjensen: make sure this importer still lives here
-        bpy.ops.import_scene.x3d(
-            filepath=filePath,
-            axis_forward=self.axis_forward,
-            axis_up=self.axis_up)
+        # if the x3d addon is not installed, inform the user
+        x3dWrlInstalled = 'x3d' in dir(bpy.ops.import_scene)
+        if not x3dWrlInstalled:
+            showError("The X3D/WRL addon is not installed!")
+        else:
+            bpy.ops.import_scene.x3d(
+                filepath=filePath,
+                axis_forward=self.axis_forward,
+                axis_up=self.axis_up)
         
     def exportOBJ(self, filePath):
         if bpy.app.version < (4, 1, 0):
@@ -615,13 +619,17 @@ class MeshIO(bpy.types.PropertyGroup):
             # skip apply modifiers
     
     def exportX3D(self, filePath):
-        # TODO jjensen: make sure this exporter still lives here
-        bpy.ops.export_scene.x3d(
-            filepath=filePath,
-            check_existing=False,
-            use_selection=True,
-            axis_forward=self.axis_forward,
-            axis_up=self.axis_up)
+        # if the x3d addon is not installed, inform the user
+        x3dWrlInstalled = 'x3d' in dir(bpy.ops.import_scene)
+        if not x3dWrlInstalled:
+            showError("The X3D/WRL addon is not installed!")
+        else:
+            bpy.ops.export_scene.x3d(
+                filepath=filePath,
+                check_existing=False,
+                use_selection=True,
+                axis_forward=self.axis_forward,
+                axis_up=self.axis_up)
 
 
 class MeshNameProp(bpy.types.PropertyGroup):

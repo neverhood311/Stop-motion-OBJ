@@ -40,6 +40,7 @@ bl_info = {
 SMOKeymaps = []
 
 def register():
+    # TODO jjensen: can we fail this function if the Blender version is insufficient?
     bpy.app.handlers.frame_change_pre.append(checkMeshChangesFrameChangePre)
     bpy.app.handlers.frame_change_post.append(checkMeshChangesFrameChangePost)
 

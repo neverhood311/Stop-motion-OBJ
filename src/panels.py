@@ -26,6 +26,9 @@ from bpy_extras.io_utils import (
 
 from .stop_motion_obj import *
 
+# global variables
+x3dWrlInstalled = 'x3d' in dir(bpy.ops.import_scene)
+
 # The properties panel added to the Object Properties Panel list
 class SMO_PT_MeshSequencePanel(bpy.types.Panel):
     bl_idname = 'OBJ_SEQUENCE_PT_properties'
@@ -274,6 +277,17 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         if self.sequenceSettings.fileNamePrefix == "":
             self.report({'ERROR_INVALID_INPUT'}, "Please enter a file name prefix")
             return {'CANCELLED'}
+        
+        # if the x3d/wrl addon is not installed, inform the user
+        x3dWrlInstalled = 'x3d' in dir(bpy.ops.import_scene)
+        if self.sequenceSettings.fileFormat == 'x3d' and not x3dWrlInstalled:
+            showError("X3D import/export addon not installed!")
+            return {'CANCELLED'}
+        
+        if self.sequenceSettings.fileFormat == 'wrl' and not x3dWrlInstalled:
+            showError("WRL import/export addon not installed!")
+            return {'CANCELLED'}
+
 
         self.importSettings.axis_forward = self.axis_forward
         self.importSettings.axis_up = self.axis_up
@@ -415,6 +429,8 @@ class SMO_PT_FileImportSettingsPanel(bpy.types.Panel):
         layout.use_property_decorate = False
         layout.row().prop(op.sequenceSettings, "fileFormat")
 
+        x3dWrlInstalled = 'x3d' in dir(bpy.ops.import_scene)
+
         if op.sequenceSettings.fileFormat == 'obj':
             layout.prop(op.importSettings, 'obj_use_image_search')
             layout.prop(op.importSettings, 'obj_use_smooth_groups')
@@ -435,9 +451,17 @@ class SMO_PT_FileImportSettingsPanel(bpy.types.Panel):
             layout.prop(op.importSettings, 'ply_merge_verts')
             layout.prop(op.importSettings, 'ply_import_colors')
         elif op.sequenceSettings.fileFormat == 'x3d':
-            layout.label(text="No .x3d settings")
+            # if the x3d/wrl addon is not installed, inform the user
+            if not x3dWrlInstalled:
+                layout.label(text="X3D import/export addon not installed!")
+            else:
+                layout.label(text="No .x3d settings")
         elif op.sequenceSettings.fileFormat == 'wrl':
-            layout.label(text="No .wrl settings")
+            # if the x3d/wrl addon is not installed, inform the user
+            if not x3dWrlInstalled:
+                layout.label(text="WRL import/export addon not installed!")
+            else:
+                layout.label(text="No .wrl settings")
 
 
 class SMO_PT_TransformSettingsPanel(bpy.types.Panel):
