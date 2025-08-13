@@ -26,9 +26,6 @@ from bpy_extras.io_utils import (
 
 from .stop_motion_obj import *
 
-# global variables
-x3dWrlInstalled = 'x3d' in dir(bpy.ops.import_scene)
-
 # The properties panel added to the Object Properties Panel list
 class SMO_PT_MeshSequencePanel(bpy.types.Panel):
     bl_idname = 'OBJ_SEQUENCE_PT_properties'
@@ -156,9 +153,7 @@ class SMO_PT_MeshSequenceRenderPanel(bpy.types.Panel):
         if objSettings.isImported is True:
             row = layout.row()
             row.operator("ms.render_animation")
-            row = layout.row()
-            row.progress(factor = 0.33, type='BAR') # TODO jjensen
-            #row.operator("ms.cancel_render_animation")  # TODO jjensen
+
 
 class SMO_PT_MeshSequenceAdvancedPanel(bpy.types.Panel):
     bl_label = 'Advanced'
@@ -616,6 +611,8 @@ class DuplicateMeshFrame(bpy.types.Operator):
         # make the interpolation constant for this keyframe
         newKeyAtFrame = next((keyframe for keyframe in meshIdxCurve.keyframe_points if keyframe.co.x == context.scene.frame_current), None)
         newKeyAtFrame.interpolation = 'CONSTANT'
+
+        # TODO jjensen: trigger a frame change so the Active Mesh field is updated
 
         return {'FINISHED'}
 

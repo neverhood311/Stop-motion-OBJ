@@ -298,7 +298,6 @@ def updateFrame(scene):
 def renderInitHandler(scene):
     global storedUseLockInterface
     storedUseLockInterface = bpy.data.scenes["Scene"].render.use_lock_interface
-    # TODO jjensen: maybe used the passed-in scene instead of bpy.data.scenes["Scene"]
     bpy.data.scenes["Scene"].render.use_lock_interface = True
     global forceMeshLoad
     forceMeshLoad = True
@@ -910,10 +909,6 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
 
     mss = _obj.mesh_sequence_settings
     
-    # get the basename without frame numbers
-    firstBaseName = os.path.basename(sortedFiles[0])
-    commonMeshName = os.path.splitext(firstBaseName)[0].rstrip('._0123456789')
-
     deselectAll()
     for file in sortedFiles:
         # import the mesh file
@@ -1608,7 +1603,6 @@ class RenderAnimationSMO(bpy.types.Operator):
     rendering = None
     frameStart = None
     frameEnd = None
-    #path = "/tmp/"
 
     def pre(self, scene, context=None):
         print("render pre")
@@ -1630,8 +1624,6 @@ class RenderAnimationSMO(bpy.types.Operator):
         self.frameStart = context.scene.frame_start
         self.frameEnd = context.scene.frame_end
         self.shots = list(range(self.frameStart, self.frameEnd + 1))
-
-        #self.path = context.scene.render.filepath
 
         bpy.app.handlers.render_pre.append(self.pre)
         bpy.app.handlers.render_post.append(self.post)

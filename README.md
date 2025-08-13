@@ -8,7 +8,6 @@ Once a sequence is imported, you may perform many of the same operations on the 
 Stop Motion OBJ is able to import very complex mesh sequences that cannot fit in memory. Using [Streaming sequences](https://github.com/neverhood311/Stop-motion-OBJ/wiki#streaming), you can specify how many meshes to keep in memory at any given time and Stop Motion OBJ will automatically load and/or remove meshes so you don’t run out of memory.
 
 
-
 # Gallery
 | | | |
 |:---:|:---:|:---:|
