@@ -32,8 +32,8 @@ The goal is to have a repeatable (manual) test script that covers all major feat
 ### Basic usage test for Cached sequences, all file types
 
 1. File > Import > Mesh Sequence then navigate to "numbers_obj" folder 
-1. In the `File Name` field, type "number", leave `Cache Mode` set to Cached, leave `Material Per Frame` unchecked and `Relative Paths` checked. Click `Select Folder` to load
-1. Repeat steps 1 & 2 for STL, PLY, and X3D (make sure the X3D I/O addon is installed), moving each sequence so they're not overlapping
+1. In the `File Name` field, type "number", leave `Cache Mode` set to Cached, leave `Material Per Frame` unchecked and `Relative Paths` checked. Click `Select Folder` to load.
+1. Repeat steps 1 & 2 for STL, PLY, and X3D (make sure the X3D I/O addon is installed). Once imported, translate each sequence slightly so they're not overlapping.
 1. Step through frames 1-12
     - **CHECK**: all sequences should show the mesh corresponding to the frame number
 1. In Object Settings > Stop Motion OBJ > Playback, set the `Mode` to Blank for one sequence.
@@ -74,7 +74,37 @@ The goal is to have a repeatable (manual) test script that covers all major feat
 
 ## Test 2
 ### Basic usage test for Streaming sequences
-TODO jjensen
+1. File > Import > Mesh Sequence then navigate to "numbers_obj" folder 
+1. In the `File Name` field, type "number", set `Cache Mode` to Streaming, leave `Material Per Frame` unchecked and `Relative Paths` checked. Click `Select Folder` to load.
+    - **CHECK**: Frame 1 should be visible.
+1. In Stop Motion OBJ > Advanced, read the sequence metadata.
+    - **CHECK**: Sequence Size should be 12
+    - **CHECK**: Cached meshes should be 1
+1. In Blender's `Outliner` panel, change the `Display Mode` from View Layer to Blender File
+    - **CHECK**: Under Meshes, you should see only two meshes: `emptyMesh` and `number_obj_1`
+1. Advance to frame 2.
+    - **CHECK**: Frame 2 should be visible.
+    - **CHECK**: Cached meshes should be 2
+    - **CHECK**: In the Outliner Panel > Current File > Meshes, you should see three meshes: `emptyMesh`, `number_obj_1`, and `number_obj_2`
+1. In Stop Motion OBJ > Streaming, change `Cache size` to 1
+    - **CHECK**: Frame 2 should still be visible
+    - **CHECK**: Cached meshes should be 1
+    - **CHECK**: In the Outliner Panel > Current File > Meshes, you should see only two meshes: `emptyMesh` and `number_obj_2`
+1. Step through the animation from frame 1 to frame 12.
+    - **CHECK**: you should see each mesh corresponding to the frame number
+1. Render the first 12 frames of the sequence at low quality settings.
+    - **CHECK**: the sequence should be advancing in the rendered images. There should be one mesh displayed at a time.
+1. In Stop Motion OBJ > Advanced > Shading, click Smooth.
+    - **CHECK**: step through the 12 frames of the sequence and make sure all meshes are smooth.
+1. Now change the shading mode to Flat.
+    - **CHECK**: step through the 12 frames of the sequence and make sure all meshes are flat.
+1. Now click `Delete Sequence`. In Blender's `Outliner` panel, change the `Display Mode` from View Layer to Blender File.
+    - **CHECK**: Under Meshes, there should be no meshes for the deleted mesh sequence.
+    - **CHECK**: Under Objects, there should be no mesh sequence object.
+1. Undo the `Delete Sequence`.
+    - **CHECK**: the mesh sequence should reappear and sequence playback should behave as expected.
+1. In Stop Motion OBJ > Streaming, uncheck Stream During Playback.
+    - **CHECK**: step through the 12 frames of the sequence. Only the one that was most recently-loaded should be visible.
 
 ## Test 3
 ### Create mesh sequence manually
@@ -88,3 +118,7 @@ TODO jjensen
 ### Auto-export test for Cached sequences
 TODO jjensen
 
+## Test 6
+### Keyframe playback mode
+1. Load the numbers_obj sequence and just kind of play around with Keyframe playback mode.
+    - **CHECK**: just make sure it looks right
