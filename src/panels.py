@@ -613,6 +613,7 @@ class DuplicateMeshFrame(bpy.types.Operator):
         newKeyAtFrame.interpolation = 'CONSTANT'
 
         # TODO jjensen: trigger a frame change so the Active Mesh field is updated
+        # TODO jjensen: a frame change will also show the copy of the mesh, not the one that was copied.
 
         return {'FINISHED'}
 

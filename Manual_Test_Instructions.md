@@ -71,6 +71,8 @@ The goal is to have a repeatable (manual) test script that covers all major feat
     - **CHECK**: Sequence Size should be 12
     - **CHECK**: Mesh directory should be correct
     - **CHECK**: Sequence version should be correct
+1. Save the sequence to disk, close Blender, reopen Blender, and reload the saved file
+    - **CHECK**: the mesh sequences should progress as expected.
 
 ## Test 2
 ### Basic usage test for Streaming sequences
@@ -105,20 +107,83 @@ The goal is to have a repeatable (manual) test script that covers all major feat
     - **CHECK**: the mesh sequence should reappear and sequence playback should behave as expected.
 1. In Stop Motion OBJ > Streaming, uncheck Stream During Playback.
     - **CHECK**: step through the 12 frames of the sequence. Only the one that was most recently-loaded should be visible.
+1. Save the sequence to disk, close Blender, reopen Blender, and reload the saved file
+    - **CHECK**: the mesh sequence should progress as expected.
 
 ## Test 3
 ### Create mesh sequence manually
-TODO jjensen
+1. Add a box to the scene
+1. Click Object > Convert to Mesh Sequence. Re-select the object
+    - **CHECK**: Go to Object Settings > Stop Motion OBJ. Make sure the standard settings for a Cached mesh sequence are there.
+    - **CHECK**: Look at the Timeline Editor. Make sure there's a keyframe set on the current frame.
+    - **CHECK**: In Stop Motion OBJ > Playback, make sure the Playback Mode is set to Keyframe and there's an Active Mesh keyframe set for mesh #1.
+1. Advance to frame 2 then click Stop Motion OBJ > Advanced > Duplicate Mesh Frame.
+    - **CHECK**: In the Timeline Editor, there should be a new keyframe on frame 2.
+    - **CHECK**: In Stop Motion OBJ > Playback, there should be an Active Mesh keyframe set for mesh #2.
+    - **CHECK**: In Blender's Outliner, in the View Layer mode, expand Cube_sequence. The mesh listed should be `Cube.001`.
+1. In Blender's `Outliner` panel, change the `Display Mode` from View Layer to Blender File
+    - **CHECK**: Under Meshes, you should see three meshes: `emptyMesh`, `Cube`, and `Cube.001`.
+1. Switch to Edit Mode, modify the mesh on frame 2, then switch back to Object Mode.
+1. Advance to frame 3 then do the hotkey `Ctrl + Shift + D`.
+    - **CHECK**: In the Timeline Editor, there should be a new keyframe on frame 3.
+    - **CHECK**: In Stop Motion OBJ > Playback, there should be an Active Mesh keyframe set for mesh #3. This mesh should be identical to mesh #2, but different from mesh #1.
+    - **CHECK**: In Blender's Outliner panel, under Meshes, you should see four meshes: `emptyMesh`, `Cube`, `Cube.001`, and `Cube.002`.
+    - **CHECK**: In Blender's Outliner, in the View Layer mode, expand Cube_sequence. The mesh listed should be `Cube.002`.
+1. Advance to frame 5 then do `Ctrl + Shift + D`. Then advance to frame 4 and do `Ctrl + Shift + D`.
+    - **CHECK**: frame 4 should have `Cube.004` visible, which is Active Mesh 5.
+    - **CHECK**: frame 5 should have `Cube.003` visible, which is Active Mesh 4.
+1. Render the sequence using fast settings.
+    - **CHECK**: make sure that the renders show the correct meshes in the right order.
+1. Bake the sequence
+    - **CHECK**: make sure that the sequence progresses properly
+1. Under the `Bake Sequence`
+    - **CHECK**: make sure the baked sequence has been converted back into a mesh sequence and that Stop Motion OBJ settings are visible again.
+1. Now click `Delete Sequence`. In Blender's `Outliner` panel, change the `Display Mode` from View Layer to Blender File.
+    - **CHECK**: Under Meshes, there should be no meshes for the deleted mesh sequence.
+    - **CHECK**: Under Objects, there should be no mesh sequence object.
+1. Undo the `Delete Sequence`.
+    - **CHECK**: the mesh sequence should reappear and sequence playback should behave as expected.
+1. Save the sequence to disk, close Blender, reopen Blender, and reload the saved file
+    - **CHECK**: the mesh sequence should progress as expected.
 
 ## Test 4
-### Auto-export test for Streaming sequences
-TODO jjensen
+### Auto-export tests
+1. Make a copy of the numbers_obj sequence to work on
+1. File > Import > Mesh Sequence then navigate to "numbers_obj Copy" folder 
+1. In the `File Name` field, type "number", set `Cache Mode` to Streaming, leave `Material Per Frame` unchecked and `Relative Paths` checked. Click `Select Folder` to load.
+1. In Object Settings > Stop Motion OBJ > Export, enable Auto-export changes
+1. Click on the Folder icon next to Export Folder. In the file dialog, create a new folder inside the sequence folder, open the folder, and click Accept.
+1. Switch to Edit mode and move one vertex, then switch back to Object mode. Advance to frame 2.
+    - **CHECK**: the Info panel on the bottom should say that mesh 1 was exported to the new folder.
+    - **CHECK**: there should be a mesh 1 in the new folder.
+1. Switch to Scupt mode and make some change. Advance to frame 3 (without leaving Sculpt mode).
+    - **CHECK**: the Info panel on the bottom should say that mesh 2 was exported to the new folder.
+    - **CHECK**: there should be a mesh 2 in the new folder.
+1. Advance to frame 4 without making changes
+    - **CHECK**: the Info panel on the bottom shouldn't have changed.
+    - **CHECK**: there should NOT be a file for mesh 3.
+1. In Object Settings > Stop Motion OBJ > Export, enable Overwrite Source.
+1. Switch to Edit mode and move one vertex, then switch back to Object mode. Advance to frame 5.
+    - **CHECK**: the Info panel on the bottom should say that a mesh was exported to the original folder.
+    - **CHECK**: mesh 4 in the original folder should have a new timestamp.
+1. Switch to Scupt mode and make some change. Advance to frame 6 (without leaving Sculpt mode).
+    - **CHECK**: the Info panel on the bottom should say that a mesh was exported to the original folder.
+    - **CHECK**: mesh 5 in the original folder should have a new timestamp.
+1. Advance to frame 7 without making changes
+    - **CHECK**: the Info panel on the bottom shouldn't have changed.
+    - **CHECK**: there should NOT be a file for mesh 6.
+1. In Object Settings > Stop Motion OBJ > Export, disable Auto-export changes.
+1. Switch to Edit mode and move one vertex, then switch back to Object mode. Advance to frame 8.
+    - **CHECK**: the Info panel on the bottom shouldn't have changed.
+    - **CHECK**: mesh 7 shouldn't have been updated on disk.
+1. Finally, repeat all of these steps for Cached sequences
 
 ## Test 5
-### Auto-export test for Cached sequences
-TODO jjensen
-
-## Test 6
 ### Keyframe playback mode
 1. Load the numbers_obj sequence and just kind of play around with Keyframe playback mode.
     - **CHECK**: just make sure it looks right
+    - **CHECK**: also make sure the frame updates in realtime while moving keyframes around in the graph editor
+
+## Test 6
+### Import multiple sequences at once
+TODO jjensen

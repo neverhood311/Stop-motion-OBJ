@@ -41,6 +41,10 @@ def register():
     bpy.app.handlers.frame_change_pre.append(checkMeshChangesFrameChangePre)
     bpy.app.handlers.frame_change_post.append(checkMeshChangesFrameChangePost)
 
+    # this is needed so that the mesh frame is updated when 'Active Mesh' keyframes are changed
+    # also for when new keyframes are added to a manually-created mesh sequence
+    bpy.app.handlers.depsgraph_update_pre.append(updateFrame)
+
     bpy.types.Mesh.inMeshSequence = bpy.props.BoolProperty()
     bpy.types.Mesh.meshHash = bpy.props.StringProperty()
     bpy.utils.register_class(SequenceVersion)
@@ -99,6 +103,8 @@ def register():
 def unregister():
     bpy.app.handlers.frame_change_pre.remove(checkMeshChangesFrameChangePre)
     bpy.app.handlers.frame_change_post.remove(checkMeshChangesFrameChangePost)
+
+    bpy.app.handlers.depsgraph_update_pre.remove(updateFrame)
 
     bpy.app.handlers.load_post.remove(initializeSequences)
     bpy.app.handlers.frame_change_pre.remove(updateFrame)
