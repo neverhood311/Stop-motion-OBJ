@@ -1,0 +1,42 @@
+newmtl hide
+Ns 30
+Ka 0 0 0
+Kd 0.639216 0.458824 0.384314
+Ks 0.0509804 0.0313726 0.0156863
+map_Kd Horse Texture.png
+newmtl tail
+Ns 30
+Ka 0 0 0
+Kd 0.247059 0.239216 0.227451
+Ks 0.0588083 0.0588083 0.0588083
+map_Kd Horse Texture.png
+newmtl nose
+Ns 30
+Ka 0 0 0
+Kd 0.0431373 0.0431373 0.0431373
+Ks 0.419989 0.382193 0.399207
+map_Kd Horse Texture.png
+newmtl innerEar
+Ns 30
+Ka 0 0 0
+Kd 0.121569 0.121569 0.121569
+Ks 0.223514 0.223514 0.223514
+map_Kd Horse Texture.png
+newmtl mane
+Ns 30
+Ka 0 0 0
+Kd 0.639216 0.458824 0.384314
+Ks 0.0352789 0.0509804 0.0352789
+map_Kd Horse Texture.png
+newmtl hooves
+Ns 30
+Ka 0 0 0
+Kd 0.0156863 0.0156863 0.0156863
+Ks 0.313726 0.313726 0.313726
+map_Kd Horse Texture.png
+newmtl eyeBall
+Ns 30
+Ka 0 0 0
+Kd 0.192157 0.192157 0.192157
+Ks 0.6 0.558007 0.558007
+map_Kd Horse Texture.png

@@ -1138,7 +1138,6 @@ def setFrameObj(_obj, frameNum):
 
 
 def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
-    print("setFrameObjStreamed frame: " + str(frameNum))
     mss = obj.mesh_sequence_settings
     idx = getMeshIdxFromFrameNumber(obj, frameNum)
     mss.curVisibleMeshIdx = idx
@@ -1605,16 +1604,13 @@ class RenderAnimationSMO(bpy.types.Operator):
     frameEnd = None
 
     def pre(self, scene, context=None):
-        print("render pre")
         self.rendering = True
 
     def post(self, scene, context=None):
-        print("render post")
         self.shots.pop(0)   # this is just to render the next image in another path
         self.rendering = False
 
     def cancelled(self, scene, context=None):
-        print("cancelled render")
         self.stop = True
     
     def execute(self, context):

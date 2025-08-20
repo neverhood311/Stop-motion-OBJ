@@ -28,6 +28,7 @@ The goal is to have a repeatable (manual) test script that covers all major feat
 
 
 # The tests
+
 ## Test 1
 ### Basic usage test for Cached sequences, all file types
 
@@ -186,4 +187,8 @@ The goal is to have a repeatable (manual) test script that covers all major feat
 
 ## Test 6
 ### Import multiple sequences at once
-TODO jjensen
+1. File > Import > Mesh Sequence then navigate to "examples" folder (where all the mesh sequence folders are located). 
+1. In the `File Name` field, type "numbers_obj/number;horse_gallop/horse", leave `Cache Mode` set to Cached, leave `Material Per Frame` unchecked and `Relative Paths` checked. Click `Select Folder` to load.
+1. Step through frames 1-24.
+    - **CHECK**: Both sequences should progress as expected. The "numbers" sequence should stop on frame 12.
+1. Repeat the test, but for Streaming Mode.
