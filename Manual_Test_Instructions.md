@@ -51,6 +51,7 @@ The goal is to have a repeatable (manual) test script that covers all major feat
     - **CHECK**: on frame 1, the sequence should show a 1. On frame 2, the sequence should show a 3. On frame 3, the sequence should show a 5.
 1. Now change the `Speed` back to 1.0 and change the `Start Frame` to 2 (`Mode` should still be set to Extend).
     - **CHECK**: on frames 1 and 2, the sequence should show a 1. On frame 12, the sequence should show an 11. On frame 13, the sequence should show a 12.
+1. Set the `Start Frame` back to 1.
 1. In Object Settings > Advanced > Shading, click `Smooth`.
     - **CHECK**: step through all frames and make sure that the meshes have smoothed faces
 1. Now change the Shading to `Flat`.
@@ -61,7 +62,7 @@ The goal is to have a repeatable (manual) test script that covers all major feat
     - **CHECK**: render the first 12 frames of the sequence at low quality settings and make sure the sequence is advancing in the rendered images. There should be one mesh displayed at a time.
 1. Undo the `Bake Sequence`.
     - **CHECK**: make sure the baked sequence has been converted back into a mesh sequence and that Stop Motion OBJ settings are visible again.
-1. Now click `Reload Sequence` on numbers_obj_sequence.
+1. Now click `Reload From Disk` on numbers_obj_sequence.
     - **CHECK**: the mesh sequence should still be visible and the shading should have reverted to Smooth shading (that's the indicator that the files have been reloaded).
 1. Now click `Delete Sequence`. In Blender's `Outliner` panel, change the `Display Mode` from View Layer to Blender File.
     - **CHECK**: Under Meshes, there should be no meshes for the deleted mesh sequence.
@@ -137,7 +138,7 @@ The goal is to have a repeatable (manual) test script that covers all major feat
     - **CHECK**: make sure that the renders show the correct meshes in the right order.
 1. Bake the sequence
     - **CHECK**: make sure that the sequence progresses properly
-1. Under the `Bake Sequence`
+1. Undo the `Bake Sequence`
     - **CHECK**: make sure the baked sequence has been converted back into a mesh sequence and that Stop Motion OBJ settings are visible again.
 1. Now click `Delete Sequence`. In Blender's `Outliner` panel, change the `Display Mode` from View Layer to Blender File.
     - **CHECK**: Under Meshes, there should be no meshes for the deleted mesh sequence.
@@ -172,7 +173,7 @@ The goal is to have a repeatable (manual) test script that covers all major feat
     - **CHECK**: mesh 5 in the original folder should have a new timestamp.
 1. Advance to frame 7 without making changes
     - **CHECK**: the Info panel on the bottom shouldn't have changed.
-    - **CHECK**: there should NOT be a file for mesh 6.
+    - **CHECK**: the file for mesh 6 should not have a new timestamp.
 1. In Object Settings > Stop Motion OBJ > Export, disable Auto-export changes.
 1. Switch to Edit mode and move one vertex, then switch back to Object mode. Advance to frame 8.
     - **CHECK**: the Info panel on the bottom shouldn't have changed.
