@@ -19,7 +19,7 @@ Stop Motion OBJ is able to import very complex mesh sequences that cannot fit in
 
 
 # Download & Install
-For Blender 4.0+, download the latest release [here](https://github.com/neverhood311/Stop-motion-OBJ/releases/latest).
+For Blender 4.0+, download [r2.3.0](https://github.com/neverhood311/Stop-motion-OBJ/releases/latest).
 
 To install, just follow the normal procedure for installing Blender addons. Open Blender and click Edit > Preferences... > Add-ons. Then click Install… and find the .zip file you previously downloaded. Once you’ve enabled the add-on, it should be ready to use immediately.
 
@@ -45,6 +45,7 @@ Once it’s finished loading, you’re done!
 # How to Support
 Stop Motion OBJ wouldn’t be possible without your help. If you find this add-on helpful, please consider donating to support further development. Everything helps.
 
+- Donate via [itch.io](https://neverhood311.itch.io/)
 - Please use [#stopmotionobj](https://twitter.com/search?q=%23stopmotionobj&src=typed_query) when posting to social media
 - Report bugs on the [issues](https://github.com/neverhood311/Stop-motion-OBJ/issues) page or on the [BlenderArtists thread](https://blenderartists.org/t/stop-motion-obj-obj-stl-ply-sequence-importer/670105)
 
