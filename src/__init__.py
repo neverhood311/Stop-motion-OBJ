@@ -25,7 +25,7 @@ bl_info = {
     "name": "Stop motion OBJ",
     "description": "Import a sequence of OBJ (or STL or PLY or X3D or VRML2) files and display them each as a single frame of animation. This add-on also supports the .STL, .PLY, .X3D, and .WRL file formats.",
     "author": "Justin Jensen",
-    "version": (2, 3, 0, "alpha.1"),
+    "version": (2, 3, 0),
     "blender": (4, 0, 0),
     "location": "File > Import > Mesh Sequence",
     "warning": "",
