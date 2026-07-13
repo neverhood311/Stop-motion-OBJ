@@ -389,6 +389,7 @@ class ImportSequence(bpy.types.Operator, ImportHelper):
         dest.ply_use_scene_unit = source.ply_use_scene_unit
         dest.ply_merge_verts = source.ply_merge_verts
         dest.ply_import_colors = source.ply_import_colors
+        dest.ply_import_attributes = source.ply_import_attributes
         
         dest.stl_global_scale = source.stl_global_scale
         dest.stl_use_scene_unit = source.stl_use_scene_unit
@@ -445,6 +446,7 @@ class SMO_PT_FileImportSettingsPanel(bpy.types.Panel):
             layout.prop(op.importSettings, 'ply_use_scene_unit')
             layout.prop(op.importSettings, 'ply_merge_verts')
             layout.prop(op.importSettings, 'ply_import_colors')
+            layout.prop(op.importSettings, 'ply_import_attributes')
         elif op.sequenceSettings.fileFormat == 'x3d':
             # if the x3d/wrl addon is not installed, inform the user
             if not x3dWrlInstalled:

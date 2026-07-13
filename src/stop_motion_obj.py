@@ -487,7 +487,8 @@ class MeshIO(bpy.types.PropertyGroup):
          name="Import Vertex color attributes",
          items=(('NONE', "None", "Do not import/export color attributes"),
                 ('SRGB', "sRGB", "Vertex colors in the file are in sRGB color space"),
-                ('LINEAR', "Linear", "Vertex colors in the file are in linear color space")))
+                ('LINEAR', "Linear", "Vertex colors in the file are in linear color space")),
+         default='SRGB')
     ply_import_attributes: bpy.props.BoolProperty(
         name="Import Attributes",
         description="Import custom vertex attributes",
@@ -602,6 +603,7 @@ class MeshIO(bpy.types.PropertyGroup):
                 export_selected_objects=True,
                 export_animation=False,
                 export_triangulated_mesh=False,
+                export_colors=True,
                 forward_axis=newForwardAxisStr,
                 global_scale=self.obj_global_scale,
                 up_axis=newUpAxisStr)
@@ -823,6 +825,27 @@ def deleteLinkedMeshMaterials(mesh, maxMaterialUsers=1, maxImageUsers=0):
     mesh.materials.clear()
 
 
+def ensureVertexColorMaterial(mesh):
+    # only create a material if the mesh has vertex colors but no material to display them
+    if len(mesh.color_attributes) == 0 or len(mesh.materials) > 0:
+        return
+
+    matName = 'SMO_VertexColors'
+    material = bpy.data.materials.get(matName)
+    if material is None:
+        material = bpy.data.materials.new(matName)
+        material.use_nodes = True
+        nodes = material.node_tree.nodes
+        bsdf = next((node for node in nodes if node.type == 'BSDF_PRINCIPLED'), None)
+        if bsdf is not None:
+            colorNode = nodes.new('ShaderNodeAttribute')
+            colorNode.attribute_name = 'Col'
+            colorNode.location = (bsdf.location.x - 250, bsdf.location.y)
+            material.node_tree.links.new(colorNode.outputs['Color'], bsdf.inputs['Base Color'])
+
+    mesh.materials.append(material)
+
+
 def newMeshSequence():
     theMesh = bpy.data.meshes.new(createUniqueName('emptyMesh', bpy.data.meshes))
     theObj = bpy.data.objects.new(createUniqueName('sequence', bpy.data.objects), theMesh)
@@ -944,6 +967,9 @@ def loadSequenceFromMeshFiles(_obj, _dir, _file):
         # if this is not the first frame, remove any materials and/or images imported with the mesh
         if numFrames >= 1 and mss.perFrameMaterial is False:
             deleteLinkedMeshMaterials(tmpMesh)
+
+        # if the mesh has vertex colors but no material, create one that displays them
+        ensureVertexColorMaterial(tmpMesh)
 
         newMeshNameElement = mss.meshNameArray.add()
         newMeshNameElement.key = tmpMesh.name
@@ -1150,6 +1176,7 @@ def setFrameObjStreamed(obj, frameNum, forceLoad=False, deleteMaterials=False):
         if deleteMaterials is True:
             nextMesh = getMeshFromIndex(obj, idx)
             deleteLinkedMeshMaterials(nextMesh)
+            ensureVertexColorMaterial(nextMesh)
 
     # if the mesh is in memory, show it
     if nextMeshProp.inMemory is True:
@@ -1238,6 +1265,10 @@ def importStreamedFile(obj, idx):
     # we want to make sure the cached meshes are saved to the .blend file
     tmpMesh.use_fake_user = True
     tmpMesh.inMeshSequence = True
+
+    # if the mesh has vertex colors but no material, create one that displays them
+    ensureVertexColorMaterial(tmpMesh)
+
     mss.meshNameArray[idx].key = tmpMesh.name
     mss.meshNameArray[idx].inMemory = True
     mss.numMeshesInMemory += 1
